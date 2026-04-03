@@ -1,0 +1,653 @@
+@import "tailwindcss";
+
+:root {
+  /* TUI-Style Colors - Clean & Modern */
+  --bg-main: #ffffff;
+  --bg-secondary: #f7f9fc;
+  --bg-tertiary: #eef2f7;
+
+  /* Blue Primary (TUI-inspired) */
+  --blue-primary: #0084D7;
+  --blue-light: #E6F4FC;
+  --blue-hover: #006AB5;
+  
+  /* Surface - Light Cards */
+  --card-white: #ffffff;
+  --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.10);
+  
+  /* Borders - Thin & Soft */
+  --border-light: #f3f4f6;
+  --border-medium: #d0d7e3;
+  --border-accent: #0084D7;
+  
+  /* Text - Darker for Readability */
+  --text-primary: #1a2332;
+  --text-secondary: #4a5568;
+  --text-muted: #7a8a9e;
+  --text-white: #ffffff;
+  
+  /* Accent Colors - Subtle */
+  --accent-green: #00a650;
+  --accent-orange: #ff6b35;
+  --accent-yellow: #ffc107;
+  
+  /* Radius - Rounded but not too much */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+  
+  /* Spacing - More whitespace */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  
+  /* Typography - Smaller, cleaner */
+  --font-h1: 32px;
+  --font-h2: 22px;
+  --font-h3: 17px;
+  --font-body: 14px;
+  --font-small: 13px;
+  --font-tiny: 11px;
+  
+  /* Font Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  font-size: var(--font-body);
+  line-height: 1.6;
+}
+
+h1 {
+  font-size: var(--font-h1);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: var(--font-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+h3 {
+  font-size: var(--font-h3);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+p {
+  font-size: var(--font-body);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+a {
+  color: #0064e0;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #0050c0;
+}
+
+/* ============================================
+   TUI-STYLE CARD SYSTEM
+   ============================================ */
+
+.tui-card {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+  transition: all 0.25s ease;
+}
+
+.tui-card:hover {
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--border-medium);
+}
+
+.tui-card-sm {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Legacy support - map old classes to new TUI style */
+.glass-card,
+.surface-2 {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.glass-soft,
+.surface-3 {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.glass-sidebar,
+.surface-1 {
+  background: var(--card-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ============================================
+   BUTTONS & INTERACTIVE ELEMENTS
+   ============================================ */
+
+.tui-btn {
+  background: var(--blue-primary);
+  color: var(--text-white);
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  font-size: var(--font-small);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tui-btn:hover {
+  background: var(--blue-hover);
+  transform: translateY(-1px);
+}
+
+.tui-btn-outline {
+  background: transparent;
+  color: var(--blue-primary);
+  border: 1px solid var(--blue-primary);
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  font-size: var(--font-small);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tui-btn-outline:hover {
+  background: var(--blue-light);
+}
+
+/* ============================================
+   TAGS & BADGES
+   ============================================ */
+
+.tui-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-tiny);
+  font-weight: var(--weight-medium);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.tui-tag-blue {
+  background: var(--blue-light);
+  color: var(--blue-primary);
+  border-color: transparent;
+}
+
+.tui-tag-green {
+  background: #e8f5e9;
+  color: var(--accent-green);
+  border-color: transparent;
+}
+
+/* ============================================
+   SECTION HEADERS
+   ============================================ */
+
+.section-header {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.section-title {
+  font-size: var(--font-h2);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+/* ============================================
+   ACCENT BORDERS (Updated for TUI)
+   ============================================ */
+
+.accent-nature {
+  border-left: 3px solid var(--accent-green);
+}
+
+.accent-food,
+.accent-gastronomy {
+  border-left: 3px solid var(--accent-orange);
+}
+
+.accent-culture {
+  border-left: 3px solid var(--blue-primary);
+}
+
+.accent-top-nature {
+  border-top: 2px solid var(--accent-green);
+}
+
+.accent-top-food,
+.accent-top-gastronomy {
+  border-top: 2px solid var(--accent-orange);
+}
+
+.accent-top-culture {
+  border-top: 2px solid var(--blue-primary);
+}
+
+/* ============================================
+   IMAGE TREATMENT
+   ============================================ */
+
+.img-cinematic {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.img-overlay-gradient {
+  background: linear-gradient(0deg, rgba(0,0,0,0.2), transparent);
+}
+
+/* ============================================
+   HOVER EFFECTS
+   ============================================ */
+
+.card-hover {
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* ============================================
+   FLATPICKR CUSTOM STYLING
+   ============================================ */
+
+/* Flatpickr container */
+.flatpickr-calendar {
+  background: white;
+  border: 1px solid #E5E9F0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-family: inherit;
+}
+
+/* Flatpickr header (month/year) */
+.flatpickr-months {
+  background: #0E3DC5;
+  border-radius: 12px 12px 0 0;
+  padding: 12px;
+}
+
+.flatpickr-current-month {
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  fill: white !important;
+  color: white !important;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+/* Weekday labels */
+.flatpickr-weekdays {
+  background: #F7F9FC;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+/* Day cells */
+.flatpickr-day {
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.flatpickr-day:hover {
+  background: #E6F4FC;
+  border-color: #E6F4FC;
+}
+
+.flatpickr-day.today {
+  border: 2px solid #0E3DC5;
+  background: transparent;
+}
+
+.flatpickr-day.selected {
+  background: #0E3DC5;
+  color: white;
+  border-color: #0E3DC5;
+}
+
+.flatpickr-day.selected:hover {
+  background: #0c34a3;
+  border-color: #0c34a3;
+}
+
+/* Disabled days */
+.flatpickr-day.flatpickr-disabled {
+  color: #D1D5DB;
+}
+
+/* Time picker */
+.flatpickr-time {
+  border-top: 1px solid #E5E9F0;
+}
+
+.flatpickr-time input {
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.flatpickr-time .flatpickr-am-pm {
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+/* Clear/Today buttons */
+.flatpickr-clear,
+.flatpickr-today {
+  color: #0E3DC5;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.flatpickr-clear:hover,
+.flatpickr-today:hover {
+  background: #E6F4FC;
+}
+
+/* ============================================
+   REACT-DATEPICKER CUSTOM STYLING
+   ============================================ */
+
+/* DatePicker input field */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #E5E9F0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  border-color: #0E3DC5;
+  box-shadow: 0 0 0 3px rgba(14, 61, 197, 0.1);
+}
+
+.react-datepicker__input-container input::placeholder {
+  color: #9CA3AF;
+}
+
+/* Calendar container */
+.react-datepicker {
+  font-family: inherit;
+  border: 1px solid #E5E9F0;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  background: white;
+}
+
+.react-datepicker__triangle {
+  display: none;
+}
+
+/* Header (month/year navigation) */
+.react-datepicker__header {
+  background: #0E3DC5;
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+  padding: 16px 12px 12px;
+}
+
+.react-datepicker__current-month {
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.react-datepicker__navigation {
+  top: 18px;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: white;
+  border-width: 2px 2px 0 0;
+}
+
+.react-datepicker__navigation:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+}
+
+/* Day names */
+.react-datepicker__day-names {
+  background: #F7F9FC !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 0.332rem !important;
+}
+
+.react-datepicker__day-name {
+  color: #6B7280 !important;
+  font-weight: 600 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  line-height: 2rem !important;
+  height: 2rem !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* 🔴 NED header - BOLD i crvena */
+.react-datepicker__day-name:last-child {
+  font-weight: 700 !important;
+  color: #B91C1C !important;
+}
+
+/* Days */
+.react-datepicker__month {
+  margin: 12px !important;
+  padding: 0 !important;
+}
+
+/* Week rows - MORA BITI GRID KAO I HEADER */
+.react-datepicker__week {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 0.332rem !important;
+}
+
+.react-datepicker__day {
+  color: #1a1a1a !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  line-height: 2rem !important;
+  height: 2rem !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+/* 🔴 NEDJELJA kolona - suptilna pozadina */
+.react-datepicker__day--weekend:last-child {
+  background: #FEF2F2 !important;
+  font-weight: 600 !important;
+}
+
+.react-datepicker__day:hover {
+  background: #E6F4FC !important;
+  border-radius: 6px !important;
+}
+
+.react-datepicker__day--today {
+  border: 2px solid #0E3DC5;
+  background: transparent;
+  font-weight: 600;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: #0E3DC5;
+  color: white;
+  font-weight: 600;
+}
+
+.react-datepicker__day--selected:hover,
+.react-datepicker__day--keyboard-selected:hover {
+  background: #0c34a3;
+}
+
+.react-datepicker__day--disabled {
+  color: #D1D5DB;
+  cursor: not-allowed;
+}
+
+.react-datepicker__day--disabled:hover {
+  background: transparent;
+}
+
+.react-datepicker__day--outside-month {
+  color: #D1D5DB;
+}
+
+/* Year dropdown */
+.react-datepicker__year-dropdown,
+.react-datepicker__month-dropdown {
+  background: white;
+  border: 1px solid #E5E9F0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.react-datepicker__year-option:hover,
+.react-datepicker__month-option:hover {
+  background: #E6F4FC;
+}
+
+.react-datepicker__year-option--selected,
+.react-datepicker__month-option--selected {
+  background: #0E3DC5;
+  color: white;
+}
+
+/* ============================================
+   ICON UTILITIES
+   ============================================ */
+
+.icon-minimal {
+  stroke-width: 1.5px;
+}
+
+.icon-bg {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px;
+}
+
+/* ============================================
+   MOBILE OPTIMIZATIONS
+   ============================================ */
+
+@media (max-width: 768px) {
+  h1 {
+    font-size: 26px;
+  }
+  
+  h2 {
+    font-size: 19px;
+  }
+  
+  h3 {
+    font-size: 16px;
+  }
+  
+  button, a {
+    min-height: 44px;
+  }
+  
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

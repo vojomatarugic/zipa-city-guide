@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Home Page -->
+  <url>
+    <loc>https://blcityguide.com/</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/?lang=en" />
+  </url>
+  
+  <!-- Restaurants Page -->
+  <url>
+    <loc>https://blcityguide.com/restaurants</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/restaurants?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/restaurants?lang=en" />
+  </url>
+  
+  <!-- Events Page -->
+  <url>
+    <loc>https://blcityguide.com/events</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/events?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/events?lang=en" />
+  </url>
+  
+  <!-- Nightlife Page -->
+  <url>
+    <loc>https://blcityguide.com/nightlife</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/nightlife?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/nightlife?lang=en" />
+  </url>
+  
+  <!-- Magazine Page -->
+  <url>
+    <loc>https://blcityguide.com/magazine</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/magazine?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/magazine?lang=en" />
+  </url>
+  
+  <!-- Map Page -->
+  <url>
+    <loc>https://blcityguide.com/map</loc>
+    <lastmod>2024-12-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://blcityguide.com/map?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://blcityguide.com/map?lang=en" />
+  </url>
+  
+</urlset>
