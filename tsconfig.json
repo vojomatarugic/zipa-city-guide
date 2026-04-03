@@ -9,7 +9,6 @@
     "jsx": "react-jsx",
     "strict": false,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
     "paths": {
       "vaul@1.1.2": ["./node_modules/vaul"],
       "sonner@2.0.3": ["./node_modules/sonner"],
