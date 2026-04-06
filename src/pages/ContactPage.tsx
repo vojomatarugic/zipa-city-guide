@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useSEO } from '../hooks/useSEO';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import ogImage from '../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
 
 export function ContactPage() {
@@ -54,8 +52,6 @@ export function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-      
       {/* Hero Section - Naslov i Opis */}
       <section className="w-full py-16 bg-white">
         <div className="max-w-[1280px] mx-auto px-4 text-center">
@@ -345,8 +341,6 @@ export function ContactPage() {
           </div>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 }

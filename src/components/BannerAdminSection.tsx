@@ -455,6 +455,7 @@ export function BannerAdminSection() {
       {notificationDialog.isOpen && (
         <NotificationDialog
           isOpen={true}
+          title={t('dialogNoticeTitle')}
           message={notificationDialog.message}
           onClose={() => setNotificationDialog({ isOpen: false, message: '' })}
         />

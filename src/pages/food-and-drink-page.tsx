@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { MapPin, Utensils } from "lucide-react";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { useT } from "../hooks/useT";
@@ -16,7 +14,15 @@ import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
 import restaurantsHeroImage from "../assets/124a9756dea5764367ff53e5154e06c6b335de75.png";
 
 // Reusable card component for venue items
-function VenueCard({ item, language, t }: { item: Item; language: string; t: (key: string) => string }) {
+function VenueCard({
+  item,
+  language,
+  t,
+}: {
+  item: Item;
+  language: string;
+  t: (key: string) => string;
+}) {
   return (
     <Link
       to={`/food-and-drink/${item.id}`}
@@ -29,7 +35,14 @@ function VenueCard({ item, language, t }: { item: Item; language: string; t: (ke
           className="w-full h-[200px] object-cover rounded-md"
         />
         <div className="p-4">
-          <VenueBadgeRow venue_type={item.venue_type} cuisine={item.cuisine} t={t} />
+          <VenueBadgeRow
+            venue_type={item.venue_type}
+            cuisine={item.cuisine}
+            cuisine_en={item.cuisine_en}
+            tags={item.tags}
+            language={language === 'en' ? 'en' : 'sr'}
+            t={t}
+          />
           <h3 className="text-base font-semibold mb-2" style={{ color: "#1a1a1a" }}>
             {language === 'en' && item.title_en ? item.title_en : item.title}
           </h3>
@@ -196,8 +209,6 @@ export function FoodAndDrinkPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <Header />
-
       {/* HERO */}
       <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
         <img
@@ -274,7 +285,14 @@ export function FoodAndDrinkPage() {
                       className="w-full h-[400px] object-cover rounded-md"
                     />
                     <div className="p-4">
-                      <VenueBadgeRow venue_type={restaurant.venue_type} cuisine={restaurant.cuisine} t={t} />
+                      <VenueBadgeRow
+                        venue_type={restaurant.venue_type}
+                        cuisine={restaurant.cuisine}
+                        cuisine_en={restaurant.cuisine_en}
+                        tags={restaurant.tags}
+                        language={language === 'en' ? 'en' : 'sr'}
+                        t={t}
+                      />
                       <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
                         {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
                       </h3>
@@ -409,7 +427,14 @@ export function FoodAndDrinkPage() {
                       className="w-full h-[250px] object-cover rounded-md"
                     />
                     <div className="p-4">
-                      <VenueBadgeRow venue_type={restaurant.venue_type} cuisine={restaurant.cuisine} t={t} />
+                      <VenueBadgeRow
+                        venue_type={restaurant.venue_type}
+                        cuisine={restaurant.cuisine}
+                        cuisine_en={restaurant.cuisine_en}
+                        tags={restaurant.tags}
+                        language={language === 'en' ? 'en' : 'sr'}
+                        t={t}
+                      />
                       <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
                         {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
                       </h3>
@@ -437,8 +462,6 @@ export function FoodAndDrinkPage() {
           </div>
         </section>
       )}
-
-      <Footer />
     </div>
   );
 }

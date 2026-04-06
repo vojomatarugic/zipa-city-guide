@@ -5,12 +5,11 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
 
 export function CinemaAllPage() {
@@ -25,9 +24,10 @@ export function CinemaAllPage() {
     async function fetchCinema() {
       setIsLoading(true);
       try {
-        const fetched = await eventService.getEvents("all", selectedCity, undefined, "cinema");
+        const fetched = await eventService.getEvents("all", selectedCity);
         const now = new Date();
         const active = fetched
+          .filter((e) => getTopLevelPageCategory(e) === "cinema")
           .filter((e) => { if (!e.start_at) return false; const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at); return end >= now; })
           .sort((a, b) => (a.start_at ? new Date(a.start_at).getTime() : 0) - (b.start_at ? new Date(b.start_at).getTime() : 0));
         setEvents(active);
@@ -39,7 +39,6 @@ export function CinemaAllPage() {
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
-      <Header />
       <section className="relative w-full" style={{ height: "250px", marginTop: 0 }}>
         <img src={cinemaHeroImage} alt="Bioskopi u Banjaluci" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(0, 137, 123, 0.5), rgba(0, 0, 0, 0.7))" }} />
@@ -111,7 +110,6 @@ export function CinemaAllPage() {
           />
         )}
       </div>
-      <Footer />
     </div>
   );
 }

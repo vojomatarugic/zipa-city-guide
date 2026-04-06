@@ -5,12 +5,11 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb.png";
 
 export function TheatreAllPage() {
@@ -25,9 +24,10 @@ export function TheatreAllPage() {
     async function fetchTheatre() {
       setIsLoading(true);
       try {
-        const fetched = await eventService.getEvents("all", selectedCity, undefined, "theatre");
+        const fetched = await eventService.getEvents("all", selectedCity);
         const now = new Date();
         const active = fetched
+          .filter((e) => getTopLevelPageCategory(e) === "theatre")
           .filter((e) => { if (!e.start_at) return false; const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at); return end >= now; })
           .sort((a, b) => (a.start_at ? new Date(a.start_at).getTime() : 0) - (b.start_at ? new Date(b.start_at).getTime() : 0));
         setEvents(active);
@@ -39,7 +39,6 @@ export function TheatreAllPage() {
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
-      <Header />
       <section className="relative w-full" style={{ height: "250px", marginTop: 0 }}>
         <img src={theatreHeroImage} alt="Pozorište u Banjaluci" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0" style={{ background: "linear-gradient(rgba(142, 36, 170, 0.5), rgba(0, 0, 0, 0.7))" }} />
@@ -111,7 +110,6 @@ export function TheatreAllPage() {
           />
         )}
       </div>
-      <Footer />
     </div>
   );
 }

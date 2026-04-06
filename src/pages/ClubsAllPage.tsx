@@ -9,12 +9,11 @@ import { useState, useEffect } from "react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import clubsHeroImage from "../assets/7ad54244090ee97cf9170d61ce80eeb03b91c8aa.png";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
+import { CLUBS_CATEGORY_THEME, CLUBS_LISTING_HERO_OVERLAY } from "../utils/categoryThemes";
 
 export function ClubsAllPage() {
   const { t, language } = useT();
@@ -34,8 +33,6 @@ export function ClubsAllPage() {
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
-      <Header />
-
       {/* Hero Section */}
       <section
         className="relative w-full"
@@ -51,12 +48,11 @@ export function ClubsAllPage() {
           className="absolute inset-0 w-full h-full object-cover"
         />
 
-        {/* Purple Overlay */}
+        {/* Category overlay (same pink as ClubsPage) */}
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(rgba(123, 31, 162, 0.5), rgba(0, 0, 0, 0.7))",
+            background: CLUBS_LISTING_HERO_OVERLAY,
           }}
         />
 
@@ -113,10 +109,10 @@ export function ClubsAllPage() {
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
                             background: "#F3F4F6",
-                            color: "#7B1FA2",
+                            color: CLUBS_CATEGORY_THEME.accentColor,
                           }}
                         >
-                          {t('nightlife')}
+                          {(club.tags ?? '').trim() || t('nightlife')}
                         </span>
                         {club.opening_hours && (
                           <span
@@ -171,9 +167,6 @@ export function ClubsAllPage() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

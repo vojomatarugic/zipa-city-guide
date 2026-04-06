@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { useT } from '../hooks/useT';
 import { MapPin, Calendar, Tag, ArrowLeft, Clock } from 'lucide-react';
 import * as eventService from '../utils/eventService';
@@ -67,8 +65,6 @@ export function SearchResultsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Back Button */}
         <button
@@ -223,8 +219,6 @@ export function SearchResultsPage() {
           </div>
         )}
       </div>
-
-      <Footer />
     </div>
   );
 }

@@ -1,18 +1,13 @@
 import React, { useState as useLocalState, useRef, useEffect } from 'react';
-import { Building2, MapPin, Phone, Globe, Users, Clock, Image as ImageIcon, Utensils, X, Search, User, Loader2, UserCheck, Pencil } from 'lucide-react';
+import { Building2, MapPin, Phone, Globe, Users, Clock, Image as ImageIcon, Utensils, Tag, X, Search, User, Loader2, UserCheck, Pencil } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { CustomDropdown } from './CustomDropdown';
 import { WorkingHoursSelector } from './WorkingHoursSelector';
 import { ImageUpload } from './ImageUpload';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import type { VenueType } from '../utils/dataService';
-import {
-  CUISINE_SLUGS,
-  parseCuisineChips,
-  serializeCuisineChips,
-  cuisineSlugLabel,
-  type CuisineChip,
-} from '../utils/cuisineLabels';
+import { VENUE_CUISINE_ROWS } from '../utils/venueCuisineTaxonomy';
+import { venueTagOptionsForLang, type VenueTagKey } from '../utils/venueTagLabels';
 
 interface SuggestedUser {
   id: string;
@@ -36,7 +31,10 @@ interface VenueFormData {
   instagram: string;
   opening_hours: string;
   opening_hours_en: string;
-  cuisine: string;
+  /** Canonical SR labels from {@link VENUE_CUISINE_ROWS}, max 2. */
+  cuisine_sr_selected: string[];
+  /** Normalized tag keys for DB `tags`, max 2. */
+  venue_tag_keys: VenueTagKey[];
   image: string;
   contact_name: string;
   contact_phone: string;
@@ -57,7 +55,7 @@ interface VenueFormProps {
 }
 
 export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data, is_admin, is_submitting, user_email }: VenueFormProps) {
-  const { t } = useT();
+  const { t, language } = useT();
 
   const roleLabels: Record<string, string> = {
     user: t('user'),
@@ -77,7 +75,8 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
     instagram: '',
     opening_hours: '',
     opening_hours_en: '',
-    cuisine: '',
+    cuisine_sr_selected: [],
+    venue_tag_keys: [],
     image: '',
     contact_name: '',
     contact_phone: '',
@@ -101,6 +100,14 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
 
   const [cuisine_menu_open, set_cuisine_menu_open] = useLocalState(false);
   const cuisine_wrap_ref = useRef<HTMLDivElement>(null);
+  const [tags_menu_open, set_tags_menu_open] = useLocalState(false);
+  const tags_wrap_ref = useRef<HTMLDivElement>(null);
+
+  const cuisine_options = VENUE_CUISINE_ROWS.map((row) => ({
+    value: row.sr,
+    label: language === 'en' ? row.en : row.sr,
+  }));
+  const tag_options = venueTagOptionsForLang(language);
 
   // 🔥 POPULATE FORM WITH INITIAL DATA IF PROVIDED
   useEffect(() => {
@@ -163,6 +170,17 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [cuisine_menu_open]);
+
+  useEffect(() => {
+    if (!tags_menu_open) return;
+    const onDown = (e: MouseEvent) => {
+      if (tags_wrap_ref.current && !tags_wrap_ref.current.contains(e.target as Node)) {
+        set_tags_menu_open(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [tags_menu_open]);
 
   // 🔍 Admin: Search users by email with debounce
   useEffect(() => {
@@ -243,9 +261,12 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
 
   const handle_submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (parseCuisineChips(form_data.cuisine).length === 0) {
-      alert(t('allFieldsRequired'));
-      return;
+    if (is_admin) {
+      const read_only_creator = !!(initial_data?.submitted_by_email && !creator_edit_mode);
+      if (!read_only_creator && !selected_user_id) {
+        alert(t('mustSelectRegisteredUser'));
+        return;
+      }
     }
     onSubmit({
       ...form_data,
@@ -284,18 +305,18 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
             placeholder={t('selectVenueType')}
             required
             options={[
-              { value: 'restaurant'    as VenueType, label: t('venueTypeRestaurant')   || 'Restoran',        emoji: '🍽' },
-              { value: 'cafe'          as VenueType, label: t('venueTypeCafe')         || 'Kafić',           emoji: '☕' },
               { value: 'bar'           as VenueType, label: t('venueTypeBar')          || 'Bar',             emoji: '🍸' },
-              { value: 'pub'           as VenueType, label: t('venueTypePub')          || 'Pub',             emoji: '🍻' },
               { value: 'brewery'       as VenueType, label: t('venueTypeBrewery')      || 'Pivnica',         emoji: '🍺' },
-              { value: 'kafana'        as VenueType, label: t('venueTypeKafana')       || 'Kafana',          emoji: '🎶' },
-              { value: 'fast_food'     as VenueType, label: t('venueTypeFastFood')     || 'Fast food',       emoji: '🍔' },
+              { value: 'cafe'          as VenueType, label: t('venueTypeCafe')         || 'Kafić',           emoji: '☕' },
               { value: 'cevabdzinica'  as VenueType, label: t('venueTypeCevabdzinica') || 'Ćevabdžinica',   emoji: '🥩' },
-              { value: 'pizzeria'      as VenueType, label: t('venueTypePizzeria')     || 'Picerija',        emoji: '🍕' },
               { value: 'dessert_shop'  as VenueType, label: t('venueTypeDessertShop')  || 'Slastičarna',     emoji: '🍰' },
+              { value: 'fast_food'     as VenueType, label: t('venueTypeFastFood')     || 'Fast food',       emoji: '🍔' },
+              { value: 'kafana'        as VenueType, label: t('venueTypeKafana')       || 'Kafana',          emoji: '🎶' },
               { value: 'nightclub'     as VenueType, label: t('venueTypeNightclub')    || 'Noćni klub',      emoji: '🎵' },
               { value: 'other'         as VenueType, label: t('venueTypeOther')        || 'Ostalo',          emoji: '📍' },
+              { value: 'pizzeria'      as VenueType, label: t('venueTypePizzeria')     || 'Picerija',        emoji: '🍕' },
+              { value: 'pub'           as VenueType, label: t('venueTypePub')          || 'Pub',             emoji: '🍻' },
+              { value: 'restaurant'    as VenueType, label: t('venueTypeRestaurant')   || 'Restoran',        emoji: '🍽' },
             ]}
           />
         </div>
@@ -490,7 +511,7 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
           />
         </div>
 
-        {/* cuisine — max 2 values from translated list; chips + dropdown */}
+        {/* Kuhinja — max 2 controlled options */}
         <div className="mb-4" ref={cuisine_wrap_ref}>
           <div className="flex items-center gap-2 mb-2">
             <Utensils className="w-4 h-4" style={{ color: '#0E3DC5' }} />
@@ -498,34 +519,27 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
               className="text-[13px] m-0"
               style={{ color: 'var(--text-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
             >
-              {t('cuisine')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+              {t('cuisine')}
             </label>
           </div>
           {(() => {
-            const chips = parseCuisineChips(form_data.cuisine);
-            const selected_slugs = new Set(
-              chips.filter((c) => c.kind === 'slug').map((c) => (c as { kind: 'slug'; slug: string }).slug)
-            );
-            const at_max = chips.length >= 2;
+            const selected = form_data.cuisine_sr_selected;
+            const selected_set = new Set(selected);
+            const at_max = selected.length >= 2;
 
-            const set_chips = (next: CuisineChip[]) => {
-              handle_change({
-                target: { name: 'cuisine', value: serializeCuisineChips(next) },
-              } as React.ChangeEvent<HTMLInputElement>);
+            const set_selected = (next: string[]) => {
+              set_form_data((prev) => ({ ...prev, cuisine_sr_selected: next.slice(0, 2) }));
             };
 
-            const remove_chip = (index: number) => {
-              const next = parseCuisineChips(form_data.cuisine);
+            const remove_at = (index: number) => {
+              const next = [...selected];
               next.splice(index, 1);
-              set_chips(next);
+              set_selected(next);
             };
 
-            const add_slug = (slug: string) => {
-              const next = parseCuisineChips(form_data.cuisine);
-              if (next.length >= 2) return;
-              if (next.some((c) => c.kind === 'slug' && c.slug === slug)) return;
-              next.push({ kind: 'slug', slug });
-              set_chips(next);
+            const add_value = (sr: string) => {
+              if (selected.length >= 2 || selected_set.has(sr)) return;
+              set_selected([...selected, sr]);
               set_cuisine_menu_open(false);
             };
 
@@ -537,57 +551,165 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
                   style={{ borderColor: '#E5E9F0', background: 'white' }}
                   onClick={() => set_cuisine_menu_open((o) => !o)}
                 >
-                  {chips.length === 0 && (
+                  {selected.length === 0 && (
                     <span style={{ fontSize: '14px', color: '#9CA3AF' }}>{t('cuisinePlaceholder')}</span>
                   )}
-                  {chips.map((chip, i) => (
-                    <span
-                      key={`${i}-${chip.kind === 'slug' ? chip.slug : chip.text}`}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium"
-                      style={{ backgroundColor: '#EEF1FB', color: '#0E3DC5' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {chip.kind === 'slug' ? cuisineSlugLabel(chip.slug, t) : chip.text}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          remove_chip(i);
-                        }}
-                        className="ml-0.5 hover:opacity-70 transition-opacity border-0 bg-transparent p-0 cursor-pointer"
+                  {selected.map((sr, i) => {
+                    const opt = cuisine_options.find((o) => o.value === sr);
+                    return (
+                      <span
+                        key={`${sr}-${i}`}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium"
+                        style={{ backgroundColor: '#EEF1FB', color: '#0E3DC5' }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
+                        {opt?.label ?? sr}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove_at(i);
+                          }}
+                          className="ml-0.5 hover:opacity-70 transition-opacity border-0 bg-transparent p-0 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    );
+                  })}
                 </button>
                 {cuisine_menu_open && (
                   <div
                     className="absolute left-0 right-0 z-50 mt-1 max-h-[240px] overflow-y-auto rounded-lg border bg-white shadow-lg"
                     style={{ borderColor: '#E5E9F0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
                   >
-                    {CUISINE_SLUGS.filter((s) => !selected_slugs.has(s)).map((slug) => (
-                      <button
-                        key={slug}
-                        type="button"
-                        disabled={at_max}
-                        className="w-full text-left px-4 py-2.5 border-0 text-[14px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{
-                          color: 'var(--text-primary)',
-                          background: 'white',
-                          borderBottom: '1px solid #F3F4F6',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!at_max) e.currentTarget.style.background = '#F0F4FF';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'white';
-                        }}
-                        onClick={() => !at_max && add_slug(slug)}
+                    {cuisine_options
+                      .filter((o) => !selected_set.has(o.value))
+                      .map((o) => (
+                        <button
+                          key={o.value}
+                          type="button"
+                          disabled={at_max}
+                          className="w-full text-left px-4 py-2.5 border-0 text-[14px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{
+                            color: 'var(--text-primary)',
+                            background: 'white',
+                            borderBottom: '1px solid #F3F4F6',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!at_max) e.currentTarget.style.background = '#F0F4FF';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white';
+                          }}
+                          onClick={() => !at_max && add_value(o.value)}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Oznaka — max 2 controlled keys → DB `tags` */}
+        <div className="mb-4" ref={tags_wrap_ref}>
+          <div className="flex items-center gap-2 mb-2">
+            <Tag className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+            <label
+              className="text-[13px] m-0"
+              style={{ color: 'var(--text-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
+            >
+              {t('venueTag')}
+            </label>
+          </div>
+          {(() => {
+            const selected = form_data.venue_tag_keys;
+            const selected_set = new Set(selected);
+            const at_max = selected.length >= 2;
+
+            const set_keys = (next: VenueTagKey[]) => {
+              set_form_data((prev) => ({ ...prev, venue_tag_keys: next.slice(0, 2) }));
+            };
+
+            const remove_at = (index: number) => {
+              const next = [...selected];
+              next.splice(index, 1);
+              set_keys(next);
+            };
+
+            const add_key = (key: VenueTagKey) => {
+              if (selected.length >= 2 || selected_set.has(key)) return;
+              set_keys([...selected, key]);
+              set_tags_menu_open(false);
+            };
+
+            return (
+              <div className="relative">
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 rounded-lg border transition-all flex flex-wrap gap-2 items-center min-h-[48px] text-left cursor-pointer"
+                  style={{ borderColor: '#E5E9F0', background: 'white' }}
+                  onClick={() => set_tags_menu_open((o) => !o)}
+                >
+                  {selected.length === 0 && (
+                    <span style={{ fontSize: '14px', color: '#9CA3AF' }}>{t('venueTagPlaceholder')}</span>
+                  )}
+                  {selected.map((key, i) => {
+                    const opt = tag_options.find((o) => o.key === key);
+                    return (
+                      <span
+                        key={`${key}-${i}`}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium"
+                        style={{ backgroundColor: '#EEF1FB', color: '#0E3DC5' }}
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {cuisineSlugLabel(slug, t)}
-                      </button>
-                    ))}
+                        {opt?.label ?? key}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove_at(i);
+                          }}
+                          className="ml-0.5 hover:opacity-70 transition-opacity border-0 bg-transparent p-0 cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </button>
+                {tags_menu_open && (
+                  <div
+                    className="absolute left-0 right-0 z-50 mt-1 max-h-[240px] overflow-y-auto rounded-lg border bg-white shadow-lg"
+                    style={{ borderColor: '#E5E9F0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                  >
+                    {tag_options
+                      .filter((o) => !selected_set.has(o.key))
+                      .map((o) => (
+                        <button
+                          key={o.key}
+                          type="button"
+                          disabled={at_max}
+                          className="w-full text-left px-4 py-2.5 border-0 text-[14px] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                          style={{
+                            color: 'var(--text-primary)',
+                            background: 'white',
+                            borderBottom: '1px solid #F3F4F6',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!at_max) e.currentTarget.style.background = '#F0F4FF';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'white';
+                          }}
+                          onClick={() => !at_max && add_key(o.key)}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
                   </div>
                 )}
               </div>
@@ -726,7 +848,13 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
                   </div>
                   <button
                     type="button"
-                    onClick={() => set_creator_edit_mode(true)}
+                    onClick={() => {
+                      set_creator_edit_mode(true);
+                      set_selected_user_id(null);
+                      set_email_search_query('');
+                      set_form_data((prev) => ({ ...prev, submitted_by_email: '' }));
+                      set_resolved_creator_name(null);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex-shrink-0"
                     style={{
                       background: 'rgba(14, 61, 197, 0.06)',
@@ -767,7 +895,6 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
                     onChange={(e) => {
                       set_email_search_query(e.target.value);
                       set_selected_user_id(null);
-                      set_form_data({ ...form_data, submitted_by_email: e.target.value });
                       if (e.target.value.length >= 2) set_show_suggestions(true);
                     }}
                     onFocus={() => {

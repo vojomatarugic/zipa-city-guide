@@ -301,15 +301,44 @@ export function translateEventType(eventType: string, language: 'sr' | 'en' = 's
  * Get all events (for admin panel)
  */
 export async function getAllEvents(): Promise<Item[]> {
+  const fetchByStatus = async (status: 'pending' | 'approved' | 'rejected' | 'all'): Promise<Item[]> => {
+    const url = `${API_BASE_URL}/events?status=${status}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    });
+
+    const responseText = await response.text();
+    let parsed: any = null;
+    try {
+      parsed = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      parsed = null;
+    }
+
+    console.log(`[eventService.getAllEvents] url=${url} status=${response.status}`);
+    console.log('[eventService.getAllEvents] body sample:', responseText.slice(0, 500));
+
+    if (!response.ok) {
+      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, responseText);
+      return [];
+    }
+
+    return parsed?.events || [];
+  };
+
   try {
-    const url = `${API_BASE_URL}/events?filter=all`;
-    
-    console.log('📋 Fetching all events from:', url);
+    console.log('📋 Fetching all events for admin');
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(url, {
+    const primaryUrl = `${API_BASE_URL}/events?status=all`;
+    const response = await fetch(primaryUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
@@ -321,15 +350,40 @@ export async function getAllEvents(): Promise<Item[]> {
 
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, errorText);
-      return [];
+    const responseText = await response.text().catch(() => '');
+    let data: any = null;
+    try {
+      data = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      data = null;
     }
 
-    const data = await response.json();
-    console.log(`✅ Fetched ${data.events?.length || 0} events for admin`);
-    return data.events || [];
+    console.log(`[eventService.getAllEvents] primaryUrl=${primaryUrl} status=${response.status}`);
+    console.log('[eventService.getAllEvents] primary body sample:', responseText.slice(0, 500));
+
+    if (response.ok && Array.isArray(data?.events) && data.events.length > 0) {
+      console.log(`✅ Fetched ${data.events.length} events for admin via status=all`);
+      return data.events;
+    }
+
+    // Fallback for backend deployments where status=all is not supported correctly.
+    console.warn('⚠️ status=all returned empty/invalid payload, falling back to status-by-status fetch');
+    const [approved, pending, rejected] = await Promise.all([
+      fetchByStatus('approved'),
+      fetchByStatus('pending'),
+      fetchByStatus('rejected'),
+    ]);
+
+    const mergedMap = new Map<string, Item>();
+    [...approved, ...pending, ...rejected].forEach((event) => {
+      const key = String((event as any).id || '');
+      if (key) mergedMap.set(key, event);
+    });
+    const merged = Array.from(mergedMap.values());
+    console.log(
+      `✅ Fallback merged events: total=${merged.length}, approved=${approved.length}, pending=${pending.length}, rejected=${rejected.length}`
+    );
+    return merged;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.error('❌ Request timeout - server took too long to respond');
@@ -345,28 +399,44 @@ export async function getAllEvents(): Promise<Item[]> {
  */
 export async function approveEvent(id: string): Promise<boolean> {
   try {
-    const url = `${API_BASE_URL}/events/${id}/approve`;
+    const url = `${API_BASE_URL}/submissions/${id}/approve`;
     
     console.log('✅ Approving event:', id);
+    let accessToken: string | null = null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token || null;
+    } catch {
+      accessToken = null;
+    }
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(url, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...(accessToken ? { 'x-auth-token': accessToken } : {}),
       },
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
+    const responseBody = await response.text().catch(() => '');
+    console.log('[approveEvent] request', {
+      url,
+      method: 'PUT',
+      hasAuthHeader: true,
+      hasUserToken: !!accessToken,
+      status: response.status,
+      body: responseBody,
+    });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, errorText);
+      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, responseBody);
       return false;
     }
 
@@ -387,28 +457,44 @@ export async function approveEvent(id: string): Promise<boolean> {
  */
 export async function rejectEvent(id: string): Promise<boolean> {
   try {
-    const url = `${API_BASE_URL}/events/${id}/reject`;
+    const url = `${API_BASE_URL}/submissions/${id}/reject`;
     
     console.log('❌ Rejecting event:', id);
+    let accessToken: string | null = null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token || null;
+    } catch {
+      accessToken = null;
+    }
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(url, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...(accessToken ? { 'x-auth-token': accessToken } : {}),
       },
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
+    const responseBody = await response.text().catch(() => '');
+    console.log('[rejectEvent] request', {
+      url,
+      method: 'PUT',
+      hasAuthHeader: true,
+      hasUserToken: !!accessToken,
+      status: response.status,
+      body: responseBody,
+    });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, errorText);
+      console.error(`❌ HTTP ${response.status} ${response.statusText}:`, responseBody);
       return false;
     }
 
@@ -430,6 +516,13 @@ export async function rejectEvent(id: string): Promise<boolean> {
 export async function deleteEvent(id: string): Promise<boolean> {
   try {
     const url = `${API_BASE_URL}/events/${id}`;
+    let accessToken: string | null = null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token || null;
+    } catch {
+      accessToken = null;
+    }
     
     console.log('🗑️ Deleting event:', id);
     
@@ -442,6 +535,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
         'Authorization': `Bearer ${publicAnonKey}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        ...(accessToken ? { 'x-auth-token': accessToken } : {}),
       },
       signal: controller.signal,
     });

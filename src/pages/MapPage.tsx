@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { UtensilsCrossed, Calendar, Hotel, Building2, Coffee, Music2, MapPin, Search } from 'lucide-react';
 import { useT } from '../hooks/useT';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 
 export function MapPage() {
   const { t } = useT();
@@ -33,9 +31,7 @@ export function MapPage() {
   ];
   
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-secondary)' }}>
-      <Header />
-      
+    <div className="min-h-full flex flex-col w-full" style={{ background: 'var(--bg-secondary)' }}>
       {/* MAP WITH SIDEBAR */}
       <div className="flex-1 w-full max-w-[1280px] mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5" style={{ height: 'calc(100vh - 180px)' }}>
@@ -165,8 +161,6 @@ export function MapPage() {
 
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 }

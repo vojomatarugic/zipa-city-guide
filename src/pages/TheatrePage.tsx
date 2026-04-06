@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { Drama } from "lucide-react";
@@ -11,6 +9,7 @@ import { useSEO } from "../hooks/useSEO";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb.png";
 
@@ -24,11 +23,14 @@ export function TheatrePage() {
   useEffect(() => {
     async function fetchTheatre() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents('upcoming', undefined, undefined, 'theatre');
-      setEvents(fetched);
+      const fetched = await eventService.getEvents("upcoming", undefined);
+      const theatreOnly = fetched.filter(
+        (e) => getTopLevelPageCategory(e) === "theatre"
+      );
+      setEvents(theatreOnly);
       setIsLoading(false);
 
-      const freeIds = fetched
+      const freeIds = theatreOnly
         .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
         .map(e => e.id);
       if (freeIds.length > 0) {
@@ -63,8 +65,6 @@ export function TheatrePage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <Header />
-
       {/* HERO SECTION */}
       <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
         <img
@@ -234,8 +234,6 @@ export function TheatrePage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

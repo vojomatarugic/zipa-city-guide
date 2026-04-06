@@ -8,13 +8,13 @@ import { useSEO } from "../hooks/useSEO";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import clubsHeroImage from "../assets/7ad54244090ee97cf9170d61ce80eeb03b91c8aa.png";
 import { UnderConstruction } from '../components/UnderConstruction';
 import { VenueOpeningHoursRow } from '../components/VenueOpeningHoursRow';
 import { PartyPopper } from "lucide-react";
+import { CLUBS_CATEGORY_THEME, CLUBS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+import { venueTagsFallbackLine } from "../utils/venueTagLabels";
 
 export function ClubsPage() {
   const { t, language } = useT();
@@ -66,15 +66,12 @@ export function ClubsPage() {
       className="min-h-screen"
       style={{ background: "#FFFFFF" }}
     >
-      {/* Header OUTSIDE container for full-width */}
-      <Header />
-
       {/* HERO SECTION - Full Width */}
       <section
         className="relative w-full"
         style={{
           height: "420px",
-          background: `linear-gradient(rgba(216, 27, 96, 0.65), rgba(216, 27, 96, 0.65)), url('${clubsHeroImage}') center/cover`,
+          background: `${CLUBS_HERO_OVERLAY_GRADIENT}, url('${clubsHeroImage}') center/cover`,
         }}
       >
         <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
@@ -117,7 +114,7 @@ export function ClubsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#D81B60",
+              color: CLUBS_CATEGORY_THEME.accentColor,
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
@@ -131,7 +128,7 @@ export function ClubsPage() {
               </div>
             ) : clubs.length === 0 ? (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor="#D81B60" icon={PartyPopper} />
+                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={PartyPopper} />
               </div>
             ) : (
               clubs.slice(0, 9).map((club) => (
@@ -153,10 +150,14 @@ export function ClubsPage() {
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
                             background: "#F3F4F6",
-                            color: "#D81B60",
+                            color: CLUBS_CATEGORY_THEME.accentColor,
                           }}
                         >
-                          {t('nightlife')}
+                          {venueTagsFallbackLine(
+                            club.tags,
+                            language === 'en' ? 'en' : 'sr',
+                            t('nightlife')
+                          )}
                         </span>
                       </div>
 
@@ -211,7 +212,7 @@ export function ClubsPage() {
             to="/clubs/all"
             style={{
               display: "inline-block",
-              background: "#D81B60",
+              background: CLUBS_CATEGORY_THEME.ctaBackground,
               color: "white",
               padding: "14px 32px",
               borderRadius: "8px",
@@ -238,7 +239,7 @@ export function ClubsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#D81B60",
+              color: CLUBS_CATEGORY_THEME.accentColor,
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
@@ -265,10 +266,14 @@ export function ClubsPage() {
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
                             background: "#F3F4F6",
-                            color: "#D81B60",
+                            color: CLUBS_CATEGORY_THEME.accentColor,
                           }}
                         >
-                          {t('nightlife')}
+                          {venueTagsFallbackLine(
+                            club.tags,
+                            language === 'en' ? 'en' : 'sr',
+                            t('nightlife')
+                          )}
                         </span>
                       </div>
 
@@ -307,7 +312,7 @@ export function ClubsPage() {
               ))
             ) : !isLoading ? (
               <div className="col-span-2">
-                <UnderConstruction language={language} accentColor="#D81B60" icon={PartyPopper} />
+                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={PartyPopper} />
               </div>
             ) : null}
           </div>
@@ -325,7 +330,7 @@ export function ClubsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#D81B60",
+              color: CLUBS_CATEGORY_THEME.accentColor,
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
@@ -398,7 +403,7 @@ export function ClubsPage() {
                       className="text-xs font-medium px-2 py-1 rounded"
                       style={{
                         background: "#F3F4F6",
-                        color: "#D81B60",
+                        color: CLUBS_CATEGORY_THEME.accentColor,
                       }}
                     >
                       {club.category}
@@ -438,7 +443,7 @@ export function ClubsPage() {
         <section className="py-24" style={{ background: "#FFFFFF" }}>
           <div className="w-[60vw] mx-auto text-center">
             <p style={{ fontSize: "48px", marginBottom: "16px" }}>🎵</p>
-            <h2 style={{ fontSize: "22px", fontWeight: 600, color: "#D81B60", marginBottom: "12px" }}>
+            <h2 style={{ fontSize: "22px", fontWeight: 600, color: CLUBS_CATEGORY_THEME.accentColor, marginBottom: "12px" }}>
               {language === 'sr' ? 'U pripremi' : 'Under Construction'}
             </h2>
             <p style={{ fontSize: "16px", color: "#6B7280" }}>
@@ -449,9 +454,6 @@ export function ClubsPage() {
           </div>
         </section>
       )}
-
-      {/* Footer OUTSIDE container for full-width */}
-      <Footer />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { AuthModal } from './AuthModal';
 import { CityModal } from './CityModal';
+import { Footer } from './Footer';
+import { Header } from './Header';
 import { useAuth } from '../contexts/AuthContext';
 
 export function RootLayout() {
@@ -36,7 +38,13 @@ export function RootLayout() {
 
   return (
     <>
-      <Outlet />
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
       <CityModal />
       <AuthModal />
     </>

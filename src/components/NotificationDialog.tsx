@@ -2,13 +2,16 @@ import { X } from 'lucide-react';
 
 interface NotificationDialogProps {
   isOpen: boolean;
+  /** Omit or pass empty string to show message only (no heading). */
   title?: string;
   message: string;
   onClose: () => void;
 }
 
-export function NotificationDialog({ isOpen, title = 'Figma', message, onClose }: NotificationDialogProps) {
+export function NotificationDialog({ isOpen, title, message, onClose }: NotificationDialogProps) {
   if (!isOpen) return null;
+
+  const showTitle = typeof title === 'string' && title.trim().length > 0;
 
   return (
     <div
@@ -34,17 +37,18 @@ export function NotificationDialog({ isOpen, title = 'Figma', message, onClose }
           <X size={18} style={{ color: '#666' }} />
         </button>
 
-        {/* Title */}
-        <h3
-          className="text-[14px] font-semibold mb-4"
-          style={{ color: '#1a1a1a', marginTop: '4px' }}
-        >
-          {title}
-        </h3>
+        {showTitle && (
+          <h3
+            className="text-[14px] font-semibold mb-4"
+            style={{ color: '#1a1a1a', marginTop: '4px' }}
+          >
+            {title!.trim()}
+          </h3>
+        )}
 
         {/* Message */}
         <p
-          className="text-[14px] mb-6"
+          className={`text-[14px] mb-6 ${showTitle ? '' : 'mt-1'}`}
           style={{ color: '#333', lineHeight: '1.5' }}
         >
           {message}

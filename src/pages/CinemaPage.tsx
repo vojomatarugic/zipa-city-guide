@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Calendar, MapPin, Star } from "lucide-react";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { EventCardSkeleton } from "../components/EventCard";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { Clapperboard } from "lucide-react";
@@ -12,6 +10,7 @@ import { useSEO } from "../hooks/useSEO";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
 
@@ -89,8 +88,10 @@ export function CinemaPage() {
   useEffect(() => {
     async function fetchCinema() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents('upcoming', undefined, undefined, 'cinema');
-      setEvents(fetched);
+      const fetched = await eventService.getEvents("upcoming", undefined);
+      setEvents(
+        fetched.filter((e) => getTopLevelPageCategory(e) === "cinema")
+      );
       setIsLoading(false);
     }
     fetchCinema();
@@ -120,8 +121,6 @@ export function CinemaPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <Header />
-
       {/* HERO SECTION */}
       <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
         <img
@@ -252,8 +251,6 @@ export function CinemaPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

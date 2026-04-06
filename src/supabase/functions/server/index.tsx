@@ -99,6 +99,81 @@ function sbService() {
 // Legacy helper for backward compatibility
 const getSupabaseClient = sbService;
 
+/** Canonical email from Supabase Auth if registered; otherwise null. Paginates listUsers. */
+async function resolveRegisteredSubmitterEmail(
+  serviceClient: ReturnType<typeof sbService>,
+  email: string
+): Promise<string | null> {
+  const want = (email || '').trim().toLowerCase();
+  if (!want) return null;
+  let page = 1;
+  const perPage = 1000;
+  for (;;) {
+    const { data, error } = await serviceClient.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error('❌ [resolveRegisteredSubmitterEmail] listUsers:', error.message);
+      return null;
+    }
+    const users = data?.users ?? [];
+    const hit = users.find((u) => (u.email || '').toLowerCase() === want);
+    if (hit?.email) return hit.email.trim();
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return null;
+}
+
+/** Allowed normalized keys for venue `tags` (Oznaka); max 2. */
+const VENUE_OZNAKA_KEYS = new Set([
+  'draft-beer',
+  'craft-beer',
+  'cocktails',
+  'wine-list',
+  'rakija',
+  'live-music',
+  'dj',
+  'karaoke',
+  'hookah',
+  'lounge',
+  'rooftop',
+  'garden',
+  'terrace',
+  'sports-screening',
+  'romantic',
+  'family-friendly',
+]);
+
+/**
+ * Accepts JSON array string, comma-separated keys, or string[] from the client.
+ * Returns up to 2 allowed keys as a Postgres `text[]` value (never a joined string).
+ */
+function normalizeVenueTagsInput(raw: unknown): string[] | null {
+  if (raw === undefined || raw === null) return null;
+  let parts: string[] = [];
+  if (Array.isArray(raw)) {
+    parts = raw.map((x) => String(x).trim()).filter(Boolean);
+  } else {
+    const s = String(raw).trim();
+    if (!s) return null;
+    if (s.startsWith('[')) {
+      try {
+        const j = JSON.parse(s) as unknown;
+        if (Array.isArray(j)) {
+          parts = j.map((x) => String(x).trim()).filter(Boolean);
+        } else {
+          parts = s.split(',').map((x) => x.trim()).filter(Boolean);
+        }
+      } catch {
+        parts = s.split(',').map((x) => x.trim()).filter(Boolean);
+      }
+    } else {
+      parts = s.split(',').map((x) => x.trim()).filter(Boolean);
+    }
+  }
+  const out = parts.filter((k) => VENUE_OZNAKA_KEYS.has(k)).slice(0, 2);
+  return out.length ? out : null;
+}
+
 /**
  * Safe wrapper that calls GoTrue /auth/v1/user directly via fetch.
  * Bypasses supabaseClient.auth.getUser() which throws AuthSessionMissingError
@@ -407,51 +482,6 @@ app.use(
 app.get("/make-server-a0e1e9cb/health", (c) => {
   console.log('🏥 Health check called');
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
-});
-
-// 🔍 DEBUG: Get all unique submitted_by emails from venues
-app.get("/make-server-a0e1e9cb/debug/venues-emails", async (c) => {
-  try {
-    const supabase = getSupabaseClient();
-    
-    // Get ALL venues
-    const { data: venues, error } = await supabase
-      .from('venues_ee0c365c')
-      .select('id, title, submitted_by, page_slug, status')
-      .order('submitted_by');
-    
-    if (error) {
-      console.error('❌ Error fetching venues:', error);
-      return c.json({ error: error.message }, 500);
-    }
-    
-    // Group by submitted_by
-    const grouped: Record<string, any[]> = {};
-    
-    venues?.forEach(venue => {
-      const email = venue.submitted_by || 'NULL';
-      if (!grouped[email]) {
-        grouped[email] = [];
-      }
-      grouped[email].push({
-        id: venue.id,
-        title: venue.title,
-        category: venue.page_slug,
-        status: venue.status
-      });
-    });
-    
-    console.log('📊 Venues by submitted_by:', JSON.stringify(grouped, null, 2));
-    
-    return c.json({ 
-      total: venues?.length || 0,
-      grouped,
-      unique_emails: Object.keys(grouped)
-    });
-  } catch (error) {
-    console.error('❌ Error:', error);
-    return c.json({ error: String(error) }, 500);
-  }
 });
 
 // ===================================
@@ -1064,6 +1094,13 @@ app.post("/make-server-a0e1e9cb/upload/venue-image", async (c) => {
 // SUBMISSIONS ENDPOINTS
 // ===================================
 
+/** Row merged from `events_ee0c365c` / `venues_ee0c365c` in submissions list (select('*')). */
+type AdminSubmissionListRow = Record<string, unknown> & {
+  created_at: string;
+  submitted_by?: string | null;
+  submitted_by_name?: string | null;
+};
+
 // Get all submissions (with optional filter by status or page_slug)
 app.get("/make-server-a0e1e9cb/submissions", async (c) => {
   try {
@@ -1073,7 +1110,7 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
     const supabase = getSupabaseClient();
     
     // Determine which table to query based on page_slug
-    let allSubmissions = [];
+    let allSubmissions: AdminSubmissionListRow[] = [];
     
     // Query events table - ONLY when explicitly requesting events
     if (page_slug === 'event' || page_slug === 'events') {
@@ -1092,7 +1129,7 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
         return c.json({ error: 'Failed to fetch events', details: eventsError.message }, 500);
       }
       
-      allSubmissions = [...allSubmissions, ...(events || [])];
+      allSubmissions = [...allSubmissions, ...((events ?? []) as AdminSubmissionListRow[])];
     }
     
     // Query venues table - when no page_slug (all venues) or specific venue page_slug
@@ -1116,7 +1153,7 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
         return c.json({ error: 'Failed to fetch venues', details: venuesError.message }, 500);
       }
       
-      allSubmissions = [...allSubmissions, ...(venues || [])];
+      allSubmissions = [...allSubmissions, ...((venues ?? []) as AdminSubmissionListRow[])];
     }
     
     // Sort combined results by created_at
@@ -1131,7 +1168,11 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
     // contact_name = kontakt osoba venue-a (npr. "Petar Petrović")
     // submitted_by_name = ime korisnika koji je kreirao unos (npr. "Vojo")
     try {
-      const uniqueEmails = [...new Set(allSubmissions.map((s: any) => s.submitted_by).filter(Boolean))];
+      const uniqueEmails = [
+        ...new Set(
+          allSubmissions.map((s) => s.submitted_by).filter((e): e is string => Boolean(e)),
+        ),
+      ];
       if (uniqueEmails.length > 0) {
         const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
         if (authData?.users) {
@@ -1144,9 +1185,11 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
               }
             }
           }
-          allSubmissions = allSubmissions.map((item: any) => ({
+          allSubmissions = allSubmissions.map((item) => ({
             ...item,
-            submitted_by_name: emailToName[item.submitted_by] || null,
+            submitted_by_name: item.submitted_by
+              ? emailToName[item.submitted_by] ?? null
+              : null,
           }));
         }
       }
@@ -1226,13 +1269,43 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     if (!body.description) {
       return c.json({ error: 'Missing required field: description' }, 400);
     }
-    const submittedBy = body.submitted_by;
-    if (!submittedBy) {
-      return c.json({ error: 'Missing required field: submitted_by' }, 400);
-    }
-    
+    const bodySubmittedRaw = typeof body.submitted_by === 'string' ? body.submitted_by.trim() : '';
     // ✅ Use sbService() to bypass broken RLS policy
     const supabase = sbService();
+
+    const authEmail = (authUser.email || '').trim();
+    if (!authEmail) {
+      return c.json({ error: 'Authenticated session has no email address.' }, 401);
+    }
+    const isAdminSubmitter = authUser.user_metadata?.role === 'admin';
+
+    let finalSubmittedBy: string;
+    if (!isAdminSubmitter) {
+      finalSubmittedBy = authEmail;
+      if (bodySubmittedRaw && bodySubmittedRaw.toLowerCase() !== authEmail.toLowerCase()) {
+        return c.json({ error: 'submitted_by must match your logged-in account email.' }, 400);
+      }
+    } else {
+      if (!bodySubmittedRaw) {
+        return c.json({ error: 'Missing required field: submitted_by (select a registered user).' }, 400);
+      }
+      const resolved = await resolveRegisteredSubmitterEmail(supabase, bodySubmittedRaw);
+      if (!resolved) {
+        return c.json({
+          error: 'submitted_by must be the email of a registered user. Choose someone from search results.',
+        }, 400);
+      }
+      finalSubmittedBy = resolved;
+      if (body.assign_user_id) {
+        const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(body.assign_user_id);
+        if (uidErr || !uidData?.user?.email) {
+          return c.json({ error: 'Invalid assign_user_id.' }, 400);
+        }
+        if (uidData.user.email.toLowerCase() !== resolved.toLowerCase()) {
+          return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
+        }
+      }
+    }
     
     // ✅ Check if submitter is admin → auto-approve
     let isSubmitterAdmin = false;
@@ -1271,8 +1344,8 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       
       const eventType = body.event_type || null;
       const EVENT_TYPE_TO_PAGE_SLUG: Record<string, string> = {
-        concert: 'concerts', festival: 'concerts', music: 'concerts',
-        theatre: 'theatre', standup: 'theatre',
+        concert: 'concerts', festival: 'events', music: 'concerts',
+        theatre: 'theatre', standup: 'events',
         cinema: 'cinema',
         club: 'clubs',
         exhibition: 'events', sport: 'events',
@@ -1300,7 +1373,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         organizer_phone: body.organizer_phone || null,
         organizer_email: body.organizer_email || null,
         status: isSubmitterAdmin ? 'approved' : 'pending',
-        submitted_by: submittedBy,
+        submitted_by: finalSubmittedBy,
         is_custom: true,
       };
       
@@ -1342,8 +1415,9 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         contact_name: body.contact_name || null,
         contact_phone: body.contact_phone || null,
         contact_email: body.contact_email || null,
+        tags: normalizeVenueTagsInput(body.tags),
         status: isSubmitterAdmin ? 'approved' : 'pending',
-        submitted_by: submittedBy,
+        submitted_by: finalSubmittedBy,
         is_custom: true,
       };
       
@@ -1465,41 +1539,110 @@ app.put("/make-server-a0e1e9cb/submissions/:id/reject", requireAdmin, async (c) 
   }
 });
 
-// Delete submission (admin only)
-app.delete("/make-server-a0e1e9cb/submissions/:id", requireAdmin, async (c) => {
+// Delete submission (owner or admin)
+app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
   try {
     const id = c.req.param('id');
-    // ✅ Use sbService() to bypass broken RLS policy
+    console.log('🗑️ [DELETE /submissions/:id] Hit route', { id });
+    const token = getTokenFromRequest(c);
+    if (!token) {
+      return c.json({ error: 'Unauthorized - please log in' }, 401);
+    }
+
+    const { data: { user }, error: authError } = await safeGetUser(sbUser(token), token);
+    if (authError || !user || !user.email) {
+      console.error('🗑️ [DELETE /submissions/:id] Auth failed', { id, authError: authError?.message });
+      return c.json({ error: 'Unauthorized - invalid token' }, 401);
+    }
+
+    const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+    const userEmail = normalize(user.email);
+    const userRole = normalize(user.user_metadata?.role);
+    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
+    console.log('🗑️ [DELETE /submissions/:id] Resolved user', { id, userEmail, userRole, isAdmin });
+
     const supabase = sbService();
     
     // Try deleting from events table first
-    const { data: deletedEvent, error: eventError } = await supabase
+    const { data: eventToDelete, error: eventFetchError } = await supabase
       .from('events_ee0c365c')
-      .delete()
+      .select('id, submitted_by, organizer_email')
       .eq('id', id)
-      .select('id')
       .maybeSingle();
-    
-    if (deletedEvent) {
-      console.log(`✅ Event deleted: ${id}`);
-      return c.json({ success: true });
+
+    if (eventFetchError) {
+      return c.json({ error: 'Failed to fetch event', details: eventFetchError.message }, 500);
+    }
+
+    if (eventToDelete) {
+      const isOwner = normalize(eventToDelete.submitted_by) === userEmail || normalize(eventToDelete.organizer_email) === userEmail;
+      if (!isAdmin && !isOwner) {
+        return c.json({ error: 'Forbidden - not your event' }, 403);
+      }
+
+      const { data: deletedEventRows, error: eventError } = await supabase
+        .from('events_ee0c365c')
+        .delete()
+        .eq('id', id)
+        .select('id');
+
+      if (eventError) {
+        return c.json({ error: 'Failed to delete event', details: eventError.message }, 500);
+      }
+      if (!deletedEventRows || deletedEventRows.length === 0) {
+        return c.json({ error: 'Event not found' }, 404);
+      }
+
+      console.log(`✅ Event deleted via /submissions route: ${id}`);
+      return c.json({ success: true, entity: 'event', deleted_id: id });
     }
     
-    // Fallback: try deleting from venues table (legacy bug — events stuck in venues)
-    const { data: deletedVenue, error: venueError } = await supabase
+    // Fallback: try deleting from venues table (legacy + venues)
+    const { data: venueToDelete, error: venueFetchError } = await supabase
+      .from('venues_ee0c365c')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (venueFetchError) {
+      return c.json({ error: 'Failed to fetch venue', details: venueFetchError.message }, 500);
+    }
+    if (!venueToDelete) {
+      return c.json({ error: 'Submission not found' }, 404);
+    }
+
+    const isVenueOwner =
+      normalize(venueToDelete.submitted_by) === userEmail ||
+      normalize(venueToDelete.contact_email) === userEmail ||
+      normalize((venueToDelete as any).organizer_email) === userEmail;
+    console.log('🗑️ [DELETE /submissions/:id] Venue ownership check', {
+      id,
+      submitted_by: normalize(venueToDelete.submitted_by),
+      contact_email: normalize(venueToDelete.contact_email),
+      organizer_email: normalize((venueToDelete as any).organizer_email),
+      userEmail,
+      isVenueOwner,
+      isAdmin,
+    });
+    if (!isAdmin && !isVenueOwner) {
+      return c.json({ error: 'Forbidden - not your venue' }, 403);
+    }
+
+    const { data: deletedVenueRows, error: venueError } = await supabase
       .from('venues_ee0c365c')
       .delete()
       .eq('id', id)
-      .select('id')
-      .maybeSingle();
-    
-    if (deletedVenue) {
-      console.log(`✅ Venue deleted: ${id}`);
-      return c.json({ success: true });
+      .select('id');
+
+    if (venueError) {
+      return c.json({ error: 'Failed to delete venue', details: venueError.message }, 500);
     }
-    
-    console.error('❌ Submission not found:', id);
-    return c.json({ error: 'Submission not found' }, 404);
+    if (!deletedVenueRows || deletedVenueRows.length === 0) {
+      return c.json({ error: 'Submission not found' }, 404);
+    }
+
+    console.log(`✅ Venue deleted via /submissions route: ${id}`);
+    return c.json({ success: true, entity: 'venue', deleted_id: id });
   } catch (error) {
     console.error('❌ Error deleting submission:', error);
     return c.json({ error: 'Failed to delete submission', details: String(error) }, 500);
@@ -1627,11 +1770,26 @@ app.delete("/make-server-a0e1e9cb/my-submissions/all", async (c) => {
 // Get events with advanced filtering
 app.get("/make-server-a0e1e9cb/events", async (c) => {
   try {
-    const status = c.req.query('status'); // pending, approved, rejected
-    const filter = c.req.query('filter'); // upcoming, today, tomorrow, weekend, past
+    const rawStatus = c.req.query('status');
+    const rawFilter = c.req.query('filter');
+    const status = (rawStatus || '').trim().toLowerCase(); // pending, approved, rejected, all
+    const filter = (rawFilter || '').trim().toLowerCase(); // upcoming, today, tomorrow, weekend, past, all
     const city = c.req.query('city');
     const type = c.req.query('type');
     const page_slug = c.req.query('page_slug'); // concerts, theatre, cinema, events, etc.
+    const knownStatuses = new Set(['pending', 'approved', 'rejected', 'all', '']);
+    const knownFilters = new Set(['upcoming', 'today', 'tomorrow', 'weekend', 'past', 'all', '']);
+
+    console.log(
+      `📨 [GET /events] status="${rawStatus ?? ''}" normalized="${status || '(empty)'}" filter="${rawFilter ?? ''}" normalized="${filter || '(empty)'}" city="${city ?? ''}" type="${type ?? ''}" page_slug="${page_slug ?? ''}"`
+    );
+
+    if (!knownStatuses.has(status)) {
+      console.warn(`⚠️ [GET /events] Unknown status "${status}" - query may return empty set`);
+    }
+    if (!knownFilters.has(filter)) {
+      console.warn(`⚠️ [GET /events] Unknown filter "${filter}" - date filter will be skipped`);
+    }
     
     const supabase = getSupabaseClient();
     
@@ -1641,10 +1799,14 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
       .select('*');
     
     // Filter by status (default: only approved)
-    if (status) {
+    // status=all means do not constrain by status.
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     } else {
-      query = query.eq('status', 'approved');
+      // Keep public default behavior (approved only) unless caller explicitly asks for all.
+      if (!status) {
+        query = query.eq('status', 'approved');
+      }
     }
     
     // Filter by page_slug (which page this event belongs to)
@@ -1901,6 +2063,34 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     
     // ✅ Use sbService() to bypass broken RLS policy
     const supabase = sbService();
+
+    let resolvedEventSubmittedBy: string | undefined = undefined;
+    if (body.assign_user_id && body.submitted_by !== undefined && body.submitted_by !== null) {
+      const rawSb = String(body.submitted_by).trim();
+      if (!rawSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+      if (!resolvedSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(body.assign_user_id);
+      if (uidErr || !uidData?.user?.email || uidData.user.email.toLowerCase() !== resolvedSb.toLowerCase()) {
+        return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
+      }
+      resolvedEventSubmittedBy = resolvedSb;
+      console.log(`🔗 Auto-assigning event to user: ${resolvedSb} (userId: ${body.assign_user_id})`);
+    } else if (body.submitted_by !== undefined) {
+      const rawSb = String(body.submitted_by ?? '').trim();
+      if (!rawSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+      if (!resolvedSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      resolvedEventSubmittedBy = resolvedSb;
+    }
     
     // ✅ snake_case only — nema camelCase fallbackova
     const updatePayload = {
@@ -1922,14 +2112,9 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       organizer_name: body.organizer_name,
       organizer_phone: body.organizer_phone,
       organizer_email: body.organizer_email,
-      submitted_by: body.submitted_by,
+      ...(resolvedEventSubmittedBy !== undefined ? { submitted_by: resolvedEventSubmittedBy } : {}),
       updated_at: new Date().toISOString(),
     };
-
-    // ✅ Handle assign_user_id for events
-    if (body.assign_user_id && body.submitted_by) {
-      console.log(`🔗 Auto-assigning event to user: ${body.submitted_by} (userId: ${body.assign_user_id})`);
-    }
 
     // 1️⃣ Try events table first
     const { data: eventsRows, error: eventsError } = await supabase
@@ -1977,7 +2162,8 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         organizer_phone: updatePayload.organizer_phone ?? venueCheck.organizer_phone,
         organizer_email: updatePayload.organizer_email ?? venueCheck.organizer_email,
         status: venueCheck.status || 'approved',
-        submitted_by: updatePayload.submitted_by ?? venueCheck.submitted_by,
+        submitted_by:
+          resolvedEventSubmittedBy !== undefined ? resolvedEventSubmittedBy : venueCheck.submitted_by,
         is_custom: venueCheck.is_custom ?? true,
         source: venueCheck.source,
         created_at: venueCheck.created_at,
@@ -2016,6 +2202,133 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
   } catch (error) {
     console.error('❌ Error updating event:', error);
     return c.json({ error: 'Failed to update event', details: String(error) }, 500);
+  }
+});
+
+// Delete event by ID (owner or admin)
+app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    console.log('🗑️ [DELETE /events/:id] Hit route', { id });
+    if (!id) {
+      return c.json({ error: 'Event ID is required' }, 400);
+    }
+
+    const accessToken = getTokenFromRequest(c);
+    if (!accessToken) {
+      return c.json({ error: 'Unauthorized - please log in' }, 401);
+    }
+
+    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    if (authError || !user || !user.email) {
+      console.error('🗑️ [DELETE /events/:id] Auth failed', { id, authError: authError?.message });
+      return c.json({ error: 'Unauthorized - invalid token' }, 401);
+    }
+
+    const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+    const userEmail = normalize(user.email);
+    const userRole = normalize(user.user_metadata?.role);
+    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
+    console.log('🗑️ [DELETE /events/:id] Resolved user', { id, userEmail, userRole, isAdmin });
+    const supabase = sbService();
+
+    // Primary source: events table
+    const { data: event, error: eventFetchError } = await supabase
+      .from('events_ee0c365c')
+      .select('id, submitted_by, organizer_email')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (eventFetchError) {
+      console.error('🗑️ [DELETE /events/:id] Failed to fetch event', { id, error: eventFetchError.message });
+      return c.json({ error: 'Failed to fetch event', details: eventFetchError.message }, 500);
+    }
+
+    if (event) {
+      const isOwner = normalize(event.submitted_by) === userEmail || normalize(event.organizer_email) === userEmail;
+      console.log('🗑️ [DELETE /events/:id] Ownership check (events table)', {
+        id,
+        submitted_by: normalize(event.submitted_by),
+        organizer_email: normalize(event.organizer_email),
+        userEmail,
+        isOwner,
+        isAdmin,
+      });
+      if (!isAdmin && !isOwner) {
+        console.warn('🗑️ [DELETE /events/:id] Authorization denied (events table)', { id, userEmail });
+        return c.json({ error: 'Forbidden - not your event' }, 403);
+      }
+
+      const { data: deletedEvents, error: deleteError } = await supabase
+        .from('events_ee0c365c')
+        .delete()
+        .eq('id', id)
+        .select('id');
+
+      if (deleteError) {
+        console.error('🗑️ [DELETE /events/:id] Delete failed (events table)', { id, error: deleteError.message });
+        return c.json({ error: 'Failed to delete event', details: deleteError.message }, 500);
+      }
+      console.log('🗑️ [DELETE /events/:id] Delete result (events table)', { id, deletedCount: deletedEvents?.length || 0 });
+      if (!deletedEvents || deletedEvents.length === 0) {
+        return c.json({ error: 'Event not found' }, 404);
+      }
+
+      return c.json({ success: true, deleted_id: id, entity: 'event' });
+    }
+
+    // Legacy fallback: some events were historically stored in venues table
+    const { data: legacyEvent, error: legacyFetchError } = await supabase
+      .from('venues_ee0c365c')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (legacyFetchError) {
+      console.error('🗑️ [DELETE /events/:id] Failed to fetch legacy event', { id, error: legacyFetchError.message });
+      return c.json({ error: 'Failed to fetch legacy event', details: legacyFetchError.message }, 500);
+    }
+    if (!legacyEvent) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+
+    const isLegacyOwner =
+      normalize(legacyEvent.submitted_by) === userEmail ||
+      normalize(legacyEvent.contact_email) === userEmail ||
+      normalize((legacyEvent as any).organizer_email) === userEmail;
+    console.log('🗑️ [DELETE /events/:id] Ownership check (legacy table)', {
+      id,
+      submitted_by: normalize(legacyEvent.submitted_by),
+      contact_email: normalize(legacyEvent.contact_email),
+      organizer_email: normalize((legacyEvent as any).organizer_email),
+      userEmail,
+      isLegacyOwner,
+      isAdmin,
+    });
+    if (!isAdmin && !isLegacyOwner) {
+      console.warn('🗑️ [DELETE /events/:id] Authorization denied (legacy table)', { id, userEmail });
+      return c.json({ error: 'Forbidden - not your event' }, 403);
+    }
+
+    const { data: deletedLegacyRows, error: deleteLegacyError } = await supabase
+      .from('venues_ee0c365c')
+      .delete()
+      .eq('id', id)
+      .select('id');
+
+    if (deleteLegacyError) {
+      console.error('🗑️ [DELETE /events/:id] Delete failed (legacy table)', { id, error: deleteLegacyError.message });
+      return c.json({ error: 'Failed to delete legacy event', details: deleteLegacyError.message }, 500);
+    }
+    console.log('🗑️ [DELETE /events/:id] Delete result (legacy table)', { id, deletedCount: deletedLegacyRows?.length || 0 });
+    if (!deletedLegacyRows || deletedLegacyRows.length === 0) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+
+    return c.json({ success: true, deleted_id: id, entity: 'event', legacy_venue: true });
+  } catch (error) {
+    console.error('❌ Error deleting event:', error);
+    return c.json({ error: 'Failed to delete event', details: String(error) }, 500);
   }
 });
 
@@ -2244,14 +2557,37 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
     // ✅ snake_case only
     const assignUserId = body.assign_user_id;
     let submittedByUpdate: Record<string, any> = {};
-    if (assignUserId && body.submitted_by) {
-      submittedByUpdate = { submitted_by: body.submitted_by };
-      console.log(`🔗 Auto-assigning venue to user: ${body.submitted_by} (userId: ${assignUserId})`);
+    if (assignUserId && body.submitted_by !== undefined && body.submitted_by !== null) {
+      const rawSb = String(body.submitted_by).trim();
+      if (!rawSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+      if (!resolvedSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(assignUserId);
+      if (uidErr || !uidData?.user?.email || uidData.user.email.toLowerCase() !== resolvedSb.toLowerCase()) {
+        return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
+      }
+      submittedByUpdate = { submitted_by: resolvedSb };
+      console.log(`🔗 Auto-assigning venue to user: ${resolvedSb} (userId: ${assignUserId})`);
     } else if (body.submitted_by !== undefined) {
-      submittedByUpdate = { submitted_by: body.submitted_by };
-      console.log(`🔗 Updating submitted_by to: ${body.submitted_by || '(cleared)'}`);
+      const rawSb = String(body.submitted_by ?? '').trim();
+      if (!rawSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+      if (!resolvedSb) {
+        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      }
+      submittedByUpdate = { submitted_by: resolvedSb };
+      console.log(`🔗 Updating submitted_by to: ${resolvedSb}`);
     }
-    
+
+    const tagsUpdate =
+      body.tags !== undefined ? { tags: normalizeVenueTagsInput(body.tags) } : {};
+
     // ✅ snake_case only — ?? (nullish coalescing) preserves empty strings
     const { data: venue, error } = await supabase
       .from('venues_ee0c365c')
@@ -2275,6 +2611,7 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
         contact_name: body.contact_name,
         contact_phone: body.contact_phone,
         contact_email: contactEmail,
+        ...tagsUpdate,
         ...submittedByUpdate,
         updated_at: new Date().toISOString(),
       })
@@ -2292,6 +2629,87 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
   } catch (error) {
     console.error('❌ Error updating venue:', error);
     return c.json({ error: 'Failed to update venue', details: String(error) }, 500);
+  }
+});
+
+// Delete venue by ID (owner or admin)
+app.delete("/make-server-a0e1e9cb/venues/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    console.log('🗑️ [DELETE /venues/:id] Hit route', { id });
+    if (!id) {
+      return c.json({ error: 'Venue ID is required' }, 400);
+    }
+
+    const accessToken = getTokenFromRequest(c);
+    if (!accessToken) {
+      return c.json({ error: 'Unauthorized - please log in' }, 401);
+    }
+
+    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    if (authError || !user || !user.email) {
+      console.error('🗑️ [DELETE /venues/:id] Auth failed', { id, authError: authError?.message });
+      return c.json({ error: 'Unauthorized - invalid token' }, 401);
+    }
+
+    const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+    const userEmail = normalize(user.email);
+    const userRole = normalize(user.user_metadata?.role);
+    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
+    console.log('🗑️ [DELETE /venues/:id] Resolved user', { id, userEmail, userRole, isAdmin });
+    const supabase = sbService();
+
+    const { data: venue, error: fetchError } = await supabase
+      .from('venues_ee0c365c')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error('🗑️ [DELETE /venues/:id] Failed to fetch venue', { id, error: fetchError.message });
+      return c.json({ error: 'Failed to fetch venue', details: fetchError.message }, 500);
+    }
+    if (!venue) {
+      return c.json({ error: 'Venue not found' }, 404);
+    }
+
+    const isOwner =
+      normalize(venue.submitted_by) === userEmail ||
+      normalize(venue.contact_email) === userEmail ||
+      normalize((venue as any).organizer_email) === userEmail;
+    console.log('🗑️ [DELETE /venues/:id] Ownership check', {
+      id,
+      submitted_by: normalize(venue.submitted_by),
+      contact_email: normalize(venue.contact_email),
+      organizer_email: normalize((venue as any).organizer_email),
+      userEmail,
+      isOwner,
+      isAdmin,
+    });
+    if (!isAdmin && !isOwner) {
+      console.warn('🗑️ [DELETE /venues/:id] Authorization denied', { id, userEmail });
+      return c.json({ error: 'Forbidden - not your venue' }, 403);
+    }
+
+    const { data: deletedVenues, error: deleteError } = await supabase
+      .from('venues_ee0c365c')
+      .delete()
+      .eq('id', id)
+      .select('id');
+
+    if (deleteError) {
+      console.error('🗑️ [DELETE /venues/:id] Delete failed', { id, error: deleteError.message });
+      return c.json({ error: 'Failed to delete venue', details: deleteError.message }, 500);
+    }
+    console.log('🗑️ [DELETE /venues/:id] Delete result', { id, deletedCount: deletedVenues?.length || 0 });
+    if (!deletedVenues || deletedVenues.length === 0) {
+      return c.json({ error: 'Venue not found' }, 404);
+    }
+
+    return c.json({ success: true, deleted_id: id, entity: 'venue' });
+  } catch (error) {
+    console.error('❌ Error deleting venue:', error);
+    return c.json({ error: 'Failed to delete venue', details: String(error) }, 500);
   }
 });
 
@@ -2830,259 +3248,6 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
   } catch (error) {
     console.error('❌ Error in delete-account:', error);
     return c.json({ error: 'Failed to delete account', details: String(error) }, 500);
-  }
-});
-
-// ===================================
-// 🌱 SEED DATA ENDPOINT (admin only)
-// ===================================
-app.post('/make-server-a0e1e9cb/seed', async (c) => {
-  console.log('🌱 POST /seed - Populating database with sample data');
-  try {
-    const token = getTokenFromRequest(c);
-    if (!token) {
-      return c.json({ error: 'Unauthorized - no token provided' }, 401);
-    }
-    
-    const { data: { user: authUser } } = await safeGetUser(sbService(), token);
-    if (!authUser) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-    
-    const isMaster = authUser.user_metadata?.is_master_admin === true || authUser.email === MASTER_ADMIN_EMAIL;
-    if (!isMaster) {
-      return c.json({ error: 'Only master admin can seed data' }, 403);
-    }
-
-    const supabase = sbService();  // service role bypasses RLS (koja referencira nepostojeću 'category' kolonu)
-    const adminEmail = authUser.email || MASTER_ADMIN_EMAIL;
-    const now = new Date().toISOString();
-
-    const venues = [
-      // ── RESTAURANTS (venue_type: restaurant) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'restaurant',title:'Kazamat',title_en:'Kazamat',description:'Elegantni restoran smješten u tvrđavi Kastel sa pogledom na rijeku Vrbas. Nudi vrhunsku bosansku i internacionalnu kuhinju u jedinstvenom ambijentu.',description_en:'Elegant restaurant located in the Kastel fortress overlooking the Vrbas river. Offers premium Bosnian and international cuisine in a unique setting.',city:'Banja Luka',address:'Kastel bb, 78000 Banja Luka',phone:'051222333',cuisine:'Bosanska, Internacionalna',cuisine_en:'Bosnian, International',opening_hours:'Pon-Ned: 11:00-23:00',opening_hours_en:'Mon-Sun: 11:00-23:00',image:'https://images.unsplash.com/photo-1758648207365-df458d3e83f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxlbGVnYW50JTIwcmVzdGF1cmFudCUyMGludGVyaW9yJTIwZGluaW5nfGVufDF8fHx8MTc3MzA5NDMyMnww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'restaurant',title:'Restoran Mala Stanica',title_en:'Restaurant Mala Stanica',description:'Restoran sa terasom na obali Vrbasa. Specijaliteti od riječne ribe i domaće paste u romantičnom ambijentu.',description_en:'Riverside terrace restaurant. Specialties from river fish and homemade pasta in a romantic setting.',city:'Banja Luka',address:'Patre 5, 78000 Banja Luka',phone:'051234567',cuisine:'Riblja, Mediteranska',cuisine_en:'Seafood, Mediterranean',opening_hours:'Pon-Ned: 10:00-23:00',opening_hours_en:'Mon-Sun: 10:00-23:00',image:'https://images.unsplash.com/photo-1760726743604-fb4e71718901?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpdGVycmFuZWFuJTIwc2VhZm9vZCUyMHJlc3RhdXJhbnQlMjB0ZXJyYWNlfGVufDF8fHx8MTc3MzE1MzE5OXww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'restaurant',title:'Kruna',title_en:'Kruna',description:'Premium fine dining restoran sa panoramskim pogledom na grad. Autorska kuhinja, sezonski meni i vrhunska vinska karta.',description_en:'Premium fine dining restaurant with panoramic city views. Signature cuisine, seasonal menu and excellent wine list.',city:'Banja Luka',address:'Kralja Petra I Karađorđevića 115',phone:'051345678',cuisine:'Autorska, Internacionalna',cuisine_en:'Signature, International',opening_hours:'Pon-Sub: 12:00-23:00',opening_hours_en:'Mon-Sat: 12:00-23:00',image:'https://images.unsplash.com/photo-1767732182449-395bdcbf875f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyb29mdG9wJTIwcmVzdGF1cmFudCUyMGNpdHklMjB2aWV3JTIwZGlubmVyfGVufDF8fHx8MTc3MzE1MzE5OXww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── ĆEVABDŽINICE (venue_type: cevabdzinica) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'cevabdzinica',title:'Kod Muje',title_en:'Kod Muje',description:'Tradicionalna ćevabdžinica sa najboljim ćevapima u gradu. Domaća atmosfera i autentični balkanski ukusi.',description_en:'Traditional grill house with the best cevapi in town. Homely atmosphere and authentic Balkan flavors.',city:'Banja Luka',address:'Kralja Petra I Karađorđevića 97',phone:'051211234',cuisine:'Balkanska, Roštilj',cuisine_en:'Balkan, Grill',opening_hours:'Pon-Sub: 08:00-22:00',opening_hours_en:'Mon-Sat: 08:00-22:00',image:'https://images.unsplash.com/photo-1592412544617-7c962b8b7271?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjZXZhcGklMjBrZWJhYiUyMGJhbGthbiUyMGdyaWxsZWQlMjBtZWF0fGVufDF8fHx8MTc3MzE1MzE5NHww&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'cevabdzinica',title:'Ćevabdžinica Tukić',title_en:'Cevabdzinica Tukic',description:'Porodična ćevabdžinica sa receptom starim 40 godina. Ručno pravljeni ćevapi od junetine i lepinja iz krušne peći.',description_en:'Family grill house with a 40-year-old recipe. Handmade beef cevapi and bread from a wood-fired oven.',city:'Banja Luka',address:'Srpska 22',phone:'051223344',cuisine:'Balkanska, Roštilj',cuisine_en:'Balkan, Grill',opening_hours:'Pon-Sub: 07:00-21:00',opening_hours_en:'Mon-Sat: 07:00-21:00',image:'https://images.unsplash.com/photo-1752162958264-22f6f5aecd96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGJhbGthbiUyMGdyaWxsJTIwZm9vZHxlbnwxfHx8fDE3NzMwNDczODh8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'cevabdzinica',title:'Ćevabdžinica Banja Luka',title_en:'Cevabdzinica Banja Luka',description:'Klasična banjalučka ćevabdžinica u centru grada. Banjalučki ćevap serviran u somunu sa kajmakom.',description_en:'Classic Banja Luka grill house downtown. Banja Luka-style cevap served in somun bread with kajmak.',city:'Banja Luka',address:'Veselina Masleše 5',phone:'051556677',cuisine:'Balkanska',cuisine_en:'Balkan',opening_hours:'Pon-Ned: 08:00-20:00',opening_hours_en:'Mon-Sun: 08:00-20:00',image:'https://images.unsplash.com/photo-1752162958264-22f6f5aecd96?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0cmFkaXRpb25hbCUyMGJhbGthbiUyMGdyaWxsJTIwZm9vZHxlbnwxfHx8fDE3NzMwNDczODh8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── PIZZERIE (venue_type: pizzeria) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'pizzeria',title:'Pizzeria San Marco',title_en:'Pizzeria San Marco',description:'Autentična italijanska picerija sa pizzama pečenim u drvenoj peći. Svježi sastojci i originalni recepti iz Napulja.',description_en:'Authentic Italian pizzeria with wood-fired pizzas. Fresh ingredients and original recipes from Naples.',city:'Banja Luka',address:'Ferhadija 12',phone:'051445566',cuisine:'Italijanska',cuisine_en:'Italian',opening_hours:'Pon-Ned: 10:00-23:00',opening_hours_en:'Mon-Sun: 10:00-23:00',image:'https://images.unsplash.com/photo-1689150911817-3e27168ab6a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpdGFsaWFuJTIwcGl6emElMjB3b29kJTIwb3ZlbnxlbnwxfHx8fDE3NzMwNjk4MTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'pizzeria',title:'Pizza Plus',title_en:'Pizza Plus',description:'Moderna picerija sa kreativnim kombinacijama i klasičnim receptima. Dostava na kućnu adresu u roku od 30 min.',description_en:'Modern pizzeria with creative combos and classic recipes. Home delivery within 30 minutes.',city:'Banja Luka',address:'Aleja Svetog Save 20',phone:'051667788',cuisine:'Italijanska, Fast food',cuisine_en:'Italian, Fast food',opening_hours:'Pon-Ned: 09:00-24:00',opening_hours_en:'Mon-Sun: 09:00-24:00',image:'https://images.unsplash.com/photo-1689150911817-3e27168ab6a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpdGFsaWFuJTIwcGl6emElMjB3b29kJTIwb3ZlbnxlbnwxfHx8fDE3NzMwNjk4MTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'pizzeria',title:'Napoli Express',title_en:'Napoli Express',description:'Brza picerija sa tankim tijestom u napolitanskom stilu. Sveže napravljeno tijesto svaki dan.',description_en:'Fast pizzeria with thin Neapolitan-style dough. Freshly made dough every day.',city:'Banja Luka',address:'Jovana Dučića 30',phone:'051778899',cuisine:'Italijanska',cuisine_en:'Italian',opening_hours:'Pon-Ned: 10:00-22:00',opening_hours_en:'Mon-Sun: 10:00-22:00',image:'https://images.unsplash.com/photo-1689150911817-3e27168ab6a3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpdGFsaWFuJTIwcGl6emElMjB3b29kJTIwb3ZlbnxlbnwxfHx8fDE3NzMwNjk4MTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── FAST FOOD (venue_type: fast_food) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'fast_food',title:'Burger House BL',title_en:'Burger House BL',description:'Gurmansko burger iskustvo sa domaćim mesom i kreativnim kombinacijama. Craft pivo i premium kokteli.',description_en:'Gourmet burger experience with locally sourced meat and creative combinations. Craft beer and premium cocktails.',city:'Banja Luka',address:'Aleja Svetog Save 8',phone:'051555666',cuisine:'Američka, Fast food',cuisine_en:'American, Fast food',opening_hours:'Pon-Ned: 11:00-23:00',opening_hours_en:'Mon-Sun: 11:00-23:00',image:'https://images.unsplash.com/photo-1677825949038-9e2dea0620d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYXN0JTIwZm9vZCUyMGJ1cmdlciUyMHJlc3RhdXJhbnR8ZW58MXx8fHwxNzczMTUzMTg2fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'fast_food',title:'Giros Korner',title_en:'Gyros Corner',description:'Brza hrana inspirisana grčkom kuhinjom. Giros u lepinji, souvlaki i svježe salate.',description_en:'Fast food inspired by Greek cuisine. Gyros wraps, souvlaki and fresh salads.',city:'Banja Luka',address:'Bulevar Cara Dušana 15',phone:'051889900',cuisine:'Grčka, Fast food',cuisine_en:'Greek, Fast food',opening_hours:'Pon-Ned: 09:00-01:00',opening_hours_en:'Mon-Sun: 09:00-01:00',image:'https://images.unsplash.com/photo-1677825949038-9e2dea0620d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYXN0JTIwZm9vZCUyMGJ1cmdlciUyMHJlc3RhdXJhbnR8ZW58MXx8fHwxNzczMTUzMTg2fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'fast_food',title:'Wok & Roll',title_en:'Wok & Roll',description:'Azijski fast food sa noodle-ima, wok jelima i spring roll-ovima. Brza priprema, svježi sastojci.',description_en:'Asian fast food with noodles, wok dishes and spring rolls. Quick preparation, fresh ingredients.',city:'Banja Luka',address:'Gundulićeva 12',phone:'051990011',cuisine:'Azijska, Fast food',cuisine_en:'Asian, Fast food',opening_hours:'Pon-Ned: 10:00-22:00',opening_hours_en:'Mon-Sun: 10:00-22:00',image:'https://images.unsplash.com/photo-1771773527813-a0524607bcf0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdXNoaSUyMGphcGFuZXNlJTIwcmVzdGF1cmFudCUyMGZyZXNofGVufDF8fHx8MTc3MzE1MzE5Mnww&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── DESSERT SHOP (venue_type: dessert_shop) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'dessert_shop',title:'Slatki Kutak',title_en:'Sweet Corner',description:'Slastičarna poznata po domaćim tortama, kremšnitama i baklavi. Savršen za porodični izlazak.',description_en:'Pastry shop known for homemade cakes, cream slices and baklava. Perfect for family outings.',city:'Banja Luka',address:'Kneza Miloša 22',phone:'051334455',cuisine:'Slastičarnica',cuisine_en:'Pastry shop',opening_hours:'Pon-Ned: 08:00-22:00',opening_hours_en:'Mon-Sun: 08:00-22:00',image:'https://images.unsplash.com/photo-1646981973579-f36c7298f07e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXN0cnklMjBiYWtlcnklMjBjYWtlcyUyMGRlc3NlcnR8ZW58MXx8fHwxNzczMTUzMTg3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'dessert_shop',title:'Gelato Amore',title_en:'Gelato Amore',description:'Artizanski sladoled po italijanskim receptima. 24 ukusa koji se mijenjaju sezonski, plus vegansko i sugar-free opcije.',description_en:'Artisan gelato from Italian recipes. 24 rotating seasonal flavors, plus vegan and sugar-free options.',city:'Banja Luka',address:'Veselina Masleše 35',phone:'051445500',cuisine:'Sladoled, Deserti',cuisine_en:'Gelato, Desserts',opening_hours:'Pon-Ned: 10:00-22:00',opening_hours_en:'Mon-Sun: 10:00-22:00',image:'https://images.unsplash.com/photo-1646981973579-f36c7298f07e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXN0cnklMjBiYWtlcnklMjBjYWtlcyUyMGRlc3NlcnR8ZW58MXx8fHwxNzczMTUzMTg3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'dessert_shop',title:'Čoko Raj',title_en:'Choco Heaven',description:'Čokoladnica i slastičarna sa domaćim pralineima, čokoladnim fondanima i toplom čokoladom od belgijskog kakaa.',description_en:'Chocolaterie and pastry shop with homemade pralines, chocolate fondants and hot chocolate from Belgian cocoa.',city:'Banja Luka',address:'Ive Andrića 10',phone:'051556600',cuisine:'Čokolada, Deserti',cuisine_en:'Chocolate, Desserts',opening_hours:'Pon-Sub: 09:00-21:00',opening_hours_en:'Mon-Sat: 09:00-21:00',image:'https://images.unsplash.com/photo-1646981973579-f36c7298f07e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwYXN0cnklMjBiYWtlcnklMjBjYWtlcyUyMGRlc3NlcnR8ZW58MXx8fHwxNzczMTUzMTg3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── PUB (venue_type: pub) ×3 ─��
-      { page_slug:'food-and-drink',venue_type:'pub',title:'Craft Beer Pub',title_en:'Craft Beer Pub',description:'Pivnica sa 20+ vrsta craft piva iz lokalnih i međunarodnih mikropivara. Pub hrana i opuštena atmosfera.',description_en:'Pub with 20+ types of craft beer from local and international microbreweries. Pub food and relaxed atmosphere.',city:'Banja Luka',address:'Gundulićeva 8',phone:'051777888',cuisine:'Craft pivo, Pub hrana',cuisine_en:'Craft beer, Pub food',opening_hours:'Pon-Ned: 16:00-01:00',opening_hours_en:'Mon-Sun: 16:00-01:00',image:'https://images.unsplash.com/photo-1761474910886-a4c7308076d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmFmdCUyMGJlZXIlMjBwdWIlMjBicmV3ZXJ5fGVufDF8fHx8MTc3MzE1MzE5Mnww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'pub',title:'Irish Corner',title_en:'Irish Corner',description:'Irski pub sa živom muzikom petkom i subotom. Guinness na točenju, fish & chips i whiskey kolekcija.',description_en:'Irish pub with live music on Fridays and Saturdays. Draught Guinness, fish & chips and whiskey collection.',city:'Banja Luka',address:'Srpska 45',phone:'051112233',cuisine:'Irska, Pub hrana',cuisine_en:'Irish, Pub food',opening_hours:'Pon-Ned: 15:00-02:00',opening_hours_en:'Mon-Sun: 15:00-02:00',image:'https://images.unsplash.com/photo-1761474910886-a4c7308076d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmFmdCUyMGJlZXIlMjBwdWIlMjBicmV3ZXJ5fGVufDF8fHx8MTc3MzE1MzE5Mnww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'pub',title:'Wine Gallery',title_en:'Wine Gallery',description:'Vinski bar sa kolekcijom od 150+ etiketa iz BiH, Srbije, Hrvatske i svijeta. Degustacije svake petkom.',description_en:'Wine bar with a collection of 150+ labels from BiH, Serbia, Croatia and the world. Tastings every Friday.',city:'Banja Luka',address:'Braće Fejića 36',phone:'051543210',cuisine:'Vino, Delikatese',cuisine_en:'Wine, Delicatessen',opening_hours:'Pon-Sub: 15:00-24:00',opening_hours_en:'Mon-Sat: 15:00-24:00',image:'https://images.unsplash.com/photo-1650903015056-4c2e63a8ce85?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aW5lJTIwYmFyJTIwY2VsbGFyJTIwdGFzdGluZ3xlbnwxfHx8fDE3NzMwNDczOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── CAFE (venue_type: cafe) ×3 ──
-      { page_slug:'food-and-drink',venue_type:'cafe',title:'Cafe Capuccino',title_en:'Cafe Capuccino',description:'Udoban kafić sa najboljom kafom u gradu. Domaće torte, kolači i latte art koji oduševljava.',description_en:'Cozy cafe with the best coffee in town. Homemade cakes, pastries and impressive latte art.',city:'Banja Luka',address:'Kralja Petra I Karađorđevića 55',phone:'051123456',cuisine:'Kafa, Kolači',cuisine_en:'Coffee, Pastries',opening_hours:'Pon-Ned: 07:00-23:00',opening_hours_en:'Mon-Sun: 07:00-23:00',image:'https://images.unsplash.com/photo-1548983811-31048d472093?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3p5JTIwY29mZmVlJTIwc2hvcCUyMGNhZmUlMjBsYXR0ZXxlbnwxfHx8fDE3NzMxMzk5MzJ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'cafe',title:'Latte Boutique',title_en:'Latte Boutique',description:'Moderni specialty coffee shop sa zrnima iz cijeloga svijeta. Third wave kafa i domaći kolači.',description_en:'Modern specialty coffee shop with beans from around the world. Third wave coffee and homemade pastries.',city:'Banja Luka',address:'Maršala Tita 30',phone:'051667788',cuisine:'Specialty kafa',cuisine_en:'Specialty coffee',opening_hours:'Pon-Sub: 07:30-22:00',opening_hours_en:'Mon-Sat: 07:30-22:00',image:'https://images.unsplash.com/photo-1615127039322-71e4a97433d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBjYWZlJTIwaW50ZXJpb3IlMjBkZXNpZ258ZW58MXx8fHwxNzczMTA4MzczfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'food-and-drink',venue_type:'cafe',title:'Book Cafe',title_en:'Book Cafe',description:'Kafić-knjižara sa čitaonicom i bogatim fondom knjiga. Tiha oaza za ljubitelje čitanja uz odličnu kafu.',description_en:'Bookstore-cafe with reading room and rich book collection. A quiet oasis for reading lovers with excellent coffee.',city:'Banja Luka',address:'Ive Andrića 4',phone:'051888999',cuisine:'Kafa, Čaj',cuisine_en:'Coffee, Tea',opening_hours:'Pon-Sub: 09:00-21:00',opening_hours_en:'Mon-Sat: 09:00-21:00',image:'https://images.unsplash.com/photo-1739133086794-6424277dbfd0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib29rc3RvcmUlMjByZWFkaW5nJTIwY296eSUyMGxpYnJhcnl8ZW58MXx8fHwxNzczMTUzMTk5fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── NIGHTCLUBS (venue_type: nightclub, page_slug: clubs) ×3 ──
-      { page_slug:'clubs',venue_type:'nightclub',title:'Club Underground',title_en:'Club Underground',description:'Najpoznatiji noćni klub u Banja Luci sa DJ-evima iz regiona. Elektronska, house i techno muzika.',description_en:'The most famous nightclub in Banja Luka with DJs from the region. Electronic, house and techno music.',city:'Banja Luka',address:'Braće Mažar 7',phone:'051666777',opening_hours:'Pet-Sub: 23:00-05:00',opening_hours_en:'Fri-Sat: 23:00-05:00',image:'https://images.unsplash.com/photo-1657208431551-cbf415b8ef26?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuaWdodGNsdWIlMjBwYXJ0eSUyMGxpZ2h0cyUyMGRhbmNlfGVufDF8fHx8MTc3MzA0NzM4OXww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'clubs',venue_type:'nightclub',title:'Lounge 33',title_en:'Lounge 33',description:'Elegantni koktel bar i lounge sa premium koktelima i opuštenom muzikom. Savršeno za veče u dvoje.',description_en:'Elegant cocktail bar and lounge with premium cocktails and relaxed music. Perfect for a romantic evening.',city:'Banja Luka',address:'Svetog Save 33',phone:'051999000',opening_hours:'Pon-Sub: 18:00-02:00',opening_hours_en:'Mon-Sat: 18:00-02:00',image:'https://images.unsplash.com/photo-1758685493098-d3a09d4044d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb2NrdGFpbCUyMGJhciUyMGxvdW5nZSUyMGV2ZW5pbmd8ZW58MXx8fHwxNzczMDQ3MzkwfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'���€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'clubs',venue_type:'nightclub',title:'Club Pulse',title_en:'Club Pulse',description:'Moderni klub sa vrhunskim zvukom i LED instalacijama. Domaći i gostujući DJ-evi svaki vikend.',description_en:'Modern club with top-tier sound system and LED installations. Local and guest DJs every weekend.',city:'Sarajevo',address:'Hamdije Kreševljakovića 3, 71000 Sarajevo',phone:'033889900',opening_hours:'Čet-Sub: 22:00-05:00',opening_hours_en:'Thu-Sat: 22:00-05:00',image:'https://images.unsplash.com/photo-1583376102242-5a6aad625ce5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaiUyMGVsZWN0cm9uaWMlMjBtdXNpYyUyMGNsdWJ8ZW58MXx8fHwxNzczMDQ3Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── ATTRACTIONS (venue_type: other, page_slug: attractions) ×3 ──
-      { page_slug:'attractions',venue_type:'other',title:'Tvrđava Kastel',title_en:'Kastel Fortress',description:'Srednjovjekovna tvrđava na obali Vrbasa. Jedna od najstarijih građevina u Banja Luci sa bogatom historijom.',description_en:'Medieval fortress on the banks of the Vrbas river. One of the oldest structures in Banja Luka with rich history.',city:'Banja Luka',address:'Kastel bb, 78000 Banja Luka',phone:'051301143',opening_hours:'Pon-Ned: 08:00-20:00',opening_hours_en:'Mon-Sun: 08:00-20:00',image:'https://images.unsplash.com/photo-1771877418824-1a8ef2b603c7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbGQlMjB0b3duJTIwZm9ydHJlc3MlMjBjYXN0bGUlMjBhdHRyYWN0aW9ufGVufDF8fHx8MTc3MzA0NzM5NHww&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'attractions',venue_type:'other',title:'Kanjon Vrbasa',title_en:'Vrbas Canyon',description:'Predivan kanjon rijeke Vrbas sa mogućnostima raftinga, kajaka i pješačenja. Prirodna ljepota na 20 minuta od centra.',description_en:'Beautiful Vrbas river canyon with rafting, kayaking and hiking opportunities. Natural beauty 20 minutes from downtown.',city:'Banja Luka',address:'Kanjon Vrbasa, Banja Luka',phone:'051301200',opening_hours:'Otvoreno 24h',opening_hours_en:'Open 24h',image:'https://images.unsplash.com/photo-1596825456493-a96b05d52c99?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyaXZlciUyMGJyaWRnZSUyMG5hdHVyZSUyMHBhcmt8ZW58MXx8fHwxNzczMDQ3Mzk0fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'attractions',venue_type:'other',title:'Hram Hrista Spasitelja',title_en:'Cathedral of Christ the Saviour',description:'Najveći pravoslavni hram u Banja Luci. Impresivna arhitektura i prekrasne freske u unutrašnjosti.',description_en:'The largest Orthodox cathedral in Banja Luka. Impressive architecture and beautiful interior frescoes.',city:'Banja Luka',address:'Trg srpskih vladara 1',phone:'051215302',opening_hours:'Pon-Ned: 07:00-19:00',opening_hours_en:'Mon-Sun: 07:00-19:00',image:'https://images.unsplash.com/photo-1627661086197-e1fb0e27bdce?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaHVyY2glMjBvcnRob2RveCUyMGNhdGhlZHJhbCUyMGFyY2hpdGVjdHVyZXxlbnwxfHx8fDE3NzMxNTMyMDF8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── CINEMA (venue_type: other, page_slug: cinema) ×3 ──
-      { page_slug:'cinema',venue_type:'other',title:'Cinestar Banja Luka',title_en:'Cinestar Banja Luka',description:'Moderni multipleks bioskop sa 6 sala, 3D projekcijama i IMAX iskustvom. Najnoviji holivudski i evropski filmovi.',description_en:'Modern multiplex cinema with 6 screens, 3D projections and IMAX experience. Latest Hollywood and European movies.',city:'Banja Luka',address:'Delta Planet Mall, Zapadni tranzit bb',phone:'051999111',opening_hours:'Pon-Ned: 10:00-24:00',opening_hours_en:'Mon-Sun: 10:00-24:00',image:'https://images.unsplash.com/photo-1640127249308-098702574176?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaW5lbWElMjBtb3ZpZSUyMHRoZWF0ZXIlMjBzY3JlZW58ZW58MXx8fHwxNzczMTIyNTM4fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'7-12 KM',price_en:'7-12 BAM',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'cinema',venue_type:'other',title:'Kino Kozara',title_en:'Cinema Kozara',description:'Kultni bioskop u centru grada sa jednom velikom salom. Projekcije art filmova, domaćih premijera i filmskih festivala.',description_en:'Iconic downtown cinema with one large hall. Art film screenings, local premieres and film festivals.',city:'Banja Luka',address:'Kralja Petra I Karađorđevića 100',phone:'051301450',opening_hours:'Pon-Ned: 16:00-22:00',opening_hours_en:'Mon-Sun: 16:00-22:00',image:'https://images.unsplash.com/photo-1758575603664-b2233ccc6eea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvdXRkb29yJTIwY2luZW1hJTIwbmlnaHQlMjBzY3JlZW5pbmd8ZW58MXx8fHwxNzczMTUzMTg5fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'5-8 KM',price_en:'5-8 BAM',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'cinema',venue_type:'other',title:'Open Air Cinema Kastel',title_en:'Open Air Cinema Kastel',description:'Ljetni bioskop na otvorenom u tvrđavi Kastel. Projekcije pod zvijezdama od juna do septembra.',description_en:'Summer open-air cinema at Kastel fortress. Screenings under the stars from June to September.',city:'Banja Luka',address:'Kastel bb',phone:'051301500',opening_hours:'Jun-Sep: 21:00-23:30',opening_hours_en:'Jun-Sep: 21:00-23:30',image:'https://images.unsplash.com/photo-1614115866447-c9a299154650?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaWxtJTIwZmVzdGl2YWwlMjBwcmVtaWVyZSUyMHJlZCUyMGNhcnBldHxlbnwxfHx8fDE3NzMxNTMxODl8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'5 KM',price_en:'5 BAM',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-    ];
-
-    const events = [
-      // ── CONCERT ×3 ──
-      { page_slug:'concerts',event_type:'concert',title:'Dubioza Kolektiv - Banja Luka Live',title_en:'Dubioza Kolektiv - Banja Luka Live',description:'Veliki koncert benda Dubioza Kolektiv na otvorenom. Energija, aktivizam i nezaboravni provod.',description_en:'Big open-air concert by Dubioza Kolektiv. Energy, activism and an unforgettable night out.',city:'Banja Luka',location:'Gradski stadion Banja Luka',address:'Stadionska bb',image:'https://images.unsplash.com/photo-1759893025842-2b897398dfa7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaXZlJTIwbXVzaWMlMjBjb25jZXJ0JTIwb3V0ZG9vciUyMGNyb3dkfGVufDF8fHx8MTc3MzE1MzE5MHww&ixlib=rb-4.1.0&q=80&w=1080',price:'25 KM',price_en:'25 BAM',start_at:'2026-04-18T20:00:00.000Z',end_at:'2026-04-18T23:30:00.000Z',venue_name:'Gradski stadion',organizer_name:'BL Live Events',organizer_phone:'066123456',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'concerts',event_type:'concert',title:'Jazz Night - Banja Luka Blues & Jazz',title_en:'Jazz Night - Banja Luka Blues & Jazz',description:'Internacionalni jazz festival sa muzičarima iz 10 zemalja. Dva dana vrhunske muzike na otvorenom.',description_en:'International jazz festival with musicians from 10 countries. Two days of premium open-air music.',city:'Banja Luka',location:'Kastel Fortress',address:'Kastel bb',image:'https://images.unsplash.com/photo-1763178466088-09e3678eb56b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdW1tZXIlMjBtdXNpYyUyMGZlc3RpdmFsJTIwb3V0ZG9vciUyMHN0YWdlfGVufDF8fHx8MTc3MzE1MzIwMHww&ixlib=rb-4.1.0&q=80&w=1080',price:'20 KM',price_en:'20 BAM',start_at:'2026-05-15T19:00:00.000Z',end_at:'2026-05-17T23:00:00.000Z',venue_name:'Kastel Fortress Open Air',organizer_name:'BL Jazz Fest',organizer_phone:'066556677',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'concerts',event_type:'concert',title:'Demofest 2026',title_en:'Demofest 2026',description:'Najveći muzički festival u Banja Luci! Tri bine, 50+ bendova, street food i zabava za sve generacije.',description_en:'The biggest music festival in Banja Luka! Three stages, 50+ bands, street food and fun for all generations.',city:'Banja Luka',location:'Kastel Fortress',address:'Kastel bb',image:'https://images.unsplash.com/photo-1763178466088-09e3678eb56b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdW1tZXIlMjBtdXNpYyUyMGZlc3RpdmFsJTIwb3V0ZG9vciUyMHN0YWdlfGVufDF8fHx8MTc3MzE1MzIwMHww&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-07-17T17:00:00.000Z',end_at:'2026-07-19T02:00:00.000Z',venue_name:'Kastel Fortress',organizer_name:'Demofest Team',organizer_phone:'066789012',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── THEATRE ×3 ──
-      { page_slug:'theatre',event_type:'theatre',title:'Hamlet - Narodno pozorište RS',title_en:'Hamlet - National Theatre RS',description:'Klasična Šekspirova tragedija u novoj režiji. Predstava je nagrađena na festivalu u Trebinju.',description_en:'Classic Shakespeare tragedy in a new direction. Award-winning production from the Trebinje festival.',city:'Banja Luka',location:'Narodno pozorište RS',address:'Kralja Petra I Karađorđevića 78',image:'https://images.unsplash.com/photo-1767979212124-bf08504f5dae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdHJlJTIwc3RhZ2UlMjBwZXJmb3JtYW5jZSUyMGRyYW1hfGVufDF8fHx8MTc3MzE1MjUzNnww&ixlib=rb-4.1.0&q=80&w=1080',price:'15 KM',price_en:'15 BAM',start_at:'2026-03-22T19:00:00.000Z',end_at:'2026-03-22T21:30:00.000Z',venue_name:'Narodno pozorište RS',organizer_name:'Narodno pozorište RS',organizer_phone:'051211100',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'theatre',event_type:'theatre',title:'Koštana - Stanislav Binički',title_en:'Kostana - Stanislav Binicki',description:'Muzička drama Koštana u produkciji Narodnog pozorišta. Balkanska strast i folkorna muzika.',description_en:'Musical drama Kostana produced by the National Theatre. Balkan passion and folk music.',city:'Banja Luka',location:'Narodno pozorište RS',address:'Kralja Petra I Karađorđevića 78',image:'https://images.unsplash.com/photo-1767979212124-bf08504f5dae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aGVhdHJlJTIwc3RhZ2UlMjBwZXJmb3JtYW5jZSUyMGRyYW1hfGVufDF8fHx8MTc3MzE1MjUzNnww&ixlib=rb-4.1.0&q=80&w=1080',price:'12 KM',price_en:'12 BAM',start_at:'2026-04-10T19:30:00.000Z',end_at:'2026-04-10T21:30:00.000Z',venue_name:'Narodno pozorište RS',organizer_name:'Narodno pozorište RS',organizer_phone:'051211100',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'theatre',event_type:'theatre',title:'Standup komedija - Marko Šelić',title_en:'Standup Comedy - Marko Selic',description:'Satirični standup performans poznatog srpskog umjetnika. Humor sa stavom i porukama.',description_en:'Satirical standup performance by renowned Serbian artist. Humor with attitude and messages.',city:'Banja Luka',location:'Dom kulture',address:'Bulevar vojvode Stepe Stepanovića 12',image:'https://images.unsplash.com/photo-1762537132884-cc6bbde0667a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFuZHVwJTIwY29tZWR5JTIwc2hvdyUyMG1pY3JvcGhvbmV8ZW58MXx8fHwxNzczMTUzMTk0fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'20 KM',price_en:'20 BAM',start_at:'2026-04-05T20:00:00.000Z',end_at:'2026-04-05T22:00:00.000Z',venue_name:'Dom kulture',organizer_name:'BL Entertainment',organizer_phone:'066334455',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── EXHIBITION ×3 ──
-      { page_slug:'events',event_type:'exhibition',title:'Savremena umjetnost BiH',title_en:'Contemporary Art of BiH',description:'Retrospektivna izložba savremene umjetnosti Bosne i Hercegovine. Radovi 30 umjetnika iz cijele zemlje.',description_en:'Retrospective exhibition of contemporary art from Bosnia and Herzegovina. Works by 30 artists from across the country.',city:'Banja Luka',location:'Muzej savremene umjetnosti RS',address:'Bulevar Cara Dušana 10',image:'https://images.unsplash.com/photo-1761403757058-e3c95b662a89?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBnYWxsZXJ5JTIwZXhoaWJpdGlvbiUyMG1vZGVybnxlbnwxfHx8fDE3NzMwNDI1MTR8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'5 KM',price_en:'5 BAM',start_at:'2026-03-15T10:00:00.000Z',end_at:'2026-05-15T18:00:00.000Z',venue_name:'Muzej savremene umjetnosti RS',organizer_name:'MSURS',organizer_phone:'051301920',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'exhibition',title:'Fotografski salon Banja Luka',title_en:'Banja Luka Photography Salon',description:'Godišnja izložba najboljih fotografija iz regiona. Kategorije: pejzaž, portret, street i reportaža.',description_en:'Annual exhibition of the best photographs from the region. Categories: landscape, portrait, street and reportage.',city:'Banja Luka',location:'Muzej Republike Srpske',address:'Đure Daničića 1',image:'https://images.unsplash.com/photo-1771189254857-9c0d3d0c4dc7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdXNldW0lMjBoZXJpdGFnZSUyMGJ1aWxkaW5nJTIwZXhoaWJpdHxlbnwxfHx8fDE3NzMxNTMxODh8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'3 KM',price_en:'3 BAM',start_at:'2026-04-01T09:00:00.000Z',end_at:'2026-04-30T17:00:00.000Z',venue_name:'Muzej Republike Srpske',organizer_name:'Foto Klub BL',organizer_phone:'066112244',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'exhibition',title:'Dizajn Sedmica 2026',title_en:'Design Week 2026',description:'Festival dizajna sa predavanjima, radionicama i izložbama. Grafički, industrijski i modni dizajn.',description_en:'Design festival with talks, workshops and exhibitions. Graphic, industrial and fashion design.',city:'Banja Luka',location:'Banski dvor',address:'Trg srpskih vladara 2',image:'https://images.unsplash.com/photo-1761403757058-e3c95b662a89?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnQlMjBnYWxsZXJ5JTIwZXhoaWJpdGlvbiUyMG1vZGVybnxlbnwxfHx8fDE3NzMwNDI1MTR8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-05-20T10:00:00.000Z',end_at:'2026-05-25T20:00:00.000Z',venue_name:'Banski dvor',organizer_name:'BL Design',organizer_phone:'066778899',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── SPORT ×3 ──
-      { page_slug:'events',event_type:'sport',title:'Igokea vs Crvena Zvezda - ABA Liga',title_en:'Igokea vs Crvena Zvezda - ABA League',description:'Košarkaški derbi ABA Lige! Igokea dočekuje Crvenu Zvezdu u prepunoj Boriku.',description_en:'ABA League basketball derby! Igokea hosts Crvena Zvezda at a packed Borik arena.',city:'Banja Luka',location:'Borik Arena',address:'Bulevar Cara Dušana bb',image:'https://images.unsplash.com/photo-1771882856158-c8e083134ee3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYXNrZXRiYWxsJTIwc3BvcnQlMjBhcmVuYSUyMGdhbWV8ZW58MXx8fHwxNzczMTUzMTkzfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'10-20 KM',price_en:'10-20 BAM',start_at:'2026-03-28T18:00:00.000Z',end_at:'2026-03-28T20:00:00.000Z',venue_name:'Borik Arena',organizer_name:'KK Igokea',organizer_phone:'051301400',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'sport',title:'FK Borac - Premijer Liga BiH',title_en:'FK Borac - BiH Premier League',description:'Utakmica Premijer lige BiH. FK Borac dočekuje rivala na gradskom stadionu.',description_en:'BiH Premier League match. FK Borac hosts their rival at the city stadium.',city:'Banja Luka',location:'Gradski stadion',address:'Stadionska bb',image:'https://images.unsplash.com/photo-1549923015-badf41b04831?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb290YmFsbCUyMHNvY2NlciUyMHN0YWRpdW0lMjBtYXRjaHxlbnwxfHx8fDE3NzMxNTMyMDB8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'5-10 KM',price_en:'5-10 BAM',start_at:'2026-04-12T17:00:00.000Z',end_at:'2026-04-12T19:00:00.000Z',venue_name:'Gradski stadion',organizer_name:'FK Borac',organizer_phone:'051301600',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'sport',title:'Vrbas Open - Rafting Championship',title_en:'Vrbas Open - Rafting Championship',description:'Međunarodno takmičenje u raftingu na rijeci Vrbas. Ekipe iz 15 zemalja, adrenalin i spektakl na vodi.',description_en:'International rafting competition on the Vrbas river. Teams from 15 countries, adrenaline and water spectacle.',city:'Banja Luka',location:'Kanjon Vrbasa',address:'Kanjon Vrbasa, Banja Luka',image:'https://images.unsplash.com/photo-1650671061571-a19b6c6bf672?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyaXZlciUyMGNhbnlvbiUyMG5hdHVyZSUyMHBhcmt8ZW58MXx8fHwxNzczMTUzMTg4fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-06-20T09:00:00.000Z',end_at:'2026-06-21T17:00:00.000Z',venue_name:'Kanjon Vrbasa',organizer_name:'RS Rafting Federation',organizer_phone:'066998877',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── GASTRO ×3 ──
-      { page_slug:'events',event_type:'gastro',title:'Street Food Festival Banja Luka',title_en:'Street Food Festival Banja Luka',description:'Festival ulične hrane sa 40+ štandova iz cijele regije. Burgeri, taco, azijska hrana, domaći specijaliteti i craft pivo.',description_en:'Street food festival with 40+ stalls from across the region. Burgers, tacos, Asian food, local specialties and craft beer.',city:'Banja Luka',location:'Trg Krajine',address:'Trg Krajine bb',image:'https://images.unsplash.com/photo-1728364283053-b1e2abe71611?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHJlZXQlMjBmb29kJTIwbWFya2V0JTIwZmVzdGl2YWx8ZW58MXx8fHwxNzczMTUzMTkzfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno ulaz',price_en:'Free entry',start_at:'2026-06-12T11:00:00.000Z',end_at:'2026-06-14T23:00:00.000Z',venue_name:'Trg Krajine',organizer_name:'BL Food Fest',organizer_phone:'066112233',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'gastro',title:'Wine & Cheese Festival',title_en:'Wine & Cheese Festival',description:'Festival vina i sireva sa vinogradima iz BiH i regije. Degustacije, edukativne radionice i muzika.',description_en:'Wine and cheese festival with vineyards from BiH and the region. Tastings, educational workshops and music.',city:'Banja Luka',location:'Banski dvor',address:'Trg srpskih vladara 2',image:'https://images.unsplash.com/photo-1650903015056-4c2e63a8ce85?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3aW5lJTIwYmFyJTIwY2VsbGFyJTIwdGFzdGluZ3xlbnwxfHx8fDE3NzMwNDczOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'15 KM',price_en:'15 BAM',start_at:'2026-09-05T12:00:00.000Z',end_at:'2026-09-07T22:00:00.000Z',venue_name:'Banski dvor',organizer_name:'Vino BiH',organizer_phone:'066445566',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'gastro',title:'Banjalučka Čorba Fest',title_en:'Banja Luka Soup Fest',description:'Takmičenje u kuvanju čorbi sa 30+ ekipa iz cijele BiH. Degustacija za posjetioce, glasanje publike za najbolju čorbu.',description_en:'Soup cooking competition with 30+ teams from all over BiH. Visitor tastings, audience voting for the best soup.',city:'Banja Luka',location:'Gradski park',address:'Gradski park bb',image:'https://images.unsplash.com/photo-1728364283053-b1e2abe71611?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdHJlZXQlMjBmb29kJTIwbWFya2V0JTIwZmVzdGl2YWx8ZW58MXx8fHwxNzczMTUzMTkzfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-10-10T10:00:00.000Z',end_at:'2026-10-10T18:00:00.000Z',venue_name:'Gradski park',organizer_name:'Grad Banja Luka',organizer_phone:'051301700',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      // ── OTHER ×3 ──
-      { page_slug:'events',event_type:'other',title:'Banja Luka Book Fair 2026',title_en:'Banja Luka Book Fair 2026',description:'Sajam knjiga sa 100+ izdavača. Promocije, potpisivanje knjiga i susreti sa piscima.',description_en:'Book fair with 100+ publishers. Promotions, book signings and meetings with authors.',city:'Banja Luka',location:'Banski dvor',address:'Trg srpskih vladara 2',image:'https://images.unsplash.com/photo-1739133086794-6424277dbfd0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxib29rc3RvcmUlMjByZWFkaW5nJTIwY296eSUyMGxpYnJhcnl8ZW58MXx8fHwxNzczMTUzMTk5fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-11-15T10:00:00.000Z',end_at:'2026-11-20T20:00:00.000Z',venue_name:'Banski dvor',organizer_name:'Kulturni centar BL',organizer_phone:'051301800',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'other',title:'IT Meetup Banja Luka',title_en:'IT Meetup Banja Luka',description:'Mjesečni meetup za programere i IT profesionalce. Predavanja, networking i pizza.',description_en:'Monthly meetup for developers and IT professionals. Talks, networking and pizza.',city:'Banja Luka',location:'Innovation Centre BL',address:'Jovana Dučića 25',image:'https://images.unsplash.com/photo-1772833020822-b797f1b6ea49?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvbGQlMjB0b3duJTIwYnJpZGdlJTIwaGlzdG9yaWMlMjBsYW5kbWFya3xlbnwxfHx8fDE3NzMxNTMxOTN8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-03-25T18:00:00.000Z',end_at:'2026-03-25T21:00:00.000Z',venue_name:'Innovation Centre BL',organizer_name:'BL Dev Community',organizer_phone:'066889900',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-      { page_slug:'events',event_type:'other',title:'Noć Muzeja 2026',title_en:'Night of Museums 2026',description:'Svi muzeji i galerije otvoreni besplatno do ponoći. Specijalni programi, vodstva i performansi.',description_en:'All museums and galleries open for free until midnight. Special programs, guided tours and performances.',city:'Banja Luka',location:'Svi muzeji u gradu',address:'Centar Banja Luka',image:'https://images.unsplash.com/photo-1771189254857-9c0d3d0c4dc7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdXNldW0lMjBoZXJpdGFnZSUyMGJ1aWxkaW5nJTIwZXhoaWJpdHxlbnwxfHx8fDE3NzMxNTMxODh8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-05-16T18:00:00.000Z',end_at:'2026-05-17T00:00:00.000Z',venue_name:'Svi muzeji',organizer_name:'Ministarstvo kulture RS',organizer_phone:'051301900',status:'approved',submitted_by:adminEmail,is_custom:false,source:'seed',created_at:now },
-    ];
-
-    // Whitelist: eksplicitno uzimamo samo kolone koje postoje u venues_ee0c365c shemi
-    // Ovo garantuje da 'category', 'source' i bilo koji drugi nepostojeći ključ nikad ne stigne do PostgREST-a
-    const VENUE_COLS = ['title','title_en','description','description_en','city','location','address','phone','website','cuisine','cuisine_en','opening_hours','opening_hours_en','price','price_en','tags','status','submitted_by','contact_name','contact_phone','contact_email','image','is_custom','venue_type','page_slug','created_at'];
-    const venuesClean = venues.map((v: any) => {
-      const clean: Record<string, any> = {};
-      for (const f of VENUE_COLS) if (v[f] !== undefined) clean[f] = v[f];
-      return clean;
-    });
-    const EVENT_COLS = ['title','title_en','description','description_en','city','location','address','image','price','price_en','start_at','end_at','venue_name','organizer_name','organizer_phone','event_type','page_slug','status','submitted_by','is_custom','created_at'];
-    const eventsClean = events.map((e: any) => {
-      const clean: Record<string, any> = {};
-      for (const f of EVENT_COLS) if (e[f] !== undefined) clean[f] = e[f];
-      return clean;
-    });
-    const { data: insertedVenues, error: venueError } = await supabase
-      .from('venues_ee0c365c').insert(venuesClean).select('id, title, city, page_slug');
-    if (venueError) {
-      console.error('❌ Error seeding venues:', venueError);
-      return c.json({ error: 'Failed to seed venues', details: venueError.message }, 500);
-    }
-
-    const { data: insertedEvents, error: eventError } = await supabase
-      .from('events_ee0c365c').insert(eventsClean).select('id, title, city, event_type');
-    if (eventError) {
-      console.error('❌ Error seeding events:', eventError);
-      return c.json({ error: 'Failed to seed events (venues OK)', details: eventError.message, venuesInserted: insertedVenues?.length || 0 }, 500);
-    }
-
-    console.log(`🌱 Seed complete: ${insertedVenues?.length} venues + ${insertedEvents?.length} events`);
-    return c.json({ success: true, venuesInserted: insertedVenues?.length || 0, eventsInserted: insertedEvents?.length || 0, venues: insertedVenues, events: insertedEvents });
-  } catch (error) {
-    console.error('❌ Seed error:', error);
-    return c.json({ error: 'Seed failed', details: String(error) }, 500);
-  }
-});
-
-// ===================================
-// 🌍 SEED REGIONAL (ex-YU, outside BiH)
-// ===================================
-app.post('/make-server-a0e1e9cb/seed-regional', async (c) => {
-  console.log('🌍 POST /seed-regional');
-  try {
-    const token = getTokenFromRequest(c);
-    if (!token) return c.json({ error: 'Unauthorized' }, 401);
-    const { data: { user: au } } = await safeGetUser(sbService(), token);
-    if (!au) return c.json({ error: 'Unauthorized' }, 401);
-    if (!(au.user_metadata?.is_master_admin === true || au.email === MASTER_ADMIN_EMAIL))
-      return c.json({ error: 'Only master admin' }, 403);
-    const sb = sbService(), em = au.email||MASTER_ADMIN_EMAIL, ts = new Date().toISOString(); // service role bypasses RLS
-    const s = 'approved', src = ''; // src se koristi u obj literalima ali strip-a u vClean/evClean
-    const v = [
-      {category:'food-and-drink',title:'Dva Jelena',title_en:'Two Deer',description:'Legendarna kafana na Skadarliji sa više od 100 godina tradicije. Srpska kuhinja, živa muzika i nezaboravan ambijent.',description_en:'Legendary tavern on Skadarlija with over 100 years of tradition. Serbian cuisine, live music and unforgettable atmosphere.',city:'Beograd',address:'Skadarska 32, 11000 Beograd',phone:'+381112343885',cuisine:'Srpska, Tradicionalna',cuisine_en:'Serbian, Traditional',opening_hours:'Pon-Ned: 10:00-01:00',opening_hours_en:'Mon-Sun: 10:00-01:00',image:'https://images.unsplash.com/photo-1689245780587-a9a6725718b1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzZXJiaWFuJTIwdHJhZGl0aW9uYWwlMjBmb29kJTIwcGxhdHRlcnxlbnwxfHx8fDE3NzMwNDgzOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Restoran Franš',title_en:'Restaurant Frans',description:'Fine dining restoran u centru Beograda. Francusko-srpska fuzija sa sezonskim menijem i vrhunskom vinskom kartom.',description_en:'Fine dining in central Belgrade. French-Serbian fusion with seasonal menu and premium wine list.',city:'Beograd',address:'Bul. Kralja Aleksandra 43, Beograd',phone:'+381113240944',cuisine:'Francuska, Fuzija',cuisine_en:'French, Fusion',opening_hours:'Pon-Sub: 12:00-24:00',opening_hours_en:'Mon-Sat: 12:00-24:00',image:'https://images.unsplash.com/photo-1759686127423-ebdd5955a3a6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiZWxncmFkZSUyMG5pZ2h0bGlmZSUyMHJlc3RhdXJhbnQlMjBzZXJiaWF8ZW58MXx8fHwxNzczMDQ4MzkzfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'clubs',title:'Freestyler',title_en:'Freestyler',description:'Ikona beogradskog noćnog života — splav na Savi. House, R&B i gostujući DJ-evi iz cijelog svijeta.',description_en:'Icon of Belgrade nightlife — floating club on the Sava. House, R&B and guest DJs from around the world.',city:'Beograd',address:'Beton Hala, Karađorđeva bb',phone:'+381112345678',opening_hours:'Pet-Sub: 23:00-06:00',opening_hours_en:'Fri-Sat: 23:00-06:00',image:'https://images.unsplash.com/photo-1717570564507-2c80a6e8181a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiZWxncmFkZSUyMGZsb2F0aW5nJTIwcml2ZXIlMjBjbHVifGVufDF8fHx8MTc3MzA0ODM5N3ww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'cafes',title:'Kafeterija Beograd',title_en:'Kafeterija Belgrade',description:'Hipsterska kafa u industrijskom ambijentu Dorćola. Specialty espresso, cold brew i domaće pecivo.',description_en:'Hipster coffee in Dorcol industrial setting. Specialty espresso, cold brew and homemade pastries.',city:'Beograd',address:'Dobračina 16, Beograd',phone:'+381113456789',cuisine:'Specialty kafa',cuisine_en:'Specialty coffee',opening_hours:'Pon-Ned: 08:00-22:00',opening_hours_en:'Mon-Sun: 08:00-22:00',image:'https://images.unsplash.com/photo-1634547813427-8f051eb6a872?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0dXJraXNoJTIwY29mZmVlJTIwdHJhZGl0aW9uYWwlMjBjb3BwZXJ8ZW58MXx8fHwxNzczMDQ4NDAxfDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Toster Bar',title_en:'Toster Bar',description:'Urban restoran u centru Novog Sada. Burgeri, sendviči i kokteli u retro ambijentu.',description_en:'Urban restaurant in central Novi Sad. Burgers, sandwiches and cocktails in retro setting.',city:'Novi Sad',address:'Jevrejska 21, 21000 Novi Sad',phone:'+381214567890',cuisine:'Moderna, Street food',cuisine_en:'Modern, Street food',opening_hours:'Pon-Ned: 10:00-24:00',opening_hours_en:'Mon-Sun: 10:00-24:00',image:'https://images.unsplash.com/photo-1581949882446-58884cf7ef88?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtZWRpdGVycmFuZWFuJTIwZ3JpbGxlZCUyMG1lYXQlMjBzdGVha2hvdXNlfGVufDF8fHx8MTc3MzA0ODM5OHww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'attractions',title:'Petrovaradinska tvrđava',title_en:'Petrovaradin Fortress',description:'Monumentalna tvrđava na Dunavu, dom EXIT festivala. Galerije, ateljei i panoramski pogled.',description_en:'Monumental fortress on the Danube, home of EXIT festival. Galleries, ateliers and panoramic views.',city:'Novi Sad',address:'Petrovaradin, 21131 Novi Sad',phone:'+381216344555',opening_hours:'Otvoreno 24h',opening_hours_en:'Open 24h',image:'https://images.unsplash.com/photo-1766777597740-95eab74cd764?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxub3ZpJTIwc2FkJTIwZm9ydHJlc3MlMjBkYW51YmUlMjByaXZlcnxlbnwxfHx8fDE3NzMwNDgzOTR8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Vinodol',title_en:'Vinodol',description:'Tradicijski restoran u srcu Zagreba sa unutrašnjim dvorištem. Domaća hrvatska kuhinja i vinska karta.',description_en:'Traditional restaurant in Zagreb with inner courtyard. Croatian cuisine and wine list.',city:'Zagreb',address:'Nikole Tesle 10, 10000 Zagreb',phone:'+38514811427',cuisine:'Hrvatska, Mediteranska',cuisine_en:'Croatian, Mediterranean',opening_hours:'Pon-Ned: 11:00-24:00',opening_hours_en:'Mon-Sun: 11:00-24:00',image:'https://images.unsplash.com/photo-1772190576978-b43f586efbcb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx6YWdyZWIlMjBjcm9hdGlhJTIwaGlzdG9yaWMlMjBjYWZlfGVufDF8fHx8MTc3MzA0ODM5NHww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'cafes',title:'Cogito Coffee',title_en:'Cogito Coffee',description:'Specialty coffee shop u Zagrebu. Single origin kafa i edukativni pristup svakoj šalici.',description_en:'Specialty coffee shop in Zagreb. Single origin and educational approach to every cup.',city:'Zagreb',address:'Varšavska 11, 10000 Zagreb',phone:'+38514834079',cuisine:'Specialty kafa',cuisine_en:'Specialty coffee',opening_hours:'Pon-Sub: 07:30-21:00',opening_hours_en:'Mon-Sat: 07:30-21:00',image:'https://images.unsplash.com/photo-1752606301350-4a8e3a8ed9e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxnZWxhdG8lMjBpY2UlMjBjcmVhbSUyMHNob3AlMjBjb2xvcmZ1bHxlbnwxfHx8fDE3NzMwNDg0MDF8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Konoba Matejuška',title_en:'Konoba Matejuska',description:'Dalmatinska konoba tik uz more. Svježa riba, hobotnica ispod peke i lokalna vina.',description_en:'Dalmatian tavern by the sea. Fresh fish, octopus under peka and local wines.',city:'Split',address:'Tome Stržića 3, 21000 Split',phone:'+385213456789',cuisine:'Dalmatinska, Riblja',cuisine_en:'Dalmatian, Seafood',opening_hours:'Pon-Ned: 11:00-23:00',opening_hours_en:'Mon-Sun: 11:00-23:00',image:'https://images.unsplash.com/photo-1515594848784-7a3f98e75f86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzcGxpdCUyMGRhbG1hdGlhbiUyMHNlYWZvb2QlMjB0ZXJyYWNlfGVufDF8fHx8MTc3MzA0ODM5NHww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'attractions',title:'Dioklecijanova palača',title_en:'Diocletian Palace',description:'UNESCO — rimska palača u srcu Splita. Živi antički spomenik sa restoranima i muzejima.',description_en:'UNESCO — Roman palace in Split. Living ancient monument with restaurants and museums.',city:'Split',address:'Dioklecijanova ul., 21000 Split',phone:'+385215678901',opening_hours:'Otvoreno 24h',opening_hours_en:'Open 24h',image:'https://images.unsplash.com/photo-1698181358897-e4869d6a3a0a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkdWJyb3ZuaWslMjBjcm9hdGlhJTIwaGlzdG9yaWMlMjB3YWxsc3xlbnwxfHx8fDE3NzMwNDg0MDF8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Pod Volat',title_en:'Pod Volat',description:'Tradicionalni crnogorski restoran. Njeguška pršuta, kačamak i vranac u autentičnom ambijentu.',description_en:'Traditional Montenegrin restaurant. Njeguski prosciutto, kacamak and vranac in authentic ambiance.',city:'Podgorica',address:'Trg V. B. Osmanagića 1, 81000 Podgorica',phone:'+38220234567',cuisine:'Crnogorska',cuisine_en:'Montenegrin',opening_hours:'Pon-Ned: 09:00-23:00',opening_hours_en:'Mon-Sun: 09:00-23:00',image:'https://images.unsplash.com/photo-1771402473322-93a818279b62?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb2Rnb3JpY2ElMjBtb250ZW5lZ3JvJTIwbW9kZXJuJTIwcmVzdGF1cmFudHxlbnwxfHx8fDE3NzMwNDgzOTV8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'attractions',title:'Stari grad Kotor',title_en:'Kotor Old Town',description:'UNESCO stari grad sa tvrđavom iznad Bokokotorskog zaliva. Venecijanska arhitektura i zadivljujući pogled.',description_en:'UNESCO old town with fortress above Bay of Kotor. Venetian architecture and breathtaking views.',city:'Kotor',address:'Stari Grad, 85330 Kotor',phone:'+38232325950',opening_hours:'Otvoreno 24h',opening_hours_en:'Open 24h',image:'https://images.unsplash.com/photo-1700549586671-6d5868866337?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxrb3RvciUyMG1vbnRlbmVncm8lMjBvbGQlMjB0b3duJTIwYmF5fGVufDF8fHx8MTc3MzA0ODQwMHww&ixlib=rb-4.1.0&q=80&w=1080',price:'8€',price_en:'8€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Galion',title_en:'Galion',description:'Luksuzni restoran na obali Bokokotorskog zaliva. Svježi morski plodovi i pogled koji oduzima dah.',description_en:'Luxury restaurant on Bay of Kotor shores. Fresh seafood and breathtaking views.',city:'Kotor',address:'Šuranj bb, 85330 Kotor',phone:'+38232325054',cuisine:'Mediteranska, Riblja',cuisine_en:'Mediterranean, Seafood',opening_hours:'Pon-Ned: 11:00-24:00',opening_hours_en:'Mon-Sun: 11:00-24:00',image:'https://images.unsplash.com/photo-1728327510164-04538fb967ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZHJpYXRpYyUyMGNvYXN0JTIwc3Vuc2V0JTIwZGluaW5nfGVufDF8fHx8MTc3MzA0ODM5OHww&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Stara Kuka',title_en:'Stara Kuka',description:'Restoran u osmanskoj kući u Starom Bazaru. Makedonska kuhinja, tavče gravče i lokalna rakija.',description_en:'Restaurant in Ottoman house in Old Bazaar. Macedonian cuisine, tavce gravce and local rakija.',city:'Skoplje',address:'Stara Čaršija, 1000 Skopje',phone:'+38923456789',cuisine:'Makedonska',cuisine_en:'Macedonian',opening_hours:'Pon-Ned: 10:00-23:00',opening_hours_en:'Mon-Sun: 10:00-23:00',image:'https://images.unsplash.com/photo-1641950075479-9b46d178ee64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxza29wamUlMjBtYWNlZG9uaWElMjBvbGQlMjBiYXphYXJ8ZW58MXx8fHwxNzczMDQ4Mzk2fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'food-and-drink',title:'Gostilna Dela',title_en:'Gostilna Dela',description:'Moderni slovenski restoran na obali Ljubljanice. Sezonski meni i lokalni proizvodi.',description_en:'Modern Slovenian restaurant on Ljubljanica riverbank. Seasonal menu and local produce.',city:'Ljubljana',address:'Petkovškovo nabrežje 65, 1000 Ljubljana',phone:'+38612345678',cuisine:'Slovenska, Moderna',cuisine_en:'Slovenian, Modern',opening_hours:'Pon-Sub: 11:00-22:00',opening_hours_en:'Mon-Sat: 11:00-22:00',image:'https://images.unsplash.com/photo-1640024038740-45671e324c7e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsanVibGphbmElMjBzbG92ZW5pYSUyMHJpdmVyJTIwY2FmZXxlbnwxfHx8fDE3NzMwNDgzOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'€€€',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-    ];
-    const ev = [
-      {category:'events',event_type:'concert',title:'Bajaga i Instruktori - Beogradska Arena',title_en:'Bajaga i Instruktori - Belgrade Arena',description:'Veliki koncert legendarnog benda. Hitovi svih vremena pred 20.000 fanova.',description_en:'Grand concert by legendary band. All-time hits in front of 20,000 fans.',city:'Beograd',location:'Stark Arena',address:'Bul. A. Čarnojevića 58, Beograd',image:'https://images.unsplash.com/photo-1593291785451-6525ceb1a345?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmb2xrJTIwbXVzaWMlMjBiYWxrYW4lMjB0cmFkaXRpb25hbCUyMGJhbmR8ZW58MXx8fHwxNzczMDQ4Mzk4fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'2500 RSD',price_en:'~21€',start_at:'2026-05-09T20:00:00.000Z',end_at:'2026-05-09T23:00:00.000Z',venue_name:'Stark Arena',organizer_name:'Live Nation Srbija',organizer_phone:'+381112345678',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'sport',title:'Crvena Zvezda vs Partizan - Vječiti derbi',title_en:'Crvena Zvezda vs Partizan - Eternal Derby',description:'Najvatreniji fudbalski derbi na Balkanu na Marakani!',description_en:'The fiercest football derby in the Balkans at Marakana!',city:'Beograd',location:'Marakana',address:'Ljutice Bogdana 1a, Beograd',image:'https://images.unsplash.com/photo-1549923015-badf41b04831?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzb2NjZXIlMjBmb290YmFsbCUyMHN0YWRpdW0lMjBjcm93ZHxlbnwxfHx8fDE3NzMwNDg0MDB8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'500-3000 RSD',price_en:'~4-25€',start_at:'2026-04-12T18:00:00.000Z',end_at:'2026-04-12T20:00:00.000Z',venue_name:'Marakana',organizer_name:'FK Crvena Zvezda',organizer_phone:'+381112067800',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'other',title:'Belgrade Underground Techno Night',title_en:'Belgrade Underground Techno Night',description:'Beogradska techno scena u napuštenom industrijskom prostoru.',description_en:'Belgrade techno scene in abandoned industrial space.',city:'Beograd',location:'Drugstore Club',address:'Bul. Despota Stefana 115',image:'https://images.unsplash.com/photo-1588503291572-6b60107fe000?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNobm8lMjByYXZlJTIwcGFydHklMjB1bmRlcmdyb3VuZHxlbnwxfHx8fDE3NzMwNDgzOTl8MA&ixlib=rb-4.1.0&q=80&w=1080',price:'1000 RSD',price_en:'~8€',start_at:'2026-03-21T23:00:00.000Z',end_at:'2026-03-22T07:00:00.000Z',venue_name:'Drugstore Club',organizer_name:'Underground BG',organizer_phone:'+381601234567',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'concert',title:'EXIT Festival 2026',title_en:'EXIT Festival 2026',description:'Jedan od najvećih festivala u Evropi! 4 dana, 40+ bina, 200+ izvođača.',description_en:'One of Europe biggest festivals! 4 days, 40+ stages, 200+ performers.',city:'Novi Sad',location:'Petrovaradinska tvrđava',address:'Petrovaradin, 21131 Novi Sad',image:'https://images.unsplash.com/photo-1703806914338-a18ed6066f74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxleGl0JTIwZmVzdGl2YWwlMjBub3ZpJTIwc2FkJTIwc3RhZ2V8ZW58MXx8fHwxNzczMDQ4Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'75€',price_en:'75€ (4-day)',start_at:'2026-07-09T16:00:00.000Z',end_at:'2026-07-12T06:00:00.000Z',venue_name:'Petrovaradinska tvrđava',organizer_name:'EXIT Foundation',organizer_phone:'+381214567890',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'exhibition',title:'MSU Zagreb - Retrospektiva',title_en:'MSU Zagreb - Retrospective',description:'Retrospektiva hrvatskih suvremenih umjetnika. Instalacije, video art i performansi.',description_en:'Retrospective of Croatian contemporary artists. Installations, video art and performances.',city:'Zagreb',location:'MSU Zagreb',address:'Av. Dubrovnik 17, 10000 Zagreb',image:'https://images.unsplash.com/photo-1527979809431-ea3d5c0c01c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldXJvcGVhbiUyMGZpbG0lMjBmZXN0aXZhbCUyMG91dGRvb3IlMjBzY3JlZW5pbmd8ZW58MXx8fHwxNzczMDQ4Mzk5fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'5€',price_en:'5€',start_at:'2026-04-01T10:00:00.000Z',end_at:'2026-06-30T20:00:00.000Z',venue_name:'MSU Zagreb',organizer_name:'MSU',organizer_phone:'+38516052700',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'concert',title:'INmusic Festival 2026',title_en:'INmusic Festival 2026',description:'Najpoznatiji hrvatski open-air festival na Jarunu. Internacionalne zvijezde.',description_en:'Croatia most famous open-air festival at Jarun Lake. International stars.',city:'Zagreb',location:'Jarun - Otok mladosti',address:'Otok hrvatske mladeži, Zagreb',image:'https://images.unsplash.com/photo-1703806914338-a18ed6066f74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxleGl0JTIwZmVzdGl2YWwlMjBub3ZpJTIwc2FkJTIwc3RhZ2V8ZW58MXx8fHwxNzczMDQ4Mzk3fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'55€',price_en:'55€',start_at:'2026-06-22T14:00:00.000Z',end_at:'2026-06-24T02:00:00.000Z',venue_name:'Jarun',organizer_name:'INmusic',organizer_phone:'+38516111222',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'concert',title:'Sea Dance Festival - Budva',title_en:'Sea Dance Festival - Budva',description:'Beach festival na plaži Jaz. Elektronska i pop muzika uz Jadransko more.',description_en:'Beach festival at Jaz. Electronic and pop music by the Adriatic.',city:'Budva',location:'Plaža Jaz',address:'Jaz Beach, 85310 Budva',image:'https://images.unsplash.com/photo-1728327510164-04538fb967ee?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZHJpYXRpYyUyMGNvYXN0JTIwc3Vuc2V0JTIwZGluaW5nfGVufDF8fHx8MTc3MzA0ODM5OHww&ixlib=rb-4.1.0&q=80&w=1080',price:'40€',price_en:'40€',start_at:'2026-08-28T17:00:00.000Z',end_at:'2026-08-30T04:00:00.000Z',venue_name:'Plaža Jaz',organizer_name:'EXIT Foundation',organizer_phone:'+382691234567',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'gastro',title:'Skopje Food Festival',title_en:'Skopje Food Festival',description:'Festival hrane iz Makedonije i Balkana. Kuharska takmičenja i degustacije.',description_en:'Food fest from Macedonia and Balkans. Cooking competitions and tastings.',city:'Skoplje',location:'Gradski park',address:'City Park, 1000 Skopje',image:'https://images.unsplash.com/photo-1641950075479-9b46d178ee64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxza29wamUlMjBtYWNlZG9uaWElMjBvbGQlMjBiYXphYXJ8ZW58MXx8fHwxNzczMDQ4Mzk2fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'Besplatno',price_en:'Free',start_at:'2026-09-05T11:00:00.000Z',end_at:'2026-09-07T22:00:00.000Z',venue_name:'Gradski park',organizer_name:'Skopje Tourism',organizer_phone:'+38923111222',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-      {category:'events',event_type:'theatre',title:'Borštnikovo srečanje 2026',title_en:'Borstnik Meeting 2026',description:'Najprestižniji pozorišni festival u Sloveniji. Gostujuće trupe iz cijele regije.',description_en:'Most prestigious theatre festival in Slovenia. Guest troupes from the region.',city:'Ljubljana',location:'SNG Drama Ljubljana',address:'Erjavčeva 1, 1000 Ljubljana',image:'https://images.unsplash.com/photo-1527979809431-ea3d5c0c01c9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxldXJvcGVhbiUyMGZpbG0lMjBmZXN0aXZhbCUyMG91dGRvb3IlMjBzY3JlZW5pbmd8ZW58MXx8fHwxNzczMDQ4Mzk5fDA&ixlib=rb-4.1.0&q=80&w=1080',price:'15€',price_en:'15€',start_at:'2026-10-10T19:00:00.000Z',end_at:'2026-10-17T22:00:00.000Z',venue_name:'SNG Drama',organizer_name:'SNG Drama Ljubljana',organizer_phone:'+38612521511',status:s,submitted_by:em,is_custom:false,source:src,created_at:ts},
-    ];
-    // Whitelist + category→page_slug konverzija za regionalne podatke
-    const V_COLS = ['title','title_en','description','description_en','city','location','address','phone','website','cuisine','cuisine_en','opening_hours','opening_hours_en','price','price_en','tags','status','submitted_by','contact_name','contact_phone','contact_email','image','is_custom','venue_type','page_slug','created_at'];
-    const vClean = v.map((x: any) => {
-      const obj: Record<string,any> = { page_slug: x.category }; // category → page_slug
-      for (const f of V_COLS) if (f !== 'page_slug' && x[f] !== undefined) obj[f] = x[f];
-      return obj;
-    });
-    const EV_COLS = ['title','title_en','description','description_en','city','location','address','image','price','price_en','start_at','end_at','venue_name','organizer_name','organizer_phone','event_type','page_slug','status','submitted_by','is_custom','created_at'];
-    const REG_EVENT_TYPE_TO_PAGE_SLUG: Record<string, string> = {
-      concert: 'concerts', festival: 'concerts', music: 'concerts',
-      theatre: 'theatre', standup: 'theatre',
-      cinema: 'cinema',
-      club: 'clubs',
-      exhibition: 'events', sport: 'events',
-      gastro: 'events', conference: 'events',
-      workshop: 'events', kids: 'events',
-      other: 'events',
-    };
-    const evClean = ev.map((x: any) => {
-      const obj: Record<string,any> = {
-        page_slug: x.page_slug || (x.event_type ? REG_EVENT_TYPE_TO_PAGE_SLUG[x.event_type] : null) || 'events',
-      };
-      for (const f of EV_COLS) if (f !== 'page_slug' && x[f] !== undefined) obj[f] = x[f];
-      return obj;
-    });
-    const { data: iv, error: ve } = await sb.from('venues_ee0c365c').insert(vClean).select('id, title, city, page_slug');
-    if (ve) { console.error('❌ Regional venues error:', ve); return c.json({ error: ve.message }, 500); }
-    const { data: ie, error: ee } = await sb.from('events_ee0c365c').insert(evClean).select('id, title, city, event_type');
-    if (ee) { console.error('❌ Regional events error:', ee); return c.json({ error: ee.message, venuesInserted: iv?.length||0 }, 500); }
-    console.log(`🌍 Regional seed: ${iv?.length} venues + ${ie?.length} events`);
-    return c.json({ success:true, venuesInserted:iv?.length||0, eventsInserted:ie?.length||0, venues:iv, events:ie });
-  } catch (error) {
-    console.error('❌ Regional seed error:', error);
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-// ===================================
-// 🗑️ CLEAR ALL DATA (master admin only)
-// ===================================
-app.post('/make-server-a0e1e9cb/clear-all', async (c) => {
-  console.log('🗑️ POST /clear-all - Deleting all venues and events');
-  try {
-    const token = getTokenFromRequest(c);
-    if (!token) return c.json({ error: 'Unauthorized' }, 401);
-    const supabase = sbService();
-    const { data: { user: authUser }, error: authError } = await safeGetUser(supabase, token);
-    if (authError || !authUser) return c.json({ error: 'Unauthorized' }, 401);
-    const isMaster = authUser.user_metadata?.is_master_admin === true || authUser.email === MASTER_ADMIN_EMAIL;
-    if (!isMaster) return c.json({ error: 'Only master admin can clear data' }, 403);
-
-    // Koristimo service role (sbService) da zaobiđemo RLS pri brisanju
-    const sb = sbService();
-
-    const { error: venueErr } = await sb
-      .from('venues_ee0c365c')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-    if (venueErr) {
-      console.error('❌ Error clearing venues:', venueErr);
-      return c.json({ error: 'Failed to clear venues', details: venueErr.message }, 500);
-    }
-
-    const { error: eventErr } = await sb
-      .from('events_ee0c365c')
-      .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
-    if (eventErr) {
-      console.error('❌ Error clearing events:', eventErr);
-      return c.json({ error: 'Failed to clear events', details: eventErr.message }, 500);
-    }
-
-    console.log('🗑️ All venues and events cleared');
-    return c.json({ success: true, venuesDeleted: 'all', eventsDeleted: 'all' });
-  } catch (error) {
-    console.error('❌ Clear error:', error);
-    return c.json({ error: 'Clear failed', details: String(error) }, 500);
   }
 });
 

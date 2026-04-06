@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
-import { Check, X, Edit2, Lock, Calendar, User, Phone, FileText, Trash2, KeyRound, LogOut, Star } from 'lucide-react';
+import { Check, X, Edit2, Lock, Calendar, User, Phone, FileText, Trash2, KeyRound, LogOut, Star, Building2, MapPin, Mail } from 'lucide-react';
 import { BannerAdminSection } from '../components/BannerAdminSection';
 import { UsersAdminSection } from '../components/UsersAdminSection';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -96,9 +94,6 @@ export function AdminPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  // Seed state
-  const [seeding, setSeeding] = useState(false);
-
   // Venues state
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'active' | 'inactive'>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -141,6 +136,7 @@ export function AdminPage() {
   // 🔴 INACTIVE EVENTS STATE
   const [inactiveEventIds, setInactiveEventIds] = useState<Set<string>>(new Set());
   const [togglingEventActive, setTogglingEventActive] = useState<string | null>(null);
+  const topBadgeBaseClass = "inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold";
 
   // 🔒 AUTH GUARD - Redirect if not logged in or not admin
   useEffect(() => {
@@ -428,7 +424,7 @@ export function AdminPage() {
 
   const confirmDelete = async () => {
     if (deleteConfirmId !== null) {
-      const success = await dataService.deleteItem(deleteConfirmId);
+      const success = await dataService.deleteVenue(deleteConfirmId);
       if (success) {
         loadSubmissions();
         setDeleteConfirmId(null);
@@ -473,6 +469,21 @@ export function AdminPage() {
     if (eventFilter === 'inactive') return event.status === 'approved' && inactiveEventIds.has(event.id);
     return event.status === eventFilter;
   });
+
+  const eventTabCounts = {
+    all: events.length,
+    pending: events.filter(e => e.status === 'pending').length,
+    approved: events.filter(e => e.status === 'approved').length,
+    active: events.filter(e => e.status === 'approved' && !inactiveEventIds.has(e.id)).length,
+    inactive: events.filter(e => e.status === 'approved' && inactiveEventIds.has(e.id)).length,
+  };
+
+  useEffect(() => {
+    // Focused regression debug: track where list size changes.
+    console.log(
+      `[Admin][EventsDebug] raw=${events.length} mapped=${events.length} tabCounts=${JSON.stringify(eventTabCounts)} currentFilter=${eventFilter} filteredVisible=${filteredEvents.length}`
+    );
+  }, [events, eventFilter, inactiveEventIds, filteredEvents.length, eventTabCounts.active, eventTabCounts.all, eventTabCounts.approved, eventTabCounts.inactive, eventTabCounts.pending]);
 
   // Calculate events created this week
   const getEventsThisWeek = () => {
@@ -520,7 +531,7 @@ export function AdminPage() {
 
   const confirmEventDelete = async () => {
     if (deleteEventConfirmId !== null) {
-      const success = await eventService.deleteEvent(deleteEventConfirmId);
+      const success = await dataService.deleteEvent(deleteEventConfirmId);
       if (success) {
         loadEvents();
         setDeleteEventConfirmId(null);
@@ -532,8 +543,6 @@ export function AdminPage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-secondary)' }}>
-      <Header />
-      
       {/* Only show admin content if logged in AND admin - otherwise redirect already happened */}
       {isLoggedIn && isAdmin && (
         <div className="w-full max-w-[1280px] mx-auto px-4 pt-12 pb-12">
@@ -1169,177 +1178,6 @@ export function AdminPage() {
             </div>
           </section>
 
-          {/* SEED DATABASE - Master Admin Only */}
-          {isMasterAdmin && (
-            <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-              <h2 className="m-0 font-bold mb-3" style={{ fontSize: '18px' }}>
-                {language === 'sr' ? 'Popuni bazu podataka' : 'Seed Database'}
-              </h2>
-              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                {language === 'sr'
-                  ? 'Zeleno dugme dodaje gradove iz BiH, a plavo dugme dodaje gradove iz regije (Beograd, Novi Sad, Zagreb, Split, Podgorica, Kotor, Skoplje, Ljubljana).'
-                  : 'Green button adds BiH cities, blue button adds regional cities (Belgrade, Novi Sad, Zagreb, Split, Podgorica, Kotor, Skopje, Ljubljana).'}
-              </p>
-              <div className="flex flex-wrap gap-3">
-              {/* DELETE ALL */}
-              <button
-                onClick={() => {
-                  setPendingConfirm({
-                    title: language === 'sr' ? 'Brisanje svih podataka' : 'Delete All Data',
-                    message: language === 'sr'
-                      ? 'Sigurno želiš izbrisati SVE objekte i dešavanja iz baze? Ova akcija se ne može poništiti!'
-                      : 'Are you sure you want to delete ALL venues and events? This action cannot be undone!',
-                    confirmText: language === 'sr' ? 'Izbriši sve' : 'Delete All',
-                    variant: 'danger',
-                    action: async () => {
-                  setPendingConfirm(null);
-                  setSeeding(true);
-                  try {
-                    const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
-                    const token = accessToken;
-                    const res = await fetch(`${API_BASE}/clear-all`, {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${publicAnonKey}`,
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'x-auth-token': token } : {}),
-                      },
-                    });
-                    const text = await res.text();
-                    let data: any;
-                    try { data = JSON.parse(text); } catch {
-                      console.error('Clear non-JSON response:', text);
-                      toast.error('Server error: ' + text.slice(0, 120));
-                      return;
-                    }
-                    if (data.success) {
-                      toast.success(language === 'sr'
-                        ? 'Svi podaci su izbrisani!'
-                        : 'All data has been deleted!');
-                      loadSubmissions();
-                      loadEvents();
-                    } else {
-                      toast.error(data.error || 'Clear failed');
-                      console.error('Clear error:', data);
-                    }
-                  } catch (err) {
-                    toast.error('Clear request failed');
-                    console.error('Clear error:', err);
-                  } finally {
-                    setSeeding(false);
-                  }
-                    },
-                  });
-                }}
-                disabled={seeding}
-                className="px-5 py-2.5 rounded-lg font-semibold text-white"
-                style={{
-                  background: seeding ? '#9CA3AF' : 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)',
-                  border: 'none',
-                  cursor: seeding ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                }}
-              >
-                {seeding
-                  ? (language === 'sr' ? 'Radim...' : 'Working...')
-                  : (language === 'sr' ? '🗑️ Izbriši sve podatke' : '🗑️ Delete All Data')}
-              </button>
-              {/* SEED BiH */}
-              <button
-                onClick={async () => {
-                  setSeeding(true);
-                  try {
-                    const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
-                    const token = accessToken;
-                    const res = await fetch(`${API_BASE}/seed`, {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${publicAnonKey}`,
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'x-auth-token': token } : {}),
-                      },
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      toast.success(language === 'sr'
-                        ? `Uspješno dodano ${data.venuesInserted} venue-a i ${data.eventsInserted} eventova!`
-                        : `Successfully added ${data.venuesInserted} venues and ${data.eventsInserted} events!`);
-                      // Refresh data
-                      loadSubmissions();
-                      loadEvents();
-                    } else {
-                      toast.error(data.error || 'Seed failed');
-                      console.error('Seed error:', data);
-                    }
-                  } catch (err) {
-                    toast.error('Seed request failed');
-                    console.error('Seed error:', err);
-                  } finally {
-                    setSeeding(false);
-                  }
-                }}
-                disabled={seeding}
-                className="px-5 py-2.5 rounded-lg font-semibold text-white"
-                style={{
-                  background: seeding ? '#9CA3AF' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  border: 'none',
-                  cursor: seeding ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                }}
-              >
-                {seeding
-                  ? (language === 'sr' ? 'Dodajem podatke...' : 'Seeding...')
-                  : (language === 'sr' ? 'Dodaj uzorak podataka (BiH)' : 'Seed Sample Data (BiH)')}
-              </button>
-              <button
-                onClick={async () => {
-                  setSeeding(true);
-                  try {
-                    const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
-                    const token = accessToken;
-                    const res = await fetch(`${API_BASE}/seed-regional`, {
-                      method: 'POST',
-                      headers: {
-                        'Authorization': `Bearer ${publicAnonKey}`,
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'x-auth-token': token } : {}),
-                      },
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                      toast.success(language === 'sr'
-                        ? `Regionalno: dodano ${data.venuesInserted} venue-a i ${data.eventsInserted} eventova!`
-                        : `Regional: added ${data.venuesInserted} venues and ${data.eventsInserted} events!`);
-                      loadSubmissions();
-                      loadEvents();
-                    } else {
-                      toast.error(data.error || 'Regional seed failed');
-                      console.error('Regional seed error:', data);
-                    }
-                  } catch (err) {
-                    toast.error('Regional seed request failed');
-                    console.error('Regional seed error:', err);
-                  } finally {
-                    setSeeding(false);
-                  }
-                }}
-                disabled={seeding}
-                className="px-5 py-2.5 rounded-lg font-semibold text-white"
-                style={{
-                  background: seeding ? '#9CA3AF' : 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
-                  border: 'none',
-                  cursor: seeding ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
-                }}
-              >
-                {seeding
-                  ? (language === 'sr' ? 'Dodajem podatke...' : 'Seeding...')
-                  : (language === 'sr' ? 'Dodaj regionalne podatke (iz regije)' : 'Seed Regional Data (ex-YU)')}
-              </button>
-              </div>
-            </section>
-          )}
-
           {/* BANNER AD MANAGEMENT - ADMIN PANEL ZA UPRAVLJANJE */}
           <BannerAdminSection />
 
@@ -1386,15 +1224,29 @@ export function AdminPage() {
                         action: async () => {
                           setPendingConfirm(null);
                           setDeletingVenues(true);
+                          const idsToDelete = Array.from(selectedVenueIds);
+                          console.log('[Admin][BulkDelete][venues] Selected IDs:', idsToDelete);
                           let deleted = 0;
                           let failed = 0;
-                          for (const id of selectedVenueIds) {
+                          const successfullyDeleted = new Set<string>();
+                          for (const id of idsToDelete) {
                             try {
-                              const ok = await dataService.deleteItem(id);
-                              if (ok) deleted++; else failed++;
-                            } catch { failed++; }
+                              console.log('[Admin][BulkDelete][venues] Deleting venue id:', id);
+                              const ok = await dataService.deleteVenue(id);
+                              if (ok) {
+                                deleted++;
+                                successfullyDeleted.add(id);
+                                console.log('[Admin][BulkDelete][venues] Success for id:', id);
+                              } else {
+                                failed++;
+                                console.error('[Admin][BulkDelete][venues] Failed for id:', id);
+                              }
+                            } catch (error) {
+                              failed++;
+                              console.error('[Admin][BulkDelete][venues] Exception for id:', id, error);
+                            }
                           }
-                          setSubmissions(prev => prev.filter(v => !selectedVenueIds.has(v.id)));
+                          setSubmissions(prev => prev.filter(v => !successfullyDeleted.has(v.id)));
                           setSelectedVenueIds(new Set());
                           setDeletingVenues(false);
                           if (failed === 0) {
@@ -1522,125 +1374,81 @@ export function AdminPage() {
                           className="w-4 h-4 rounded accent-[#0E3DC5] cursor-pointer flex-shrink-0 mt-1"
                         />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <h3 className="m-0">{submission.title}</h3>
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-[12px]">
+                            <span className={`${topBadgeBaseClass} bg-gray-100`}>
                               {t(('venueType' + (submission.venue_type || submission.page_slug || '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')) as any)}
                             </span>
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if inactive) */}
                             {(() => {
                               const isActive = !inactiveVenueIds.has(submission.id);
+                              const isPendingInAllTab = filter === 'all' && submission.status === 'pending';
                               return (
                                 <>
-                                  <span className="text-[11px] px-2 py-1 rounded-full" style={{
+                                  <span className={topBadgeBaseClass} style={{
                                     background: submission.status === 'pending'
-                                      ? '#FFF7ED'
+                                      ? (isPendingInAllTab ? '#FFF1F2' : '#FFF7ED')
                                       : (!isActive ? '#F3F4F6' : 'rgba(14, 61, 197, 0.06)'),
                                     border: submission.status === 'pending'
-                                      ? '1px solid #FDBA74'
+                                      ? (isPendingInAllTab ? '1px solid #FDBA74' : '1px solid #FDBA74')
                                       : (!isActive ? '1px solid #D1D5DB' : '1px solid rgba(14, 61, 197, 0.25)'),
                                     color: submission.status === 'pending'
-                                      ? 'var(--accent-orange)'
+                                      ? (isPendingInAllTab ? '#C2410C' : 'var(--accent-orange)')
                                       : (!isActive ? '#9CA3AF' : '#0E3DC5'),
+                                    fontWeight: submission.status === 'pending'
+                                      ? (isPendingInAllTab ? 700 : 600)
+                                      : 600,
                                   }}>
                                     {submission.status === 'pending' ? t('pending') : t('approved')}
                                   </span>
-                                  {/* Active/Inactive toggle buttons */}
-                                  {submission.status === 'approved' && (
-                                    <div className="flex gap-0.5">
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleToggleActive(submission.id, true); }}
-                                        disabled={togglingActive === submission.id}
-                                        className="text-[11px] px-2 py-1 rounded-l-full border-0 cursor-pointer transition-all"
-                                        style={{
-                                          background: isActive ? '#F0FDF4' : '#F3F4F6',
-                                          border: isActive ? '1px solid #86EFAC' : '1px solid #D1D5DB',
-                                          color: isActive ? '#16A34A' : '#9CA3AF',
-                                          fontWeight: isActive ? 600 : 400,
-                                          opacity: togglingActive === submission.id ? 0.5 : 1,
-                                        }}
-                                      >
-                                        {language === 'sr' ? 'Aktivan' : 'Active'}
-                                      </button>
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); handleToggleActive(submission.id, false); }}
-                                        disabled={togglingActive === submission.id}
-                                        className="text-[11px] px-2 py-1 rounded-r-full border-0 cursor-pointer transition-all"
-                                        style={{
-                                          background: !isActive ? '#FEF2F2' : '#F3F4F6',
-                                          border: !isActive ? '1px solid #FCA5A5' : '1px solid #D1D5DB',
-                                          color: !isActive ? '#DC2626' : '#9CA3AF',
-                                          fontWeight: !isActive ? 600 : 400,
-                                          opacity: togglingActive === submission.id ? 0.5 : 1,
-                                        }}
-                                      >
-                                        {language === 'sr' ? 'Neaktivan' : 'Inactive'}
-                                      </button>
-                                    </div>
-                                  )}
+                                  <div className="inline-flex">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleToggleActive(submission.id, true); }}
+                                      disabled={togglingActive === submission.id}
+                                      className={`${topBadgeBaseClass} rounded-r-none border`}
+                                      style={{
+                                        background: isActive ? '#F0FDF4' : '#F3F4F6',
+                                        borderColor: isActive ? '#86EFAC' : '#D1D5DB',
+                                        color: isActive ? '#16A34A' : '#9CA3AF',
+                                        opacity: togglingActive === submission.id ? 0.5 : 1,
+                                        cursor: togglingActive === submission.id ? 'not-allowed' : 'pointer',
+                                      }}
+                                    >
+                                      {language === 'sr' ? 'Aktivan' : 'Active'}
+                                    </button>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleToggleActive(submission.id, false); }}
+                                      disabled={togglingActive === submission.id}
+                                      className={`${topBadgeBaseClass} rounded-l-none border border-l-0`}
+                                      style={{
+                                        background: !isActive ? '#FEF2F2' : '#F3F4F6',
+                                        borderColor: !isActive ? '#FCA5A5' : '#D1D5DB',
+                                        color: !isActive ? '#DC2626' : '#9CA3AF',
+                                        opacity: togglingActive === submission.id ? 0.5 : 1,
+                                        cursor: togglingActive === submission.id ? 'not-allowed' : 'pointer',
+                                      }}
+                                    >
+                                      {language === 'sr' ? 'Neaktivan' : 'Inactive'}
+                                    </button>
+                                  </div>
                                 </>
                               );
                             })()}
                             {submission.submitted_by && (
-                              <span 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px]"
-                                style={{ 
-                                  background: 'rgba(107, 114, 128, 0.08)',
-                                  border: '1px solid rgba(107, 114, 128, 0.2)',
-                                  color: '#6B7280',
-                                  fontWeight: 500,
-                                }}
-                              >
+                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
                                 {language === 'sr' ? 'Dodao:' : 'Added by:'} {submission.submitted_by_name || submission.submitted_by}
                               </span>
                             )}
-                            <span 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]"
-                              style={{ 
-                                background: 'rgba(107, 114, 128, 0.06)',
-                                border: '1px solid rgba(107, 114, 128, 0.15)',
-                                color: '#9CA3AF',
-                                fontWeight: 400,
-                              }}
-                            >
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
                               📅 {formatDate(submission.created_at)}
                             </span>
-                            {featuredVenueIds.has(submission.id) && (
-                              <span className="text-[11px] px-2 py-1 rounded-full bg-amber-50 border border-amber-300" style={{ color: '#D97706' }}>
-                                ⭐ {language === 'sr' ? 'Istaknuto' : 'Featured'}
-                              </span>
-                            )}
                           </div>
                           <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
-                            <span>📍 {submission.address}{submission.city ? `, ${submission.city}` : ''}</span>
-                            {submission.phone && <span>📞 {submission.phone}</span>}
-                            {(submission.contact_name || submission.contact_email) && (
-                              <span 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px]"
-                                style={{ 
-                                  background: 'rgba(14, 61, 197, 0.06)',
-                                  border: '1px solid rgba(14, 61, 197, 0.15)',
-                                  color: '#0E3DC5',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                <User className="w-3 h-3" />
-                                {submission.contact_name || submission.contact_email}
-                              </span>
-                            )}
-                            {submission.contact_email && submission.contact_name && (
-                              <span 
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px]"
-                                style={{ 
-                                  background: 'rgba(14, 61, 197, 0.04)',
-                                  border: '1px solid rgba(14, 61, 197, 0.1)',
-                                  color: '#4B6BD6',
-                                  fontWeight: 400,
-                                }}
-                              >
-                                ✉ {submission.contact_email}
-                              </span>
-                            )}
+                            {submission.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{submission.city}</span>}
+                            {submission.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{submission.address}</span>}
+                            {(submission.contact_name || (submission as any).organizer_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{submission.contact_name || (submission as any).organizer_name}</span>}
+                            {(submission.phone || (submission as any).contact_phone || (submission as any).organizer_phone) && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{submission.phone || (submission as any).contact_phone || (submission as any).organizer_phone}</span>}
+                            {(submission.contact_email || (submission as any).organizer_email) && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{submission.contact_email || (submission as any).organizer_email}</span>}
                           </div>
                         </div>
                       </div>
@@ -1754,15 +1562,29 @@ export function AdminPage() {
                         action: async () => {
                           setPendingConfirm(null);
                           setDeletingEvents(true);
+                          const idsToDelete = Array.from(selectedEventIds);
+                          console.log('[Admin][BulkDelete][events] Selected IDs:', idsToDelete);
                           let deleted = 0;
                           let failed = 0;
-                          for (const id of selectedEventIds) {
+                          const successfullyDeleted = new Set<string>();
+                          for (const id of idsToDelete) {
                             try {
-                              const ok = await eventService.deleteEvent(id);
-                              if (ok) deleted++; else failed++;
-                            } catch { failed++; }
+                              console.log('[Admin][BulkDelete][events] Deleting event id:', id);
+                              const ok = await dataService.deleteEvent(id);
+                              if (ok) {
+                                deleted++;
+                                successfullyDeleted.add(id);
+                                console.log('[Admin][BulkDelete][events] Success for id:', id);
+                              } else {
+                                failed++;
+                                console.error('[Admin][BulkDelete][events] Failed for id:', id);
+                              }
+                            } catch (error) {
+                              failed++;
+                              console.error('[Admin][BulkDelete][events] Exception for id:', id, error);
+                            }
                           }
-                          setEvents(prev => prev.filter(ev => !selectedEventIds.has(ev.id)));
+                          setEvents(prev => prev.filter(ev => !successfullyDeleted.has(ev.id)));
                           setSelectedEventIds(new Set());
                           setDeletingEvents(false);
                           if (failed === 0) {
@@ -1865,6 +1687,7 @@ export function AdminPage() {
               ) : (
                 filteredEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
+                  const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
                   return (
                   <div
                     key={event.id}
@@ -1892,8 +1715,8 @@ export function AdminPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <h3 className="m-0">{event.title}</h3>
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-[12px]">
-                              {t((event.page_slug || 'events') as keyof typeof translations)}
+                            <span className={`${topBadgeBaseClass} bg-gray-100`}>
+                              {eventTypeLabel}
                             </span>
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if expired/inactive) */}
                             {(() => {
@@ -1902,44 +1725,37 @@ export function AdminPage() {
                                 : false;
                               const isEventActive = !inactiveEventIds.has(event.id);
                               const isFullyActive = isEventActive && !isExpired;
+                              const isPendingInAllTab = eventFilter === 'all' && event.status === 'pending';
                               return (
                                 <>
-                                  <span className="text-[11px] px-2 py-1 rounded-full" style={{
+                                  <span className={topBadgeBaseClass} style={{
                                     background: event.status === 'pending' 
-                                      ? '#FFF7ED' 
+                                      ? (isPendingInAllTab ? '#FFF1F2' : '#FFF7ED')
                                       : (!isFullyActive ? '#F3F4F6' : 'rgba(14, 61, 197, 0.06)'),
                                     border: event.status === 'pending'
-                                      ? '1px solid #FDBA74'
+                                      ? (isPendingInAllTab ? '1px solid #FDBA74' : '1px solid #FDBA74')
                                       : (!isFullyActive ? '1px solid #D1D5DB' : '1px solid rgba(14, 61, 197, 0.25)'),
                                     color: event.status === 'pending'
-                                      ? 'var(--accent-orange)'
+                                      ? (isPendingInAllTab ? '#C2410C' : 'var(--accent-orange)')
                                       : (!isFullyActive ? '#9CA3AF' : '#0E3DC5'),
+                                    fontWeight: event.status === 'pending'
+                                      ? (isPendingInAllTab ? 700 : 600)
+                                      : 600,
                                   }}>
                                     {event.status === 'pending' ? t('pending') : t('approved')}
                                   </span>
-                                  {/* Expired badge (date-based) */}
-                                  {event.status === 'approved' && isExpired && (
-                                    <span className="text-[11px] px-2 py-1 rounded-full" style={{
-                                      background: '#FEF2F2',
-                                      border: '1px solid #FCA5A5',
-                                      color: '#DC2626',
-                                    }}>
-                                      {language === 'sr' ? 'Istekao' : 'Expired'}
-                                    </span>
-                                  )}
-                                  {/* Active/Inactive toggle buttons */}
                                   {event.status === 'approved' && (
-                                    <div className="flex gap-0.5">
+                                    <div className="inline-flex">
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleToggleEventActive(event.id, true); }}
                                         disabled={togglingEventActive === event.id}
-                                        className="text-[11px] px-2 py-1 rounded-l-full border-0 cursor-pointer transition-all"
+                                        className={`${topBadgeBaseClass} rounded-r-none border`}
                                         style={{
                                           background: isEventActive ? '#F0FDF4' : '#F3F4F6',
-                                          border: isEventActive ? '1px solid #86EFAC' : '1px solid #D1D5DB',
+                                          borderColor: isEventActive ? '#86EFAC' : '#D1D5DB',
                                           color: isEventActive ? '#16A34A' : '#9CA3AF',
-                                          fontWeight: isEventActive ? 600 : 400,
                                           opacity: togglingEventActive === event.id ? 0.5 : 1,
+                                          cursor: togglingEventActive === event.id ? 'not-allowed' : 'pointer',
                                         }}
                                       >
                                         {language === 'sr' ? 'Aktivan' : 'Active'}
@@ -1947,13 +1763,13 @@ export function AdminPage() {
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleToggleEventActive(event.id, false); }}
                                         disabled={togglingEventActive === event.id}
-                                        className="text-[11px] px-2 py-1 rounded-r-full border-0 cursor-pointer transition-all"
+                                        className={`${topBadgeBaseClass} rounded-l-none border border-l-0`}
                                         style={{
                                           background: !isEventActive ? '#FEF2F2' : '#F3F4F6',
-                                          border: !isEventActive ? '1px solid #FCA5A5' : '1px solid #D1D5DB',
+                                          borderColor: !isEventActive ? '#FCA5A5' : '#D1D5DB',
                                           color: !isEventActive ? '#DC2626' : '#9CA3AF',
-                                          fontWeight: !isEventActive ? 600 : 400,
                                           opacity: togglingEventActive === event.id ? 0.5 : 1,
+                                          cursor: togglingEventActive === event.id ? 'not-allowed' : 'pointer',
                                         }}
                                       >
                                         {language === 'sr' ? 'Neaktivan' : 'Inactive'}
@@ -1964,79 +1780,21 @@ export function AdminPage() {
                               );
                             })()}
                             {event.submitted_by && (
-                              <span 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px]"
-                                style={{ 
-                                  background: 'rgba(107, 114, 128, 0.08)',
-                                  border: '1px solid rgba(107, 114, 128, 0.2)',
-                                  color: '#6B7280',
-                                  fontWeight: 500,
-                                }}
-                              >
+                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
                                 {language === 'sr' ? 'Dodao:' : 'Added by:'} {event.submitted_by_name || event.submitted_by}
                               </span>
                             )}
-                            <span 
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px]"
-                              style={{ 
-                                background: 'rgba(107, 114, 128, 0.06)',
-                                border: '1px solid rgba(107, 114, 128, 0.15)',
-                                color: '#9CA3AF',
-                                fontWeight: 400,
-                              }}
-                            >
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
                               📅 {formatDate(event.created_at)}
                             </span>
-                            {featuredVenueIds.has(event.id) && (
-                              <span className="text-[11px] px-2 py-1 rounded-full bg-amber-50 border border-amber-300" style={{ color: '#D97706' }}>
-                                ⭐ {language === 'sr' ? 'Istaknuto' : 'Featured'}
-                              </span>
-                            )}
                           </div>
                           <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
-                            <span>📍 {event.address}{event.city ? `, ${event.city}` : ''}</span>
-                            {event.phone && <span>📞 {event.phone}</span>}
-                            {event.start_at && <span>📅 {formatDate(event.start_at)}</span>}
-                            {(event.organizer_name || event.organizer_phone || event.organizer_email) && (
-                              <span 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px]"
-                                style={{ 
-                                  background: 'rgba(107, 114, 128, 0.08)',
-                                  border: '1px solid rgba(107, 114, 128, 0.2)',
-                                  color: '#6B7280',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                🎤 {event.organizer_name || ''}{event.organizer_phone ? ` | 📞 ${event.organizer_phone}` : ''}{event.organizer_email ? ` | ✉ ${event.organizer_email}` : ''}
-                              </span>
-                            )}
-                            {(event.contact_name || event.contact_email) && (
-                              <span 
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px]"
-                                style={{ 
-                                  background: 'rgba(14, 61, 197, 0.06)',
-                                  border: '1px solid rgba(14, 61, 197, 0.15)',
-                                  color: '#0E3DC5',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                <User className="w-3 h-3" />
-                                {event.contact_name || event.contact_email}
-                              </span>
-                            )}
-                            {event.contact_email && event.contact_name && (
-                              <span 
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px]"
-                                style={{ 
-                                  background: 'rgba(14, 61, 197, 0.04)',
-                                  border: '1px solid rgba(14, 61, 197, 0.1)',
-                                  color: '#4B6BD6',
-                                  fontWeight: 400,
-                                }}
-                              >
-                                ✉ {event.contact_email}
-                              </span>
-                            )}
+                            {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
+                            {event.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{event.address}</span>}
+                            {event.start_at && <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDate(event.start_at)}</span>}
+                            {(event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{event.organizer_name || event.contact_name}</span>}
+                            {(event.organizer_phone || event.phone) && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{event.organizer_phone || event.phone}</span>}
+                            {(event.organizer_email || event.contact_email) && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{event.organizer_email || event.contact_email}</span>}
                           </div>
                         </div>
                       </div>
@@ -2111,8 +1869,6 @@ export function AdminPage() {
         </div>
       )}
 
-      <Footer />
-      
       {/* Delete Confirm Dialog */}
       {deleteConfirmId !== null && (
         <ConfirmDialog

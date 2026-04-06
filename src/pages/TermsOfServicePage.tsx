@@ -2,8 +2,6 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
 import { getBreadcrumbSchema } from "../utils/structuredData";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import {
   BRAND,
   TEXT,
@@ -46,8 +44,6 @@ export function TermsOfServicePage() {
       className="min-h-screen"
       style={{ background: BACKGROUNDS.white }}
     >
-      <Header />
-
       {/* CONTENT SECTION */}
       <section className="py-16">
         <div className="max-w-[800px] mx-auto px-4">
@@ -552,8 +548,6 @@ export function TermsOfServicePage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

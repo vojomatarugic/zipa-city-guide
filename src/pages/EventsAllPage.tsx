@@ -10,13 +10,13 @@ import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import eventsHeroImage from "../assets/55c8d14367570f30de708fa478fd6a7489c658c9.png";
+import { EVENTS_CATEGORY_THEME, EVENTS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 export function EventsAllPage() {
   const { t } = useT();
@@ -43,6 +43,7 @@ export function EventsAllPage() {
             const endDate = event.end_at ? new Date(event.end_at) : new Date(event.start_at);
             return endDate >= now;
           })
+          .filter((e) => getTopLevelPageCategory(e) === "events")
           .sort((a, b) => {
             const dateA = a.start_at ? new Date(a.start_at).getTime() : 0;
             const dateB = b.start_at ? new Date(b.start_at).getTime() : 0;
@@ -68,8 +69,6 @@ export function EventsAllPage() {
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
-      <Header />
-
       {/* Hero Section */}
       <section
         className="relative w-full"
@@ -82,7 +81,7 @@ export function EventsAllPage() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(rgba(255, 107, 53, 0.65), rgba(255, 107, 53, 0.65))" }}
+          style={{ background: EVENTS_HERO_OVERLAY_GRADIENT }}
         />
         <div className="relative z-10 h-full flex flex-col justify-center items-center px-8 lg:px-24">
           <h1
@@ -126,7 +125,7 @@ export function EventsAllPage() {
 
         {/* Empty */}
         {!isLoading && events.length === 0 && (
-          <UnderConstruction language={language} accentColor="#FB8C00" icon={CalendarDays} />
+          <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
         )}
 
         {/* Events Grouped by Month with Accordion */}
@@ -134,7 +133,7 @@ export function EventsAllPage() {
           <MonthAccordion
             events={events}
             language={language}
-            accentColor="#FB8C00"
+            accentColor={EVENTS_CATEGORY_THEME.accentColor}
             badgeBg="#FFF7ED"
             badgeBorder="#FDBA74"
             countLabelSr="događaja"
@@ -153,7 +152,7 @@ export function EventsAllPage() {
                 />
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-sm font-medium" style={{ color: "#FB8C00" }}>
+                    <span className="text-sm font-medium" style={{ color: EVENTS_CATEGORY_THEME.accentColor }}>
                       {eventService.translateEventType(event.event_type || event.page_slug || '', language) || (language === "sr" ? "Događaj" : "Event")}
                     </span>
                     {(/^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '')) && (
@@ -191,7 +190,7 @@ export function EventsAllPage() {
                   )}
                   {interestCounts[event.id] > 0 && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Heart size={12} style={{ color: "#FB8C00" }} />
+                      <Heart size={12} style={{ color: EVENTS_CATEGORY_THEME.accentColor }} />
                       <span className="text-xs" style={{ color: "#9CA3AF" }}>
                         {interestCounts[event.id]} {language === "sr" ? "zainteresovano" : "interested"}
                       </span>
@@ -203,8 +202,6 @@ export function EventsAllPage() {
           />
         )}
       </div>
-
-      <Footer />
     </div>
   );
 }

@@ -2,8 +2,6 @@ import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { getBreadcrumbSchema } from '../utils/structuredData';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { BRAND, TEXT, BACKGROUNDS, BORDERS } from '../utils/colors';
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 
@@ -37,8 +35,6 @@ export function PrivacyPolicyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-
-      <Header />
 
       {/* CONTENT SECTION */}
       <section className="py-16">
@@ -587,8 +583,6 @@ export function PrivacyPolicyPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

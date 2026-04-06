@@ -149,6 +149,8 @@ export interface Item {
   address?: string;
   map_url?: string;
   venue_type?: string;
+  /** Venue oznaka keys (DB `tags`: string[] or comma-separated string from API) */
+  tags?: string | string[] | null;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -345,13 +347,18 @@ export async function createItem(
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error('[createItem] Error:', response.status, errorData);
-      return null;
+      const msg =
+        (errorData && typeof errorData.error === 'string' && errorData.error) ||
+        (errorData && typeof errorData.details === 'string' && errorData.details) ||
+        `Request failed (${response.status})`;
+      throw new Error(msg);
     }
 
     const data = await response.json();
     return data.submission || null;
   } catch (error) {
     console.error('[createItem] Error:', error);
+    if (error instanceof Error) throw error;
     return null;
   }
 }
@@ -380,13 +387,18 @@ export async function updateVenue(
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error('[updateVenue] Error:', response.status, errorData);
-      return null;
+      const msg =
+        (errorData && typeof errorData.error === 'string' && errorData.error) ||
+        (errorData && typeof errorData.details === 'string' && errorData.details) ||
+        `Request failed (${response.status})`;
+      throw new Error(msg);
     }
 
     const data = await response.json();
     return data.venue || null;
   } catch (error) {
     console.error('[updateVenue] Error:', error);
+    if (error instanceof Error) throw error;
     return null;
   }
 }
@@ -415,13 +427,18 @@ export async function updateEvent(
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error('[updateEvent] Error:', response.status, errorData);
-      return null;
+      const msg =
+        (errorData && typeof errorData.error === 'string' && errorData.error) ||
+        (errorData && typeof errorData.details === 'string' && errorData.details) ||
+        `Request failed (${response.status})`;
+      throw new Error(msg);
     }
 
     const data = await response.json();
     return data.event || null;
   } catch (error) {
     console.error('[updateEvent] Error:', error);
+    if (error instanceof Error) throw error;
     return null;
   }
 }
@@ -515,6 +532,127 @@ export async function deleteItem(id: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('[deleteItem] Error:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete a venue by ID (owner or admin).
+ */
+export async function deleteVenue(id: string): Promise<boolean> {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) { console.error('[deleteVenue] No access token'); return false; }
+    const attemptUrls = [
+      `${API_BASE_URL}/venues/${id}`,
+      `${API_BASE_URL}/submissions/${id}`, // fallback for older backend route layouts
+    ];
+
+    for (let i = 0; i < attemptUrls.length; i++) {
+      const url = attemptUrls[i];
+      const isLastAttempt = i === attemptUrls.length - 1;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        console.log('[deleteVenue] Request start', { id, url, hasToken: !!accessToken, tokenPrefix: accessToken.slice(0, 16) });
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: authHeaders(accessToken),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const responseBody = await response.text().catch(() => '');
+
+        if (response.ok) {
+          console.log('[deleteVenue] Success response', { id, url, status: response.status, body: responseBody });
+          return true;
+        }
+
+        console.error('[deleteVenue] Failed response', {
+          id,
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody
+        });
+
+        // Retry with fallback route unless request is clearly unauthorized.
+        if (!isLastAttempt && response.status !== 401) {
+          console.warn('[deleteVenue] Trying fallback route after failed primary', { id, failedUrl: url, status: response.status });
+          continue;
+        }
+        if (isLastAttempt || response.status === 401) {
+          return false;
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('[deleteVenue] Attempt error', { id, url, error });
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[deleteVenue] Error:', error);
+    return false;
+  }
+}
+
+/**
+ * Delete an event by ID (owner or admin).
+ */
+export async function deleteEvent(id: string): Promise<boolean> {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) { console.error('[deleteEvent] No access token'); return false; }
+    const attemptUrls = [
+      `${API_BASE_URL}/events/${id}`,
+      `${API_BASE_URL}/submissions/${id}`, // fallback for older backend route layouts
+    ];
+
+    for (let i = 0; i < attemptUrls.length; i++) {
+      const url = attemptUrls[i];
+      const isLastAttempt = i === attemptUrls.length - 1;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      try {
+        console.log('[deleteEvent] Request start', { id, url, hasToken: !!accessToken, tokenPrefix: accessToken.slice(0, 16) });
+        const response = await fetch(url, {
+          method: 'DELETE',
+          headers: authHeaders(accessToken),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const responseBody = await response.text().catch(() => '');
+
+        if (response.ok) {
+          console.log('[deleteEvent] Success response', { id, url, status: response.status, body: responseBody });
+          return true;
+        }
+
+        console.error('[deleteEvent] Failed response', {
+          id,
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody
+        });
+
+        if (!isLastAttempt && [403, 404, 405, 501].includes(response.status)) {
+          console.warn('[deleteEvent] Trying fallback route after failed primary', { id, failedUrl: url, status: response.status });
+          continue;
+        }
+        if (isLastAttempt || ![403, 404, 405, 501].includes(response.status)) {
+          return false;
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('[deleteEvent] Attempt error', { id, url, error });
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[deleteEvent] Error:', error);
     return false;
   }
 }

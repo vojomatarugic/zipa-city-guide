@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { CalendarDays } from "lucide-react";
@@ -14,6 +12,8 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
 import eventsHeroImage from "../assets/55c8d14367570f30de708fa478fd6a7489c658c9.png";
+import { EVENTS_CATEGORY_THEME, EVENTS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 export function EventsPage() {
   const { t } = useT();
@@ -31,11 +31,14 @@ export function EventsPage() {
         'upcoming',
         selectedCity
       );
-      setEvents(fetchedEvents);
+      const eventsBucket = fetchedEvents.filter(
+        (e) => getTopLevelPageCategory(e) === "events"
+      );
+      setEvents(eventsBucket);
       setIsLoading(false);
 
       // Fetch interest counts for free events
-      const freeIds = fetchedEvents
+      const freeIds = eventsBucket
         .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
         .map(e => e.id);
       if (freeIds.length > 0) {
@@ -78,14 +81,12 @@ export function EventsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <Header />
-
       {/* HERO SECTION */}
       <section
         className="relative w-full"
         style={{
           height: "420px",
-          background: `linear-gradient(rgba(255, 107, 53, 0.65), rgba(255, 107, 53, 0.65)), url('${eventsHeroImage}') center/cover`,
+          background: `${EVENTS_HERO_OVERLAY_GRADIENT}, url('${eventsHeroImage}') center/cover`,
         }}
       >
         <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
@@ -123,7 +124,7 @@ export function EventsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#FB8C00",
+              color: EVENTS_CATEGORY_THEME.accentColor,
               marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
@@ -140,14 +141,14 @@ export function EventsPage() {
                   key={event.id}
                   event={event}
                   language={language}
-                  accentColor="#FB8C00"
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
                   imageHeight="350px"
                   interestCount={interestCounts[event.id]}
                 />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor="#FB8C00" icon={CalendarDays} />
+                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
               </div>
             )}
           </div>
@@ -158,7 +159,7 @@ export function EventsPage() {
               to="/events/all"
               style={{
                 display: "inline-block",
-                background: "#FB8C00",
+                background: EVENTS_CATEGORY_THEME.ctaBackground,
                 color: "#FFFFFF",
                 padding: "14px 32px",
                 borderRadius: "8px",
@@ -182,7 +183,7 @@ export function EventsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#FB8C00",
+              color: EVENTS_CATEGORY_THEME.accentColor,
               marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
@@ -199,14 +200,14 @@ export function EventsPage() {
                   key={event.id}
                   event={event}
                   language={language}
-                  accentColor="#FB8C00"
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
                   imageHeight="200px"
                   interestCount={interestCounts[event.id]}
                 />
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor="#FB8C00" icon={CalendarDays} />
+                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
               </div>
             )}
           </div>
@@ -220,7 +221,7 @@ export function EventsPage() {
             style={{
               fontSize: "24px",
               fontWeight: 600,
-              color: "#FB8C00",
+              color: EVENTS_CATEGORY_THEME.accentColor,
               marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
@@ -235,21 +236,19 @@ export function EventsPage() {
                   key={event.id}
                   event={event}
                   language={language}
-                  accentColor="#FB8C00"
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
                   imageHeight="200px"
                   interestCount={interestCounts[event.id]}
                 />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor="#FB8C00" icon={CalendarDays} />
+                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
               </div>
             )}
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "npm:hono": ["../../../../node_modules/hono"],
+      "npm:hono/cors": ["../../../../node_modules/hono/dist/types/middleware/cors"],
+      "npm:hono/logger": ["../../../../node_modules/hono/dist/types/middleware/logger"],
+      "jsr:@supabase/supabase-js@2.49.8": [
+        "../../../../node_modules/@jsr/supabase__supabase-js/_dist/src/index.d.ts"
+      ]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx", "./deno-ambient.d.ts"]
+}

@@ -2,11 +2,9 @@ import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
 import { BACKGROUNDS, BORDERS, TEXT, BRAND } from '../utils/colors';
 import { Link, useNavigate } from 'react-router';
-import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2 } from 'lucide-react';
+import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useEffect, useState } from 'react';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import * as dataService from '../utils/dataService';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -26,6 +24,10 @@ export function MyPanelPage() {
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set());
   const [deletingVenues, setDeletingVenues] = useState(false);
   const [deletingEvents, setDeletingEvents] = useState(false);
+  const [inactiveVenueIds, setInactiveVenueIds] = useState<Set<string>>(new Set());
+  const [inactiveEventIds, setInactiveEventIds] = useState<Set<string>>(new Set());
+  const [togglingVenueActiveId, setTogglingVenueActiveId] = useState<string | null>(null);
+  const [togglingEventActiveId, setTogglingEventActiveId] = useState<string | null>(null);
 
   // ✅ CONFIRM DIALOG STATE (replaces window.confirm)
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -35,6 +37,47 @@ export function MyPanelPage() {
     variant: 'danger' | 'warning' | 'info';
     action: () => void;
   } | null>(null);
+  const topBadgeBaseClass = "inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold";
+
+  const handleToggleVenueActive = async (id: string, makeActive: boolean) => {
+    const currentlyInactive = inactiveVenueIds.has(id);
+    if (makeActive && !currentlyInactive) return;
+    if (!makeActive && currentlyInactive) return;
+    setTogglingVenueActiveId(id);
+    try {
+      const result = await dataService.toggleVenueActive(id);
+      if (!result) {
+        toast.error(language === 'sr' ? 'Promjena statusa nije uspjela' : 'Failed to change active status');
+        return;
+      }
+      const next = new Set(inactiveVenueIds);
+      if (result.is_active) next.delete(id);
+      else next.add(id);
+      setInactiveVenueIds(next);
+    } finally {
+      setTogglingVenueActiveId(null);
+    }
+  };
+
+  const handleToggleEventActive = async (id: string, makeActive: boolean) => {
+    const currentlyInactive = inactiveEventIds.has(id);
+    if (makeActive && !currentlyInactive) return;
+    if (!makeActive && currentlyInactive) return;
+    setTogglingEventActiveId(id);
+    try {
+      const result = await dataService.toggleEventActive(id);
+      if (!result) {
+        toast.error(language === 'sr' ? 'Promjena statusa nije uspjela' : 'Failed to change active status');
+        return;
+      }
+      const next = new Set(inactiveEventIds);
+      if (result.is_active) next.delete(id);
+      else next.add(id);
+      setInactiveEventIds(next);
+    } finally {
+      setTogglingEventActiveId(null);
+    }
+  };
   
   // ✅ EDIT PROFILE STATE
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -93,10 +136,14 @@ export function MyPanelPage() {
       
       Promise.all([
         dataService.getMyVenues(),
-        dataService.getMyEvents()
-      ]).then(([myVenues, myEvents]) => {
+        dataService.getMyEvents(),
+        dataService.getInactiveVenueIds(),
+        dataService.getInactiveEventIds(),
+      ]).then(([myVenues, myEvents, inactiveVenues, inactiveEvents]) => {
         setUserVenues(myVenues);
         setUserEvents(myEvents);
+        setInactiveVenueIds(new Set(inactiveVenues));
+        setInactiveEventIds(new Set(inactiveEvents));
         console.log('✅ Loaded:', myVenues.length, 'venues,', myEvents.length, 'events');
         setLoading(false);
       }).catch(error => {
@@ -151,7 +198,6 @@ export function MyPanelPage() {
         background: '#FFFFFF',
       }}
     >
-      <Header />
       <div
         style={{
           maxWidth: '1280px',
@@ -828,15 +874,29 @@ export function MyPanelPage() {
                         action: async () => {
                           setPendingConfirm(null);
                           setDeletingVenues(true);
+                          const idsToDelete = Array.from(selectedVenueIds);
+                          console.log('[MyPanel][BulkDelete][venues] Selected IDs:', idsToDelete);
                           let deleted = 0;
                           let failed = 0;
-                          for (const id of selectedVenueIds) {
+                          const successfullyDeleted = new Set<string>();
+                          for (const id of idsToDelete) {
                             try {
-                              const ok = await dataService.deleteItem(id);
-                              if (ok) deleted++; else failed++;
-                            } catch { failed++; }
+                              console.log('[MyPanel][BulkDelete][venues] Deleting venue id:', id);
+                              const ok = await dataService.deleteVenue(id);
+                              if (ok) {
+                                deleted++;
+                                successfullyDeleted.add(id);
+                                console.log('[MyPanel][BulkDelete][venues] Success for id:', id);
+                              } else {
+                                failed++;
+                                console.error('[MyPanel][BulkDelete][venues] Failed for id:', id);
+                              }
+                            } catch (error) {
+                              failed++;
+                              console.error('[MyPanel][BulkDelete][venues] Exception for id:', id, error);
+                            }
                           }
-                          setUserVenues(prev => prev.filter(v => !selectedVenueIds.has(v.id)));
+                          setUserVenues(prev => prev.filter(v => !successfullyDeleted.has(v.id)));
                           setSelectedVenueIds(new Set());
                           setDeletingVenues(false);
                           if (failed === 0) {
@@ -880,10 +940,18 @@ export function MyPanelPage() {
                 <div className="space-y-3">
                   {userVenues.map(venue => {
                     const isSelected = selectedVenueIds.has(venue.id);
+                    const isActive = !inactiveVenueIds.has(venue.id);
                     const statusColor = venue.status === 'approved' ? '#16A34A' : venue.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = venue.status === 'approved' ? '#F0FDF4' : venue.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = venue.status === 'approved' ? t('statusApproved') : venue.status === 'rejected' ? t('statusRejected') : t('statusPending');
-                    const categoryKey = `category${venue.page_slug.charAt(0).toUpperCase() + venue.page_slug.slice(1)}` as string;
+                    const typeSource = (venue.venue_type || venue.category || '').toString();
+                    const typeKey = typeSource
+                      ? (`venueType${typeSource.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof typeof translations)
+                      : null;
+                    const typeLabel =
+                      (typeKey ? t(typeKey) : '') ||
+                      typeSource ||
+                      t('categoryFoodAndDrink');
                     return (
                       <div
                         key={venue.id}
@@ -909,40 +977,65 @@ export function MyPanelPage() {
                             <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
                               {venue.title}
                             </h4>
+                            <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
+                              {typeLabel}
+                            </span>
                             <span
-                              className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              className={topBadgeBaseClass}
                               style={{ background: statusBg, color: statusColor, border: `1px solid ${statusColor}30` }}
                             >
                               {statusLabel}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-4 flex-wrap text-[13px]" style={{ color: TEXT.secondary }}>
-                            {venue.city && (
-                              <span className="flex items-center gap-1">
-                                <MapPin size={13} className="text-red-400" />
-                                {venue.city}
-                              </span>
-                            )}
-                            {(venue.phone || venue.contact_phone) && (
-                              <span className="flex items-center gap-1">
-                                <Phone size={13} className="text-green-500" />
-                                {venue.phone || venue.contact_phone}
-                              </span>
-                            )}
+                            <div className="inline-flex">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleVenueActive(venue.id, true)}
+                                disabled={togglingVenueActiveId === venue.id}
+                                className={`${topBadgeBaseClass} rounded-r-none border`}
+                                style={{
+                                  background: isActive ? '#F0FDF4' : '#F3F4F6',
+                                  borderColor: isActive ? '#86EFAC' : '#D1D5DB',
+                                  color: isActive ? '#16A34A' : '#9CA3AF',
+                                  opacity: togglingVenueActiveId === venue.id ? 0.5 : 1,
+                                  cursor: togglingVenueActiveId === venue.id ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {language === 'sr' ? 'Aktivan' : 'Active'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleVenueActive(venue.id, false)}
+                                disabled={togglingVenueActiveId === venue.id}
+                                className={`${topBadgeBaseClass} rounded-l-none border border-l-0`}
+                                style={{
+                                  background: !isActive ? '#FEF2F2' : '#F3F4F6',
+                                  borderColor: !isActive ? '#FCA5A5' : '#D1D5DB',
+                                  color: !isActive ? '#DC2626' : '#9CA3AF',
+                                  opacity: togglingVenueActiveId === venue.id ? 0.5 : 1,
+                                  cursor: togglingVenueActiveId === venue.id ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {language === 'sr' ? 'Neaktivan' : 'Inactive'}
+                              </button>
+                            </div>
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
+                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {venue.submitted_by || '-'}
+                            </span>
                             {venue.created_at && (
-                              <span className="flex items-center gap-1">
-                                <Calendar size={13} className="text-blue-400" />
-                                {language === 'sr'
+                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
+                                📅 {language === 'sr'
                                   ? (() => { const d = new Date(venue.created_at); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`; })()
                                   : new Date(venue.created_at).toISOString().split('T')[0]
                                 }
                               </span>
                             )}
-                            {venue.page_slug && (
-                              <span className="px-2 py-0.5 rounded bg-gray-100 text-[12px]" style={{ color: TEXT.secondary }}>
-                                {t(categoryKey as keyof typeof translations) || venue.page_slug}
-                              </span>
-                            )}
+                          </div>
+                          <div className="flex items-center gap-4 flex-wrap text-[13px]" style={{ color: TEXT.secondary }}>
+                            {venue.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{venue.city}</span>}
+                            {venue.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{venue.address}</span>}
+                            {venue.contact_name && <span className="inline-flex items-center gap-1.5"><User size={14} />{venue.contact_name}</span>}
+                            {(venue.phone || venue.contact_phone) && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{venue.phone || venue.contact_phone}</span>}
+                            {venue.contact_email && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{venue.contact_email}</span>}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -1026,15 +1119,29 @@ export function MyPanelPage() {
                         action: async () => {
                           setPendingConfirm(null);
                           setDeletingEvents(true);
+                          const idsToDelete = Array.from(selectedEventIds);
+                          console.log('[MyPanel][BulkDelete][events] Selected IDs:', idsToDelete);
                           let deleted = 0;
                           let failed = 0;
-                          for (const id of selectedEventIds) {
+                          const successfullyDeleted = new Set<string>();
+                          for (const id of idsToDelete) {
                             try {
-                              const ok = await dataService.deleteItem(id);
-                              if (ok) deleted++; else failed++;
-                            } catch { failed++; }
+                              console.log('[MyPanel][BulkDelete][events] Deleting event id:', id);
+                              const ok = await dataService.deleteEvent(id);
+                              if (ok) {
+                                deleted++;
+                                successfullyDeleted.add(id);
+                                console.log('[MyPanel][BulkDelete][events] Success for id:', id);
+                              } else {
+                                failed++;
+                                console.error('[MyPanel][BulkDelete][events] Failed for id:', id);
+                              }
+                            } catch (error) {
+                              failed++;
+                              console.error('[MyPanel][BulkDelete][events] Exception for id:', id, error);
+                            }
                           }
-                          setUserEvents(prev => prev.filter(ev => !selectedEventIds.has(ev.id)));
+                          setUserEvents(prev => prev.filter(ev => !successfullyDeleted.has(ev.id)));
                           setSelectedEventIds(new Set());
                           setDeletingEvents(false);
                           if (failed === 0) {
@@ -1078,9 +1185,20 @@ export function MyPanelPage() {
                 <div className="space-y-3">
                   {userEvents.map(event => {
                     const isSelected = selectedEventIds.has(event.id);
+                    const isActive = !inactiveEventIds.has(event.id);
                     const statusColor = event.status === 'approved' ? '#16A34A' : event.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = event.status === 'approved' ? '#F0FDF4' : event.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = event.status === 'approved' ? t('statusApproved') : event.status === 'rejected' ? t('statusRejected') : t('statusPending');
+                    const eventDateLabel = event.start_at
+                      ? (language === 'sr'
+                        ? (() => {
+                            const d = new Date(event.start_at as string);
+                            return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`;
+                          })()
+                        : new Date(event.start_at as string).toISOString().split('T')[0])
+                      : (event.date || '');
+                    const eventLocation = event.address || event.venue_name || '';
+                    const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
                     return (
                       <div
                         key={event.id}
@@ -1106,29 +1224,63 @@ export function MyPanelPage() {
                             <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
                               {event.title}
                             </h4>
+                            <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
+                              {eventTypeLabel}
+                            </span>
                             <span
-                              className="px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                              className={topBadgeBaseClass}
                               style={{ background: statusBg, color: statusColor, border: `1px solid ${statusColor}30` }}
                             >
                               {statusLabel}
                             </span>
+                            <div className="inline-flex">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleEventActive(event.id, true)}
+                                disabled={togglingEventActiveId === event.id}
+                                className={`${topBadgeBaseClass} rounded-r-none border`}
+                                style={{
+                                  background: isActive ? '#F0FDF4' : '#F3F4F6',
+                                  borderColor: isActive ? '#86EFAC' : '#D1D5DB',
+                                  color: isActive ? '#16A34A' : '#9CA3AF',
+                                  opacity: togglingEventActiveId === event.id ? 0.5 : 1,
+                                  cursor: togglingEventActiveId === event.id ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {language === 'sr' ? 'Aktivan' : 'Active'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleEventActive(event.id, false)}
+                                disabled={togglingEventActiveId === event.id}
+                                className={`${topBadgeBaseClass} rounded-l-none border border-l-0`}
+                                style={{
+                                  background: !isActive ? '#FEF2F2' : '#F3F4F6',
+                                  borderColor: !isActive ? '#FCA5A5' : '#D1D5DB',
+                                  color: !isActive ? '#DC2626' : '#9CA3AF',
+                                  opacity: togglingEventActiveId === event.id ? 0.5 : 1,
+                                  cursor: togglingEventActiveId === event.id ? 'not-allowed' : 'pointer',
+                                }}
+                              >
+                                {language === 'sr' ? 'Neaktivan' : 'Inactive'}
+                              </button>
+                            </div>
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
+                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {event.submitted_by || '-'}
+                            </span>
+                            {event.created_at && (
+                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
+                                📅 {formatDate(event.created_at)}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 flex-wrap text-[13px]" style={{ color: TEXT.secondary }}>
-                            {(event.address || event.venue_name || event.city) && (
-                              <span className="flex items-center gap-1">
-                                <MapPin size={13} className="text-red-400" />
-                                {event.address || event.venue_name || event.city}
-                              </span>
-                            )}
-                            {event.date && (
-                              <span className="flex items-center gap-1">
-                                <Calendar size={13} className="text-blue-400" />
-                                {event.date}
-                              </span>
-                            )}
-                            <span className="px-2 py-0.5 rounded bg-gray-100 text-[12px]" style={{ color: TEXT.secondary }}>
-                              {t('categoryEvents')}
-                            </span>
+                            {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
+                            {eventLocation && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{eventLocation}</span>}
+                            {eventDateLabel && <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{eventDateLabel}</span>}
+                            {(event.organizerName || event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{(event as any).organizerName || event.organizer_name || event.contact_name}</span>}
+                            {event.organizer_phone && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{event.organizer_phone}</span>}
+                            {event.organizer_email && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{event.organizer_email}</span>}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -1160,7 +1312,6 @@ export function MyPanelPage() {
           )}
         </div>
       </div>
-      <Footer />
 
       {/* Generic Pending Confirm Dialog (bulk delete) */}
       {pendingConfirm && (

@@ -1,21 +1,20 @@
-import {
-  MapPin,
-  Music,
-  ArrowLeft,
-  Clock,
-  Phone,
-  Mail,
-  Users,
-} from "lucide-react";
 import { Link, useParams } from "react-router";
 import { useState, useEffect } from "react";
 import { useT } from "../hooks/useT";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Footer } from "../components/Footer";
-import { Header } from "../components/Header";
 import { getVenueById } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
-import { splitOpeningHoursDisplaySegments } from "../utils/openingHoursDisplay";
+import { VenueBadgeRow, VenueHeroVenueTypeLabel } from "../components/VenueBadgeRow";
+import {
+  VenueDetailTwoColumnGrid,
+  VenueDetailMainColumn,
+  VenueDetailRightColumn,
+  VenueDetailBottomCardRow,
+  VenueDetailHoursCard,
+  VenueDetailAddressCard,
+  VenueDetailInfoCard,
+} from "../components/VenueDetailLayout";
+import { CLUBS_CATEGORY_THEME } from "../utils/categoryThemes";
 
 export function ClubDetailPage() {
   const { id } = useParams();
@@ -38,11 +37,9 @@ export function ClubDetailPage() {
   if (isLoading) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-        <Header />
         <div className="flex items-center justify-center h-[60vh]">
           <p className="text-2xl font-bold">{t('loading') || 'Loading'}...</p>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -50,26 +47,23 @@ export function ClubDetailPage() {
   if (!club) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-        <Header />
         <div className="flex items-center justify-center h-[60vh] flex-col gap-4">
           <p className="text-2xl font-bold">{t('clubNotFound') || 'Club not found'}</p>
           <Link to="/clubs" className="text-blue-600 hover:underline">
             {t('backToClubs') || 'Back to Clubs'}
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-      <Header />
       <div
         style={{
           position: "relative",
           height: "350px",
-          background: "linear-gradient(135deg, #7B1FA2, #9C27B0)",
+          background: CLUBS_CATEGORY_THEME.heroGradient,
         }}
       >
         <ImageWithFallback
@@ -113,6 +107,11 @@ export function ClubDetailPage() {
           }}
         >
           <div>
+            <VenueHeroVenueTypeLabel
+              venue_type={club.venue_type || "nightclub"}
+              t={t}
+              accentColor={CLUBS_CATEGORY_THEME.accentColor}
+            />
             <h1
               style={{
                 fontSize: "56px",
@@ -125,14 +124,16 @@ export function ClubDetailPage() {
             >
               {language === 'en' && club.title_en ? club.title_en : club.title}
             </h1>
-            <p
-              style={{
-                fontSize: "20px",
-                color: "rgba(255,255,255,0.9)",
-              }}
-            >
-              {t('nightlife')}
-            </p>
+            <VenueBadgeRow
+              cuisine={club.cuisine}
+              cuisine_en={club.cuisine_en}
+              tags={club.tags}
+              cuisineOnly
+              language={language === 'en' ? 'en' : 'sr'}
+              t={t}
+              variant="onDark"
+              className="flex flex-wrap items-center gap-2"
+            />
           </div>
         </div>
       </div>
@@ -147,302 +148,70 @@ export function ClubDetailPage() {
           paddingBottom: "50px",
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr",
-            gap: "40px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "32px",
-                fontWeight: 700,
-                color: "#1A1D29",
-                marginBottom: "24px",
-                textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-              }}
+        <VenueDetailTwoColumnGrid
+          mainColumn={
+            <VenueDetailMainColumn
+              bottomCards={
+                <VenueDetailBottomCardRow>
+                  <VenueDetailHoursCard
+                    openingHoursText={club.opening_hours}
+                    openingHoursTextEn={club.opening_hours_en}
+                    language={language}
+                    t={t}
+                    accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  />
+                  <VenueDetailAddressCard
+                    address={club.address}
+                    mapUrl={club.map_url}
+                    t={t}
+                    accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  />
+                </VenueDetailBottomCardRow>
+              }
             >
-              {t("aboutClub") || 'About'}
-            </h2>
-            <p
-              style={{
-                fontSize: "16px",
-                lineHeight: "1.8",
-                color: "#4B5563",
-                marginBottom: "32px",
-                whiteSpace: "pre-wrap",
-                wordWrap: "break-word",
-                overflowWrap: "break-word",
-              }}
-            >
-              {language === 'en' && club.description_en ? club.description_en : club.description}
-            </p>
-
-            <div style={{ marginTop: "auto" }}>
-              <div
+              <h2
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "24px",
-                }}
-              >
-                {club.opening_hours && (
-                  <div
-                    style={{
-                      background: "white",
-                      padding: "24px",
-                      borderRadius: "12px",
-                      border: "1px solid #E5E9F0",
-                    }}
-                  >
-                    <Clock
-                      size={24}
-                      style={{
-                        color: "#7B1FA2",
-                        marginBottom: "12px",
-                      }}
-                    />
-                    <h3
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: 700,
-                        color: "#1A1D29",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      {t("openingHours")}
-                    </h3>
-                    <div style={{ fontSize: "16px", color: "#6B7280" }}>
-                      {splitOpeningHoursDisplaySegments(
-                        language === 'en' && club.opening_hours_en ? club.opening_hours_en : club.opening_hours
-                      ).map((line, i) => (
-                        <div key={i} style={{ marginTop: i > 0 ? 6 : 0 }}>
-                          {line}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {club.address && (
-                  <div
-                    style={{
-                      background: "white",
-                      padding: "24px",
-                      borderRadius: "12px",
-                      border: "1px solid #E5E9F0",
-                    }}
-                  >
-                    <MapPin
-                      size={24}
-                      style={{
-                        color: "#7B1FA2",
-                        marginBottom: "12px",
-                      }}
-                    />
-                    <h3
-                      style={{
-                        fontSize: "18px",
-                        fontWeight: 700,
-                        color: "#1A1D29",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      {t("address")}
-                    </h3>
-                    {club.map_url ? (
-                      <a
-                        href={club.map_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ fontSize: "16px", color: "#7B1FA2", textDecoration: "none" }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
-                      >
-                        {club.address}
-                      </a>
-                    ) : (
-                      <p style={{ fontSize: "16px", color: "#6B7280" }}>
-                        {club.address}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div
-              style={{
-                background: "white",
-                padding: "32px",
-                borderRadius: "16px",
-                border: "1px solid #E5E9F0",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-                position: "sticky",
-                top: "100px",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "24px",
+                  fontSize: "32px",
                   fontWeight: 700,
                   color: "#1A1D29",
                   marginBottom: "24px",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                 }}
               >
-                {t("information")}
-              </h3>
-              <div
+                {t("aboutClub") || "About"}
+              </h2>
+              <p
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "20px",
+                  fontSize: "16px",
+                  lineHeight: "1.8",
+                  color: "#4B5563",
+                  marginBottom: "32px",
+                  whiteSpace: "pre-wrap",
+                  wordWrap: "break-word",
+                  overflowWrap: "break-word",
                 }}
               >
-                {club.phone && (
-                  <>
-                    <div>
-                      <Phone
-                        size={18}
-                        style={{
-                          color: "#7B1FA2",
-                          marginBottom: "8px",
-                        }}
-                      />
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#6B7280",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        {t("contact")}
-                      </p>
-                      {club.contact_name && (
-                        <p
-                          style={{
-                            fontSize: "16px",
-                            color: "#1A1D29",
-                            fontWeight: 600,
-                            marginBottom: "2px",
-                          }}
-                        >
-                          {club.contact_name}
-                        </p>
-                      )}
-                      <p
-                        style={{
-                          fontSize: "16px",
-                          color: "#4B5563",
-                        }}
-                      >
-                        {club.phone}
-                      </p>
-                    </div>
-                    <div
-                      style={{
-                        height: "1px",
-                        background: "#E5E9F0",
-                      }}
-                    />
-                  </>
-                )}
-                {club.contact_email && (
-                  <>
-                    <div>
-                      <Mail
-                        size={18}
-                        style={{
-                          color: "#7B1FA2",
-                          marginBottom: "8px",
-                        }}
-                      />
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#6B7280",
-                          marginBottom: "4px",
-                        }}
-                      >
-                        Email
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          color: "#4B5563",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {club.contact_email}
-                      </p>
-                    </div>
-                    <div
-                      style={{
-                        height: "1px",
-                        background: "#E5E9F0",
-                      }}
-                    />
-                  </>
-                )}
-                {club.website && (
-                  <div>
-                    <p
-                      style={{
-                        fontSize: "14px",
-                        color: "#6B7280",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      Website
-                    </p>
-                    <a
-                      href={club.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontSize: "14px",
-                        color: "#0E3DC5",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {club.website}
-                    </a>
-                  </div>
-                )}
-              </div>
-              {club.phone && (
-                <button
-                  onClick={() => window.location.href = `tel:${club.phone}`}
-                  style={{
-                    width: "100%",
-                    background: "#7B1FA2",
-                    color: "white",
-                    border: "none",
-                    padding: "16px",
-                    borderRadius: "8px",
-                    fontSize: "16px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    marginTop: "24px",
-                  }}
-                >
-                  {t("callClub") || 'Call Club'}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+                {language === "en" && club.description_en ? club.description_en : club.description}
+              </p>
+            </VenueDetailMainColumn>
+          }
+          rightColumn={
+            <VenueDetailRightColumn>
+              <VenueDetailInfoCard
+                phone={club.phone}
+                contactPhone={club.contact_phone}
+                email={club.contact_email}
+                website={club.website}
+                t={t}
+                accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                callButtonLabel={t("callClub") || "Call Club"}
+                ctaBackground={CLUBS_CATEGORY_THEME.ctaBackground}
+                ctaBorder={CLUBS_CATEGORY_THEME.ctaBorder}
+              />
+            </VenueDetailRightColumn>
+          }
+        />
       </div>
-      <Footer />
     </div>
   );
 }

@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { Calendar, MapPin, Phone, Mail, Globe, Tag, DollarSign, User, CalendarIcon, Clock, UserCheck, Search, X, Pencil } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -72,7 +70,7 @@ export function SubmitEventPage() {
   const hasLoadedRef = useRef(false);
 
   // 🔥 SANITIZE legacy event_type values that are no longer valid in DB
-  const VALID_EVENT_TYPES = ['concert', 'festival', 'theatre', 'standup', 'cinema', 'club', 'exhibition', 'sport', 'gastro', 'conference', 'workshop', 'kids', 'other'];
+  const VALID_EVENT_TYPES = ['cinema', 'club', 'concert', 'conference', 'exhibition', 'festival', 'gastro', 'kids', 'other', 'sport', 'standup', 'theatre', 'workshop'];
   const sanitizeEventType = (type: string | undefined | null): string => {
     if (!type) return '';
     if (VALID_EVENT_TYPES.includes(type)) return type;
@@ -107,6 +105,8 @@ export function SubmitEventPage() {
   const [showNotification, setShowNotification] = useState(false);
   const [timeError, setTimeError] = useState<string>('');
   const [addressError, setAddressError] = useState<string>('');
+  const [eventNameEnError, setEventNameEnError] = useState<string>('');
+  const [descriptionEnError, setDescriptionEnError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [existingEvent, setExistingEvent] = useState<dataService.Item | null>(null);
 
@@ -122,12 +122,13 @@ export function SubmitEventPage() {
   const suggestRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-populate submittedByEmail from user session (CREATE mode)
+  // Non-admin CREATE: submitted_by is always the logged-in user (read-only in UI).
+  // Admins must pick a registered user from search — do not pre-fill their own email as "creator".
   useEffect(() => {
-    if (user?.email && !id && !formData.submittedByEmail) {
+    if (user?.email && !id && !isAdmin && !formData.submittedByEmail) {
       setFormData(prev => ({ ...prev, submittedByEmail: user.email || '' }));
     }
-  }, [user?.email]);
+  }, [user?.email, id, isAdmin]);
 
   // 🔥 Admin: auto-populate emailSearchQuery + resolve user in EDIT mode
   useEffect(() => {
@@ -336,7 +337,18 @@ export function SubmitEventPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    setEventNameEnError('');
+    setDescriptionEnError('');
+    if (!formData.eventNameEn.trim()) {
+      setEventNameEnError(t('eventNameEnRequired'));
+      return;
+    }
+    if (!formData.descriptionEn.trim()) {
+      setDescriptionEnError(t('eventDescriptionEnRequired'));
+      return;
+    }
+
     // Validate required fields — in edit mode, allow keeping existing start_at if user didn't change
     const hasExistingStartAt = !!(existingEvent?.start_at);
     if (!selectedDate || !formData.startTime) {
@@ -396,6 +408,17 @@ export function SubmitEventPage() {
     }
 
     setAddressError(''); // Clear any address errors before submission
+
+    if (isAdmin) {
+      const readOnlyCreator = !!(id && formData.submittedByEmail && !creatorEditMode);
+      if (!readOnlyCreator && !selectedUserId) {
+        alert(t('mustSelectRegisteredUser'));
+        return;
+      }
+    } else if (!user?.email) {
+      alert(t('loginRequiredSubmit') || 'You must be logged in to submit.');
+      return;
+    }
     
     // Validate mutual dependency: price ↔ ticket link
     if (formData.priceType === 'paid' && !formData.ticketLink.trim()) {
@@ -414,9 +437,9 @@ export function SubmitEventPage() {
     // Map eventType to page_slug
     const pageSlugMap: Record<string, dataService.ItemCategory> = {
       'concert': 'concerts',
-      'festival': 'concerts',
+      'festival': 'events',
       'theatre': 'theatre',
-      'standup': 'theatre',
+      'standup': 'events',
       'cinema': 'cinema',
       'club': 'clubs',
       'exhibition': 'events',
@@ -472,7 +495,7 @@ export function SubmitEventPage() {
         const numVal = numMatch ? parseFloat(numMatch[0].replace(',', '.')) : 0;
         return numVal > 0 ? `≈${(numVal / 1.95583).toFixed(2)} €` : formData.price;
       })(),
-      submitted_by: formData.submittedByEmail || user?.email || '',
+      submitted_by: (isAdmin ? formData.submittedByEmail.trim() : (user?.email || '').trim()),
       event_time: formData.eventTime,
       venue_name: formData.venue,
       ticket_link: formData.ticketLink,
@@ -511,14 +534,21 @@ export function SubmitEventPage() {
       }
     } catch (error) {
       console.error('❌ Error creating event submission:', error);
-      alert(t('errorSubmittingEvent') || 'Error submitting event. Please try again.');
+      alert(
+        error instanceof Error
+          ? error.message
+          : (t('errorSubmittingEvent') || 'Error submitting event. Please try again.')
+      );
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (name === 'eventNameEn') setEventNameEnError('');
+    if (name === 'descriptionEn') setDescriptionEnError('');
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -555,8 +585,6 @@ export function SubmitEventPage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-secondary)' }}>
-      <Header />
-      
       <div className="w-full max-w-[900px] mx-auto px-4 py-6 pb-12" style={{ paddingRight: '80px' }}>
         
         {/* TITLE */}
@@ -596,19 +624,19 @@ export function SubmitEventPage() {
                 placeholder={t('selectEventType')}
                 required
                 options={[
-                  { value: 'concert', label: t('concert'), emoji: '🎵' },
-                  { value: 'festival', label: t('festival'), emoji: '🎪' },
-                  { value: 'theatre', label: t('theatre'), emoji: '🎭' },
-                  { value: 'standup', label: 'Stand-up', emoji: '🎤' },
                   { value: 'cinema', label: t('filmScreening'), emoji: '🎬' },
                   { value: 'club', label: t('clubEvent'), emoji: '🪩' },
-                  { value: 'exhibition', label: t('exhibition'), emoji: '🖼️' },
-                  { value: 'sport', label: t('sport'), emoji: '⚽' },
-                  { value: 'gastro', label: t('gastro'), emoji: '🍽️' },
+                  { value: 'concert', label: t('concert'), emoji: '🎵' },
                   { value: 'conference', label: t('conference'), emoji: '🎓' },
-                  { value: 'workshop', label: t('workshop'), emoji: '🔧' },
+                  { value: 'exhibition', label: t('exhibition'), emoji: '🖼️' },
+                  { value: 'festival', label: t('festival'), emoji: '🎪' },
+                  { value: 'gastro', label: t('gastro'), emoji: '🍽️' },
                   { value: 'kids', label: t('kids'), emoji: '🧸' },
-                  { value: 'other', label: t('other'), emoji: '📍' }
+                  { value: 'other', label: t('other'), emoji: '📍' },
+                  { value: 'sport', label: t('sport'), emoji: '⚽' },
+                  { value: 'standup', label: 'Stand-up', emoji: '🎤' },
+                  { value: 'theatre', label: t('theatre'), emoji: '🎭' },
+                  { value: 'workshop', label: t('workshop'), emoji: '🔧' }
                 ]}
               />
             </div>
@@ -653,21 +681,28 @@ export function SubmitEventPage() {
                   letterSpacing: '0.5px'
                 }}
               >
-                {language === 'sr' ? 'Naziv dešavanja (Engleski)' : 'Event Name (English)'}
+                {t('eventNameEnglish')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
               </label>
               <input
                 type="text"
                 name="eventNameEn"
                 value={formData.eventNameEn}
                 onChange={handleChange}
-                placeholder={language === 'sr' ? 'npr. Jazz Night in Banja Luka' : 'e.g. Jazz Night in Banja Luka'}
+                required
+                aria-invalid={!!eventNameEnError}
+                placeholder={t('eventNameEnPlaceholder')}
                 className="w-full px-4 py-3 rounded-lg border transition-all"
                 style={{
-                  borderColor: '#E5E9F0',
+                  borderColor: eventNameEnError ? '#DC2626' : '#E5E9F0',
                   fontSize: '14px',
                   color: 'var(--text-primary)'
                 }}
               />
+              {eventNameEnError && (
+                <p className="text-sm mt-2 m-0" style={{ color: '#DC2626' }}>
+                  ⚠️ {eventNameEnError}
+                </p>
+              )}
             </div>
 
             {/* Datum i vrijeme */}
@@ -870,21 +905,28 @@ export function SubmitEventPage() {
                   letterSpacing: '0.5px'
                 }}
               >
-                {language === 'sr' ? 'Opis dešavanja (Engleski)' : 'Event Description (English)'}
+                {t('eventDescriptionEnglish')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
               </label>
               <textarea
                 name="descriptionEn"
                 value={formData.descriptionEn}
                 onChange={handleChange}
-                placeholder={language === 'sr' ? 'npr. Join us for an unforgettable night of jazz music...' : 'e.g. Join us for an unforgettable night of jazz music...'}
+                required
+                aria-invalid={!!descriptionEnError}
+                placeholder={t('eventDescriptionEnPlaceholder')}
                 rows={4}
                 className="w-full px-4 py-3 rounded-lg border transition-all resize-none"
                 style={{
-                  borderColor: '#E5E9F0',
+                  borderColor: descriptionEnError ? '#DC2626' : '#E5E9F0',
                   fontSize: '14px',
                   color: 'var(--text-primary)'
                 }}
               />
+              {descriptionEnError && (
+                <p className="text-sm mt-2 m-0" style={{ color: '#DC2626' }}>
+                  ⚠️ {descriptionEnError}
+                </p>
+              )}
             </div>
 
             {/* Link ka ticketima */}
@@ -1119,7 +1161,7 @@ export function SubmitEventPage() {
                         {resolvedCreatorName && <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }} className="truncate">{resolvedCreatorName}</div>}
                         <div style={{ fontSize: '13px', color: '#6B7280' }} className="truncate">{formData.submittedByEmail}</div>
                       </div>
-                      <button type="button" onClick={() => setCreatorEditMode(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex-shrink-0" style={{ background: 'rgba(14, 61, 197, 0.06)', color: '#0E3DC5', fontSize: '12px', fontWeight: 600 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(14, 61, 197, 0.12)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(14, 61, 197, 0.06)'; }}>
+                      <button type="button" onClick={() => { setCreatorEditMode(true); setSelectedUserId(null); setEmailSearchQuery(''); setFormData((prev) => ({ ...prev, submittedByEmail: '' })); setResolvedCreatorName(null); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex-shrink-0" style={{ background: 'rgba(14, 61, 197, 0.06)', color: '#0E3DC5', fontSize: '12px', fontWeight: 600 }} onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(14, 61, 197, 0.12)'; }} onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(14, 61, 197, 0.06)'; }}>
                         <Pencil className="w-3 h-3" />
                         {t('change')}
                       </button>
@@ -1133,7 +1175,7 @@ export function SubmitEventPage() {
                     </label>
                     <div style={{ position: 'relative' }}>
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9CA3AF', pointerEvents: 'none' }} />
-                      <input type="text" value={emailSearchQuery} onChange={(e) => { setEmailSearchQuery(e.target.value); setSelectedUserId(null); setFormData({ ...formData, submittedByEmail: e.target.value }); if (e.target.value.length >= 2) setShowSuggestions(true); }} onFocus={() => { if (suggestedUsers.length > 0) setShowSuggestions(true); }} required placeholder={t('searchByEmailOrName') || 'Pretrazi po emailu ili imenu...'} className="w-full py-3 rounded-lg border transition-all" style={{ paddingLeft: '36px', paddingRight: isSearching ? '36px' : '16px', borderColor: selectedUserId ? '#0E3DC5' : '#E5E9F0', fontSize: '14px', color: 'var(--text-primary)', boxShadow: selectedUserId ? '0 0 0 2px rgba(14, 61, 197, 0.1)' : 'none' }} />
+                      <input type="text" value={emailSearchQuery} onChange={(e) => { setEmailSearchQuery(e.target.value); setSelectedUserId(null); if (e.target.value.length >= 2) setShowSuggestions(true); }} onFocus={() => { if (suggestedUsers.length > 0) setShowSuggestions(true); }} required placeholder={t('searchByEmailOrName') || 'Pretrazi po emailu ili imenu...'} className="w-full py-3 rounded-lg border transition-all" style={{ paddingLeft: '36px', paddingRight: isSearching ? '36px' : '16px', borderColor: selectedUserId ? '#0E3DC5' : '#E5E9F0', fontSize: '14px', color: 'var(--text-primary)', boxShadow: selectedUserId ? '0 0 0 2px rgba(14, 61, 197, 0.1)' : 'none' }} />
                       {isSearching && <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: '#0E3DC5', borderTopColor: 'transparent' }} />}
                     </div>
                     {selectedUserId && emailSearchQuery && (
@@ -1219,11 +1261,9 @@ export function SubmitEventPage() {
         </form>
       </div>
 
-      <Footer />
-      
       <NotificationDialog
         isOpen={showNotification}
-        title={id ? t('eventUpdatedSuccess') : undefined}
+        title={id ? t('eventUpdatedSuccess') : t('dialogNoticeTitle')}
         message={id ? t('eventUpdatedMessage') : t('eventWillBeAdded')}
         onClose={() => {
           setShowNotification(false);

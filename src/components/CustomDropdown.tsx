@@ -12,6 +12,8 @@ export function CustomDropdown({ value, onChange, options, placeholder, required
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const normalizedValue = String(value ?? '').trim();
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -24,7 +26,7 @@ export function CustomDropdown({ value, onChange, options, placeholder, required
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => String(opt.value).trim() === normalizedValue);
 
   return (
     <div ref={dropdownRef} className="relative">
@@ -35,9 +37,9 @@ export function CustomDropdown({ value, onChange, options, placeholder, required
         className="w-full px-4 py-3 text-[15px] cursor-pointer transition-all focus:outline-none text-left"
         style={{
           border: '1px solid',
-          borderColor: value ? 'var(--blue-primary)' : 'var(--border-light)',
+          borderColor: normalizedValue ? 'var(--blue-primary)' : 'var(--border-light)',
           borderRadius: '12px',
-          color: value ? 'var(--text-primary)' : '#8B95A5',
+          color: normalizedValue ? 'var(--text-primary)' : '#8B95A5',
           background: 'white',
           boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
           display: 'flex',
@@ -63,7 +65,7 @@ export function CustomDropdown({ value, onChange, options, placeholder, required
           viewBox="0 0 16 16" 
           fill="none" 
           style={{ 
-            color: value ? 'var(--blue-primary)' : '#8B95A5',
+            color: normalizedValue ? 'var(--blue-primary)' : '#8B95A5',
             transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease'
           }}
@@ -84,27 +86,32 @@ export function CustomDropdown({ value, onChange, options, placeholder, required
             overflowY: 'auto'
           }}
         >
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-              className="w-full px-4 py-3 text-[15px] text-left cursor-pointer transition-colors hover:bg-blue-50"
-              style={{
-                border: 'none',
-                background: value === option.value ? '#F0F7FF' : 'white',
-                color: 'var(--text-primary)',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              {option.emoji && <span className="mr-2">{option.emoji}</span>}
-              {option.label}
-            </button>
-          ))}
+          {options.map((option) => {
+            const selected = normalizedValue === String(option.value).trim();
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-4 py-3 text-[15px] text-left cursor-pointer transition-colors border-0 flex items-center ${
+                  selected
+                    ? 'bg-[#F0F7FF] hover:bg-[#E5F0FC]'
+                    : 'bg-white hover:bg-blue-50'
+                }`}
+                style={{
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {option.emoji && <span className="mr-2">{option.emoji}</span>}
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

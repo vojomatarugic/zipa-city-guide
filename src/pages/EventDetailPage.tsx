@@ -1,23 +1,26 @@
 import {
   Calendar,
   MapPin,
-  Clock,
-  ArrowLeft,
-  Share2,
   Heart,
   ExternalLink,
   Ticket,
   Users,
 } from "lucide-react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { Footer } from "../components/Footer";
-import { Header } from "../components/Header";
-import { useState, useEffect } from "react"; // ✅ NEW
-import * as eventService from "../utils/eventService"; // ✅ NEW
-import { Item } from "../utils/dataService"; // ✅ NEW
+import { useState, useEffect } from "react";
+import * as eventService from "../utils/eventService";
+import { Item } from "../utils/dataService";
+import {
+  VenueDetailTwoColumnGrid,
+  VenueDetailMainColumn,
+  VenueDetailRightColumn,
+  VenueDetailBottomCardRow,
+} from "../components/VenueDetailLayout";
+import { getEventDetailTheme } from "../utils/categoryThemes";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 // Heart pulse animation keyframes (injected once)
 const heartAnimStyle = document.createElement('style');
@@ -36,42 +39,6 @@ if (!document.getElementById('heart-pulse-style')) {
   document.head.appendChild(heartAnimStyle);
 }
 
-// Dynamic theme colors based on page_slug
-const THEME_COLORS: Record<string, { primary: string; gradient: string; accent: string; buttonBg: string }> = {
-  concerts: {
-    primary: '#C0CA33',
-    gradient: 'linear-gradient(135deg, #C0CA33, #D4E157)',
-    accent: '#C0CA33',
-    buttonBg: '#C0CA33',
-  },
-  theatre: {
-    primary: '#8E24AA',
-    gradient: 'linear-gradient(135deg, #8E24AA, #AB47BC)',
-    accent: '#8E24AA',
-    buttonBg: '#8E24AA',
-  },
-  cinema: {
-    primary: '#00897B',
-    gradient: 'linear-gradient(135deg, #00897B, #26A69A)',
-    accent: '#00897B',
-    buttonBg: '#00897B',
-  },
-  clubs: {
-    primary: '#7B1FA2',
-    gradient: 'linear-gradient(135deg, #7B1FA2, #9C27B0)',
-    accent: '#7B1FA2',
-    buttonBg: '#7B1FA2',
-  },
-  events: {
-    primary: '#FB8C00',
-    gradient: 'linear-gradient(135deg, #FB8C00, #FF9800)',
-    accent: '#FB8C00',
-    buttonBg: '#FB8C00',
-  },
-};
-
-const DEFAULT_THEME = THEME_COLORS.events;
-
 function isEventFree(event: Item): boolean {
   return /^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '');
 }
@@ -80,16 +47,16 @@ export function EventDetailPage() {
   const { id } = useParams();
   const { t } = useT();
   const { language } = useLanguage();
-  const [event, setEvent] = useState<Item | null>(null); // ✅ NEW
-  const [loading, setLoading] = useState(true); // ✅ NEW
+  const [event, setEvent] = useState<Item | null>(null);
+  const [loading, setLoading] = useState(true);
   const [interestCount, setInterestCount] = useState(0);
   const [hasClicked, setHasClicked] = useState(false);
   const [heartAnimating, setHeartAnimating] = useState(false);
 
-  // Determine theme from event's page_slug
-  const theme = event?.page_slug ? (THEME_COLORS[event.page_slug] || DEFAULT_THEME) : DEFAULT_THEME;
+  const theme = getEventDetailTheme(
+    event ? getTopLevelPageCategory(event) : undefined
+  );
 
-  // ✅ NEW: Fetch event data from backend
   useEffect(() => {
     async function fetchEvent() {
       if (!id) return;
@@ -121,42 +88,33 @@ export function EventDetailPage() {
     }
   }, [id, event]);
 
-  // ✅ Loading state
   if (loading) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-        <Header />
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600"></div>
           <p className="mt-4 text-gray-600">
             {language === 'sr' ? 'Učitavanje...' : 'Loading...'}
           </p>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  // ✅ Event not found
   if (!event) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-        <Header />
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <p className="text-gray-600 text-lg">
             {language === 'sr' ? 'Događaj nije pronađen' : 'Event not found'}
           </p>
         </div>
-        <Footer />
       </div>
     );
   }
 
   return (
     <div key={language} style={{ background: "#FAFBFC", minHeight: "100vh" }}>
-      {/* Header */}
-      <Header />
-      
       {/* Hero Section */}
       <div
         style={{
@@ -217,7 +175,7 @@ export function EventDetailPage() {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  background: "#00897B",
+                  background: theme.accent,
                   color: "white",
                   padding: "8px 16px",
                   borderRadius: "24px",
@@ -256,147 +214,130 @@ export function EventDetailPage() {
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Content — same grid + bottom alignment as venue detail (FoodAndDrinkDetailPage) */}
       <div
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
           paddingLeft: "20px",
           paddingRight: "20px",
-          paddingTop: "60px",
-          paddingBottom: "60px",
+          paddingTop: "50px",
+          paddingBottom: "50px",
         }}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr",
-            gap: "40px",
-          }}
-        >
-          {/* Main Content */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "32px",
-                fontWeight: 700,
-                color: "#1A1D29",
-                marginBottom: "24px",
-                textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-              }}
-            >
-              {t("aboutEvent")}
-            </h2>
-            <p
-              style={{
-                fontSize: "16px",
-                lineHeight: "1.8",
-                color: "#4B5563",
-                marginBottom: "32px",
-              }}
-            >
-              {language === 'sr' ? event.description : (event.description_en || event.description)}
-            </p>
+        <VenueDetailTwoColumnGrid
+          mainColumn={
+            <VenueDetailMainColumn
+              bottomCards={
+                <VenueDetailBottomCardRow>
+                  <div
+                    style={{
+                      background: "white",
+                      padding: "24px",
+                      borderRadius: "12px",
+                      border: "1px solid #E5E9F0",
+                    }}
+                  >
+                    <Calendar
+                      size={24}
+                      style={{
+                        color: theme.accent,
+                        marginBottom: "12px",
+                      }}
+                    />
+                    <h3
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "#1A1D29",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {t("dateAndTime")}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "16px",
+                        color: "#6B7280",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {event.start_at ? eventService.getRelativeDateLabel(event.start_at, language) : ""}
+                    </p>
+                    <p style={{ fontSize: "16px", color: "#6B7280" }}>
+                      {event.start_at ? eventService.formatEventTime(event.start_at, event.end_at) : ""}
+                    </p>
+                  </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "24px",
-                marginTop: "auto",
-              }}
+                  <div
+                    style={{
+                      background: "white",
+                      padding: "24px",
+                      borderRadius: "12px",
+                      border: "1px solid #E5E9F0",
+                    }}
+                  >
+                    <MapPin
+                      size={24}
+                      style={{
+                        color: theme.accent,
+                        marginBottom: "12px",
+                      }}
+                    />
+                    <h3
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: "#1A1D29",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {t("location")}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: "16px",
+                        color: "#6B7280",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {event.venue_name || event.address || ""}
+                    </p>
+                    <p style={{ fontSize: "14px", color: "#9CA3AF" }}>
+                      {event.venue_name && event.address ? event.address : ""}
+                    </p>
+                  </div>
+                </VenueDetailBottomCardRow>
+              }
             >
-              <div
+              <h2
                 style={{
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  border: "1px solid #E5E9F0",
+                  fontSize: "32px",
+                  fontWeight: 700,
+                  color: "#1A1D29",
+                  marginBottom: "24px",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                 }}
               >
-                <Calendar
-                  size={24}
-                  style={{
-                    color: theme.accent,
-                    marginBottom: "12px",
-                  }}
-                />
-                <h3
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "#1A1D29",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {t("dateAndTime")}
-                </h3>
-                <p
-                  style={{
-                    fontSize: "16px",
-                    color: "#6B7280",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {event.start_at ? eventService.getRelativeDateLabel(event.start_at, language) : ''}
-                </p>
-                <p
-                  style={{ fontSize: "16px", color: "#6B7280" }}
-                >
-                  {event.start_at ? eventService.formatEventTime(event.start_at, event.end_at) : ''}
-                </p>
-              </div>
-
-              <div
+                {t("aboutEvent")}
+              </h2>
+              <p
                 style={{
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  border: "1px solid #E5E9F0",
+                  fontSize: "16px",
+                  lineHeight: "1.8",
+                  color: "#4B5563",
+                  marginBottom: "32px",
+                  whiteSpace: "pre-wrap",
+                  wordWrap: "break-word",
+                  overflowWrap: "break-word",
                 }}
               >
-                <MapPin
-                  size={24}
-                  style={{
-                    color: theme.accent,
-                    marginBottom: "12px",
-                  }}
-                />
-                <h3
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "#1A1D29",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {t("location")}
-                </h3>
-                <p
-                  style={{
-                    fontSize: "16px",
-                    color: "#6B7280",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {event.venue_name || event.address || ''}
-                </p>
-                <p
-                  style={{ fontSize: "14px", color: "#9CA3AF" }}
-                >
-                  {event.venue_name && event.address ? event.address : ''}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div>
+                {language === "sr" ? event.description : event.description_en || event.description}
+              </p>
+            </VenueDetailMainColumn>
+          }
+          rightColumn={
+            <VenueDetailRightColumn>
             <div
               style={{
                 background: "white",
@@ -447,7 +388,7 @@ export function EventDetailPage() {
                     style={{
                       fontSize: "20px",
                       fontWeight: 700,
-                      color: "#00897B",
+                      color: theme.accent,
                     }}
                   >
                     {(() => {
@@ -636,12 +577,10 @@ export function EventDetailPage() {
                 </button>
               )}
             </div>
-          </div>
-        </div>
+            </VenueDetailRightColumn>
+          }
+        />
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

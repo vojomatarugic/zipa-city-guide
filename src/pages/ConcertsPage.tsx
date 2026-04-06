@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { Music } from "lucide-react";
@@ -13,6 +11,7 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import concertsHeroImage from "../assets/b2e065a42a0a51bb75c2d1ea6e313313b9eeac02.png";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 export function ConcertsPage() {
   const { t } = useT();
@@ -24,11 +23,14 @@ export function ConcertsPage() {
   useEffect(() => {
     async function fetchConcerts() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents('upcoming', undefined, undefined, 'concerts');
-      setEvents(fetched);
+      const fetched = await eventService.getEvents("upcoming", undefined);
+      const concertOnly = fetched.filter(
+        (e) => getTopLevelPageCategory(e) === "concerts"
+      );
+      setEvents(concertOnly);
       setIsLoading(false);
 
-      const freeIds = fetched
+      const freeIds = concertOnly
         .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
         .map(e => e.id);
       if (freeIds.length > 0) {
@@ -63,8 +65,6 @@ export function ConcertsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
-      <Header />
-
       {/* HERO SECTION */}
       <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
         <img
@@ -193,7 +193,7 @@ export function ConcertsPage() {
       <section className="pt-16 pb-8" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
-            className="mb-2.5 pb-2 lg:mb-4 lg:pb-3 border-b border-gray-100"
+            className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
             style={{
               fontSize: "24px",
               fontWeight: 600,
@@ -224,8 +224,6 @@ export function ConcertsPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

@@ -2,13 +2,11 @@ import { useT } from '../hooks/useT';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
 import { VenueForm } from '../components/VenueForm';
 import { NotificationDialog } from '../components/NotificationDialog';
 import * as dataService from '../utils/dataService';
-import { buildCuisineEnString } from '../utils/cuisineLabels';
-import { tr } from '../utils/translations';
+import { parseCuisineSrSelectionsFromDb, serializeCuisineForDb } from '../utils/venueCuisineTaxonomy';
+import { parseVenueTagKeysFromDb, type VenueTagKey } from '../utils/venueTagLabels';
 
 // Mapira venue_type → page_slug (za DB)
 // ⚠️  Record<VenueType, ...> (ne Record<string, ...>) — TypeScript ODBIJA kompajliranje
@@ -115,7 +113,11 @@ export function AddVenuePage() {
       instagram:     '',
       opening_hours:    existing_venue.opening_hours    || '',
       opening_hours_en: existing_venue.opening_hours_en || '',
-      cuisine:       existing_venue.cuisine        || '',
+      cuisine_sr_selected: parseCuisineSrSelectionsFromDb(
+        existing_venue.cuisine,
+        existing_venue.cuisine_en
+      ),
+      venue_tag_keys: parseVenueTagKeysFromDb(existing_venue.tags),
       image:         existing_venue.image          || '',
       contact_name:  existing_venue.contact_name   || '',
       contact_phone: existing_venue.contact_phone  || '',
@@ -137,7 +139,8 @@ export function AddVenuePage() {
     instagram:     string;
     opening_hours: string;
     opening_hours_en: string;
-    cuisine:       string;
+    cuisine_sr_selected: string[];
+    venue_tag_keys: VenueTagKey[];
     image:         string;
     contact_name:  string;
     contact_phone: string;
@@ -149,6 +152,10 @@ export function AddVenuePage() {
     //    a Record<VenueType, ItemCategory> garantuje da mapiranje postoji —
     //    page_slug ne može biti undefined.
     const page_slug = VENUE_TYPE_TO_CATEGORY[form_data.venue_type];
+
+    const { cuisine, cuisine_en } = serializeCuisineForDb(form_data.cuisine_sr_selected);
+    const tags_payload =
+      form_data.venue_tag_keys.length > 0 ? form_data.venue_tag_keys : null;
 
     if (!page_slug) {
       console.error(`❌ [AddVenuePage] Nepoznat venue_type: "${form_data.venue_type}" — nema mapiranja u VENUE_TYPE_TO_CATEGORY. Submission blokiran.`);
@@ -170,8 +177,9 @@ export function AddVenuePage() {
       image:            form_data.image || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800',
       opening_hours:    form_data.opening_hours,
       opening_hours_en: form_data.opening_hours_en,
-      cuisine:          form_data.cuisine,
-      cuisine_en:       buildCuisineEnString(form_data.cuisine, tr),
+      cuisine:          cuisine || null,
+      cuisine_en:       cuisine_en || null,
+      tags:             tags_payload,
       submitted_by:     form_data.submitted_by_email || user?.email || '',
       contact_name:     form_data.contact_name,
       contact_phone:    form_data.contact_phone,
@@ -180,47 +188,55 @@ export function AddVenuePage() {
       phone:            form_data.phone,
     };
 
+    const payload_with_assign = form_data.assign_user_id
+      ? { ...new_item, assign_user_id: form_data.assign_user_id }
+      : new_item;
+
     try {
       set_is_saving(true);
 
       if (id && existing_venue) {
         // EDIT MODE
-        const update_payload = form_data.assign_user_id
-          ? { ...new_item, assign_user_id: form_data.assign_user_id }
-          : new_item;
-
-        const result = await dataService.updateVenue(id, update_payload);
-        if (result) {
-          set_show_notification(true);
-          console.log('✅ Venue updated successfully!');
-        } else {
-          alert(t('errorUpdatingVenue') || 'Error updating venue. Please try again.');
+        try {
+          const result = await dataService.updateVenue(id, payload_with_assign);
+          if (result) {
+            set_show_notification(true);
+            console.log('✅ Venue updated successfully!');
+          } else {
+            alert(t('errorUpdatingVenue') || 'Error updating venue. Please try again.');
+          }
+        } catch (err) {
+          console.error('❌ updateVenue:', err);
+          alert(err instanceof Error ? err.message : (t('errorUpdatingVenue') || 'Error updating venue.'));
         }
       } else {
-        // CREATE MODE
-        const created = await dataService.createItem(new_item);
+        // CREATE MODE (admin: include assign_user_id so server can verify id ↔ email)
+        try {
+          const created = await dataService.createItem(payload_with_assign);
 
-        if (!created?.id) {
-          // Kreiranje nije uspjelo — ne pokazuj lažni uspjeh
-          console.error('❌ createItem returned null — venue was NOT saved to database');
-          alert(t('errorSubmittingVenue') || 'Greška: objekat nije sačuvan. Pokušajte ponovo ili provjerite konzolu za detalje.');
-          return;
-        }
-
-        console.log('✅ Venue created with id:', created.id);
-
-        if (isAdmin) {
-          // Admin-kreiran venue → odmah odobri (bez čekanja na review)
-          const approved = await dataService.approveItem(created.id);
-          if (approved) {
-            console.log('✅ Venue auto-approved (admin created):', created.id);
-          } else {
-            console.warn('⚠️ Auto-approve failed — venue je pending, odobri ručno u admin panelu');
+          if (!created?.id) {
+            console.error('❌ createItem returned null — venue was NOT saved to database');
+            alert(t('errorSubmittingVenue') || 'Greška: objekat nije sačuvan. Pokušajte ponovo ili provjerite konzolu za detalje.');
+            return;
           }
-        }
 
-        set_show_notification(true);
-        console.log('✅ Venue saved', isAdmin ? '(auto-approved)' : '(PENDING — čeka admin odobrenje)');
+          console.log('✅ Venue created with id:', created.id);
+
+          if (isAdmin) {
+            const approved = await dataService.approveItem(created.id);
+            if (approved) {
+              console.log('✅ Venue auto-approved (admin created):', created.id);
+            } else {
+              console.warn('⚠️ Auto-approve failed — venue je pending, odobri ručno u admin panelu');
+            }
+          }
+
+          set_show_notification(true);
+          console.log('✅ Venue saved', isAdmin ? '(auto-approved)' : '(PENDING — čeka admin odobrenje)');
+        } catch (err) {
+          console.error('❌ createItem:', err);
+          alert(err instanceof Error ? err.message : (t('errorSubmittingVenue') || 'Error submitting venue.'));
+        }
       }
     } catch (error) {
       console.error('❌ Error submitting venue:', error);
@@ -232,8 +248,6 @@ export function AddVenuePage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-secondary)' }}>
-      <Header />
-
       <div className="w-full max-w-[900px] mx-auto px-4 py-6 pb-12" style={{ paddingRight: '80px' }}>
 
         {/* NASLOV */}
@@ -267,8 +281,6 @@ export function AddVenuePage() {
           />
         )}
       </div>
-
-      <Footer />
 
       <NotificationDialog
         isOpen={show_notification}

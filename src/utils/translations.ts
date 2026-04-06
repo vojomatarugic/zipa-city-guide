@@ -1781,6 +1781,15 @@ export const translations = {
     lat: "Pridruženo korisniku", 
     en: "Assigned to user" 
   },
+  mustSelectRegisteredUser: {
+    lat: "Morate odabrati registrovanog korisnika iz liste pretrage (klik na rezultat). Nasumički uneseni email nije dozvoljen.",
+    en: "You must select a registered user from the search results (click a row). Typing an email manually is not allowed.",
+  },
+  dialogNoticeTitle: { lat: "Obavještenje", en: "Notice" },
+  loginRequiredSubmit: {
+    lat: "Morate biti prijavljeni da biste poslali prijavu.",
+    en: "You must be logged in to submit.",
+  },
   dismiss: { lat: "Odustani", en: "Dismiss" },
   confirm: { lat: "Potvrdi", en: "Confirm" },
   submitVenue: {
@@ -1814,6 +1823,15 @@ export const translations = {
   cuisinePlaceholder: {
     lat: "npr. Tradicionalna, Italijanska, Azijska...",
     en: "e.g. Traditional, Italian, Asian...",
+  },
+  venueTag: { lat: "Oznaka", en: "Tag" },
+  venueTagHint: {
+    lat: "Slobodan tekst (npr. Krušna peć, Terasa, Porodično). Dozvoljena su sva slova uključujući š, ć, č, ž, đ.",
+    en: "Free text (e.g. Wood-fired oven, Terrace, Family-friendly). All letters including diacritics are allowed.",
+  },
+  venueTagPlaceholder: {
+    lat: "npr. Noćni život",
+    en: "e.g. Nightlife",
   },
   clickToEdit: {
     lat: "Klikni za uređivanje",
@@ -1920,6 +1938,30 @@ export const translations = {
   eventDescriptionPlaceholder: {
     lat: "Opišite dešavanje...",
     en: "Describe the event...",
+  },
+  eventNameEnglish: {
+    lat: "Naziv dešavanja (Engleski)",
+    en: "Event Name (English)",
+  },
+  eventDescriptionEnglish: {
+    lat: "Opis dešavanja (Engleski)",
+    en: "Event Description (English)",
+  },
+  eventNameEnPlaceholder: {
+    lat: "npr. Jazz Night in Banja Luka",
+    en: "e.g. Jazz Night in Banja Luka",
+  },
+  eventDescriptionEnPlaceholder: {
+    lat: "npr. Join us for an unforgettable night of live music...",
+    en: "e.g. Join us for an unforgettable night of live music...",
+  },
+  eventNameEnRequired: {
+    lat: "Naziv na engleskom je obavezan.",
+    en: "English event title is required.",
+  },
+  eventDescriptionEnRequired: {
+    lat: "Opis na engleskom je obavezan.",
+    en: "English event description is required.",
   },
   ticketLink: { lat: "Link za karte", en: "Ticket Link" },
   ticketLinkPlaceholder: {
@@ -3971,8 +4013,8 @@ export const translations = {
   // address removed - duplicate (already defined earlier)
   // cuisine removed - duplicate (already defined earlier)
   ambience: { lat: "Ambijent", en: "Ambience" },
-  callRestaurant: { lat: "Pozovi restoran", en: "Call Restaurant" },
-  callClub: { lat: "Pozovi klub", en: "Call Club" },
+  callRestaurant: { lat: "Pozovi", en: "Call" },
+  callClub: { lat: "Pozovi", en: "Call" },
   clubNotFound: { lat: "Klub nije pronađen", en: "Club not found" },
   backToRestaurants: { lat: "Povratak na restorane", en: "Back to Restaurants" },
   backToClubs: { lat: "Povratak na klubove", en: "Back to Clubs" },

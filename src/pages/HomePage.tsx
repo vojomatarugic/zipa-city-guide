@@ -9,12 +9,11 @@ import {
   Heart,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router";
-import { Header } from "../components/Header";
-import { Footer } from "../components/Footer";
 import { useSEO } from "../hooks/useSEO";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
 import * as eventService from "../utils/eventService";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import {
   getWebSiteSchema,
   getTouristDestinationSchema,
@@ -94,25 +93,32 @@ export function HomePage() {
   const [searchLoading, setSearchLoading] = useState(false); // ✅ NEW: Search loading state
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
 
-  // Fetch featured events on component mount
+  // Same bucket as EventsPage: top-level category "events" only
   useEffect(() => {
     async function fetchFeaturedEvents() {
       setEventsLoading(true);
-      const events = await eventService.getEvents('upcoming');
-      setFeaturedEvents(events.slice(0, 4)); // Only first 4 events
+      const events = await eventService.getEvents("upcoming", selectedCity);
+      const eventsBucket = events.filter(
+        (e) => getTopLevelPageCategory(e) === "events"
+      );
+      const top = eventsBucket.slice(0, 4);
+      setFeaturedEvents(top);
       setEventsLoading(false);
-      
-      // Fetch interest counts for free events
-      const freeEventIds = events.slice(0, 4)
-        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
-        .map(e => e.id);
+
+      const freeEventIds = top
+        .filter(
+          (e) =>
+            /^(free|besplatn|gratis)/i.test(e.price || "") ||
+            /^(free|besplatn|gratis)/i.test(e.price_en || "")
+        )
+        .map((e) => e.id);
       if (freeEventIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeEventIds);
         setInterestCounts(counts);
       }
     }
     fetchFeaturedEvents();
-  }, []);
+  }, [selectedCity]);
 
   // ✅ NEW: Live search effect
   useEffect(() => {
@@ -261,8 +267,6 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header />
-
       {/* HERO SECTION - AllEvents Style */}
       <section
         className="relative w-full"
@@ -2172,8 +2176,6 @@ export function HomePage() {
             </div>
           );
         })()}
-
-      <Footer />
     </div>
   );
 }
