@@ -39,7 +39,7 @@ export function EventsPage() {
 
       // Fetch interest counts for free events
       const freeIds = eventsBucket
-        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
+        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
         .map(e => e.id);
       if (freeIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeIds);

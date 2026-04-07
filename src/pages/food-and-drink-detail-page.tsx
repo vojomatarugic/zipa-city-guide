@@ -169,17 +169,6 @@ export function FoodAndDrinkDetailPage() {
                 </VenueDetailBottomCardRow>
               }
             >
-              <h2
-                style={{
-                  fontSize: "32px",
-                  fontWeight: 700,
-                  color: "#1A1D29",
-                  marginBottom: "24px",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                {t("aboutRestaurant")}
-              </h2>
               <p
                 style={{
                   fontSize: "16px",

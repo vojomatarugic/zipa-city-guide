@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'danger' | 'warning' | 'info';
+  showCancel?: boolean;
 }
 
 export function ConfirmDialog({
@@ -21,7 +22,8 @@ export function ConfirmDialog({
   onCancel,
   confirmText,
   cancelText,
-  variant = 'warning'
+  variant = 'warning',
+  showCancel = true,
 }: ConfirmDialogProps) {
   const { t } = useT();
 
@@ -141,28 +143,30 @@ export function ConfirmDialog({
 
             {/* Actions */}
             <div className="flex gap-3">
-              <button
-                onClick={onCancel}
-                className="flex-1 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-all cursor-pointer"
-                style={{
-                  border: '1.5px solid #E5E7EB',
-                  background: '#FAFAFA',
-                  color: '#374151',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#F3F4F6';
-                  e.currentTarget.style.borderColor = '#D1D5DB';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#FAFAFA';
-                  e.currentTarget.style.borderColor = '#E5E7EB';
-                }}
-              >
-                {cancelText || t('cancel')}
-              </button>
+              {showCancel && (
+                <button
+                  onClick={onCancel}
+                  className="flex-1 px-5 py-2.5 rounded-xl text-[14px] font-semibold transition-all cursor-pointer"
+                  style={{
+                    border: '1.5px solid #E5E7EB',
+                    background: '#FAFAFA',
+                    color: '#374151',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#F3F4F6';
+                    e.currentTarget.style.borderColor = '#D1D5DB';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#FAFAFA';
+                    e.currentTarget.style.borderColor = '#E5E7EB';
+                  }}
+                >
+                  {cancelText || t('cancel')}
+                </button>
+              )}
               <button
                 onClick={onConfirm}
-                className="flex-1 px-5 py-2.5 rounded-xl text-white text-[14px] font-semibold transition-all cursor-pointer border-0"
+                className={`${showCancel ? 'flex-1' : 'w-full'} px-5 py-2.5 rounded-xl text-white text-[14px] font-semibold transition-all cursor-pointer border-0`}
                 style={{
                   backgroundColor: config.confirmBg,
                   boxShadow: `0 2px 8px ${config.iconBg}`,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { MapPin } from 'lucide-react';
+import { MapPin, Disc3 } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation } from '../contexts/LocationContext';
@@ -12,7 +12,6 @@ import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import clubsHeroImage from "../assets/7ad54244090ee97cf9170d61ce80eeb03b91c8aa.png";
 import { UnderConstruction } from '../components/UnderConstruction';
 import { VenueOpeningHoursRow } from '../components/VenueOpeningHoursRow';
-import { PartyPopper } from "lucide-react";
 import { CLUBS_CATEGORY_THEME, CLUBS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
 import { venueTagsFallbackLine } from "../utils/venueTagLabels";
 
@@ -128,7 +127,7 @@ export function ClubsPage() {
               </div>
             ) : clubs.length === 0 ? (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={PartyPopper} />
+                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={Disc3} />
               </div>
             ) : (
               clubs.slice(0, 9).map((club) => (
@@ -312,7 +311,7 @@ export function ClubsPage() {
               ))
             ) : !isLoading ? (
               <div className="col-span-2">
-                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={PartyPopper} />
+                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={Disc3} />
               </div>
             ) : null}
           </div>
@@ -437,23 +436,6 @@ export function ClubsPage() {
           </div>
         </div>
       </section>
-
-      {/* PRAZNO STANJE - kada nema klubova */}
-      {!isLoading && clubs.length === 0 && (
-        <section className="py-24" style={{ background: "#FFFFFF" }}>
-          <div className="w-[60vw] mx-auto text-center">
-            <p style={{ fontSize: "48px", marginBottom: "16px" }}>🎵</p>
-            <h2 style={{ fontSize: "22px", fontWeight: 600, color: CLUBS_CATEGORY_THEME.accentColor, marginBottom: "12px" }}>
-              {language === 'sr' ? 'U pripremi' : 'Under Construction'}
-            </h2>
-            <p style={{ fontSize: "16px", color: "#6B7280" }}>
-              {language === 'sr'
-                ? 'Budite prvi koji će dodati klub u Banja Luci.'
-                : 'Be the first to add a club in Banja Luka.'}
-            </p>
-          </div>
-        </section>
-      )}
     </div>
   );
 }

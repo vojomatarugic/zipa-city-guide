@@ -418,6 +418,37 @@ export function AuthModal() {
                 )}
               </div>
 
+              {/* Second option: use a different account (same visual weight as last-used) */}
+              <div style={{
+                border: `2px solid ${BRAND.primary}`,
+                borderRadius: '12px',
+                padding: '2px',
+                position: 'relative',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearLastLoginInfo();
+                    setLastLogin(null);
+                    setEmail('');
+                    setPassword('');
+                  }}
+                  className="w-full flex items-center justify-center gap-3 py-3 rounded-lg"
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#374151',
+                  }}
+                >
+                  <span>
+                    {language === 'sr' ? 'Koristi drugi nalog' : 'Use a different account'}
+                  </span>
+                </button>
+              </div>
+
               <Divider />
 
               {/* Other methods */}
@@ -445,30 +476,6 @@ export function AuthModal() {
                   label={language === 'sr' ? 'Nastavi sa Email' : 'Continue with Email'}
                 />
               )}
-
-              {/* Use different account link */}
-              <button
-                onClick={() => {
-                  clearLastLoginInfo();
-                  setLastLogin(null);
-                  setEmail('');
-                  setPassword('');
-                }}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  color: '#9CA3AF',
-                  padding: '8px 0 0 0',
-                  textAlign: 'center',
-                  width: '100%',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = BRAND.primary; e.currentTarget.style.textDecoration = 'underline'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = '#9CA3AF'; e.currentTarget.style.textDecoration = 'none'; }}
-              >
-                {language === 'sr' ? 'Koristi drugi nalog' : 'Use a different account'}
-              </button>
             </div>
           )}
 

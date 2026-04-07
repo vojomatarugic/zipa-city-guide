@@ -1785,6 +1785,18 @@ export const translations = {
     lat: "Morate odabrati registrovanog korisnika iz liste pretrage (klik na rezultat). Nasumički uneseni email nije dozvoljen.",
     en: "You must select a registered user from the search results (click a row). Typing an email manually is not allowed.",
   },
+  invalidUserSelectionTitle: {
+    lat: "Neispravan odabir korisnika",
+    en: "Invalid user selection",
+  },
+  invalidUserSelectionMessage: {
+    lat: "Morate odabrati registrovanog korisnika iz liste pretrage. Ručno uneseni email nije dozvoljen.",
+    en: "You must select a registered user from the search results. Manually entered email is not allowed.",
+  },
+  okButton: {
+    lat: "U redu",
+    en: "OK",
+  },
   dialogNoticeTitle: { lat: "Obavještenje", en: "Notice" },
   loginRequiredSubmit: {
     lat: "Morate biti prijavljeni da biste poslali prijavu.",
@@ -1927,9 +1939,22 @@ export const translations = {
   startTime: { lat: "Početak", en: "Start" },
   endTime: { lat: "Kraj (opcionalno)", en: "End (optional)" },
   eventVenue: { lat: "Mjesto održavanja", en: "Venue" },
+  /** Submit event: venue name only (not city) */
+  eventLocationVenueName: {
+    lat: "Naziv lokacije / mjesto održavanja",
+    en: "Location Name / Venue",
+  },
   eventVenuePlaceholder: {
-    lat: "npr. Banski Dvor",
-    en: "e.g. Banski Dvor",
+    lat: "npr. Kastel",
+    en: "e.g. Kastel",
+  },
+  eventCityPlaceholder: {
+    lat: "npr. Banja Luka",
+    en: "e.g. Banja Luka",
+  },
+  eventStreetAndNumberPlaceholder: {
+    lat: "npr. Kralja Petra I 5",
+    en: "e.g. Kralja Petra I 5",
   },
   eventDescription: {
     lat: "Opis dešavanja",
@@ -2479,6 +2504,11 @@ export const translations = {
   allClubsTitleBanjaLuka: {
     lat: "Svi klubovi u Banjaluci",
     en: "All Clubs in Banja Luka",
+  },
+  /** Clubs /all hero second line — matches ConcertsAllPage “na jednom mjestu” pattern */
+  clubsAllHeroSubline: {
+    lat: "na jednom mjestu",
+    en: "in one place",
   },
   allRestaurantsDescBanjaLuka: {
     lat: "Svi restorani u Banjaluci",
@@ -4091,6 +4121,28 @@ export const translations = {
   deletingInProgress: {
     lat: "Brisanje...",
     en: "Deleting...",
+  },
+
+  /** Venue/event active toggle — shared by My Panel and Admin (sonner success/error) */
+  toastVenueNowActive: {
+    lat: "Objekat je sada aktivan",
+    en: "Venue is now active",
+  },
+  toastVenueNowInactive: {
+    lat: "Objekat je sada neaktivan",
+    en: "Venue is now inactive",
+  },
+  toastEventNowActive: {
+    lat: "Događaj je sada aktivan",
+    en: "Event is now active",
+  },
+  toastEventNowInactive: {
+    lat: "Događaj je sada neaktivan",
+    en: "Event is now inactive",
+  },
+  toastActiveStatusFailed: {
+    lat: "Greška pri promjeni statusa",
+    en: "Error changing active status",
   },
 };
 

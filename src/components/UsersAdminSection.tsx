@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, ChevronDown, ChevronUp, Calendar, MapPin, Ban, Trash2, ShieldCheck, Shield, Crown, ArrowUpDown } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, Calendar, MapPin, Ban, Trash2, ShieldCheck, Shield, Crown, ArrowUpDown, Building2, User, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { ConfirmDialog } from './ConfirmDialog';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/authService';
-
+import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
+import { shouldHandleSoftRowClick } from '../utils/rowClick';
 interface User {
   id: string;
   email: string;
@@ -25,18 +26,37 @@ interface User {
 interface UserSubmission {
   id: string;
   title: string;
+  title_en?: string;
   page_slug: string;
   status: string;
   created_at: string;
   start_at?: string;
   image?: string;
   address?: string;
+  city?: string;
+  venue_type?: string;
+  event_type?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  organizer_name?: string;
+  organizer_phone?: string;
+  organizer_email?: string;
+  is_active?: boolean;
+  /** Same source of truth as Admin lists: inactive IDs in kv_store, not DB is_active. */
+  _kind?: 'venue' | 'event';
 }
 
-export function UsersAdminSection() {
+type UsersAdminSectionProps = {
+  /** Same kv_store-backed source as Admin main list (updates when admin toggles active/inactive). */
+  inactiveVenueIds: Set<string>;
+  inactiveEventIds: Set<string>;
+};
+
+export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersAdminSectionProps) {
   const { t, language } = useT();
-  const navigate = useNavigate();
   const { isLoading: authLoading, accessToken } = useAuth();
+  const navigate = useNavigate();
   
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +78,7 @@ export function UsersAdminSection() {
     confirmText?: string;
     onConfirm: () => void;
   }>({ isOpen: false, title: '', message: '', variant: 'warning', onConfirm: () => {} });
+  const topBadgeBaseClass = 'inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold';
 
   const showConfirm = (opts: { title: string; message: string; variant: 'danger' | 'warning' | 'info'; confirmText?: string; onConfirm: () => void }) => {
     setConfirmDialog({ isOpen: true, ...opts });
@@ -192,10 +213,10 @@ export function UsersAdminSection() {
 
       const data = await response.json();
       
-      // Combine venues and events
-      const allSubmissions = [
-        ...(data.venues || []),
-        ...(data.events || [])
+      // Combine venues and events (tag kind so active/inactive matches Admin list kv_store)
+      const allSubmissions: UserSubmission[] = [
+        ...(data.venues || []).map((v: Record<string, unknown>) => ({ ...v, _kind: 'venue' as const })),
+        ...(data.events || []).map((e: Record<string, unknown>) => ({ ...e, _kind: 'event' as const })),
       ];
       
       setUserSubmissions({ ...userSubmissions, [userId]: allSubmissions });
@@ -211,8 +232,6 @@ export function UsersAdminSection() {
       setExpandedUserId(null);
     } else {
       setExpandedUserId(userId);
-      
-      // Load submissions if not already loaded
       if (!userSubmissions[userId]) {
         await loadUserSubmissions(userId, email);
       }
@@ -251,6 +270,32 @@ export function UsersAdminSection() {
     }
   };
 
+  const getTypeLabel = (submission: UserSubmission) => {
+    const rawType = (submission.event_type || submission.venue_type || '').toString().trim();
+    if (!rawType) {
+      return getCategoryLabel(submission.page_slug || '');
+    }
+    const translationKey = rawType as Parameters<typeof t>[0];
+    const translated = t(translationKey);
+    if (translated !== translationKey) return translated;
+    return rawType
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  };
+
+  const getSubmissionActive = (submission: UserSubmission) => {
+    if (submission.status !== 'approved') return false;
+    if (submission._kind === 'event') return !inactiveEventIds.has(submission.id);
+    if (submission._kind === 'venue') return !inactiveVenueIds.has(submission.id);
+    const normalized = (submission.page_slug || '').toLowerCase();
+    const looksEvent =
+      !!submission.event_type ||
+      ['events', 'event', 'exhibition', 'concerts', 'cinema', 'theatre'].includes(normalized);
+    return looksEvent ? !inactiveEventIds.has(submission.id) : !inactiveVenueIds.has(submission.id);
+  };
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'approved': return t('statusApproved');
@@ -269,6 +314,11 @@ export function UsersAdminSection() {
       case 'events': return 'bg-blue-100 text-blue-700';
       default: return 'bg-gray-100 text-gray-700';
     }
+  };
+
+  const getTypeBadgeColor = (submission: UserSubmission) => {
+    if (submission.event_type) return 'bg-blue-100 text-blue-700';
+    return getCategoryBadgeColor(submission.page_slug);
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -459,21 +509,21 @@ export function UsersAdminSection() {
     }
   });
 
-  // ✅ Navigate to submission detail page
-  const handleSubmissionClick = (submission: UserSubmission) => {
+  const getSubmissionHref = (submission: UserSubmission) => {
     const { page_slug, id } = submission;
+    const normalized = (page_slug || '').toLowerCase();
     
-    // Determine route based on page_slug
-    if (page_slug === 'events') {
-      navigate(`/events/${id}`);
-    } else if (page_slug === 'food-and-drink' || page_slug === 'restaurants' || page_slug === 'cafes') {
+    // Determine route based on canonical page mapping
+    if (submission.event_type || normalized === 'events' || normalized === 'event' || normalized === 'exhibition' || normalized === 'concerts' || normalized === 'cinema' || normalized === 'theatre') {
+      return `/${getCanonicalEventPageSlug(submission.event_type, submission.page_slug)}/${id}`;
+    } else if (normalized === 'food-and-drink' || normalized === 'restaurants' || normalized === 'cafes') {
       // food-and-drink venues (backward compat: 'restaurants' is the old slug)
-      navigate(`/food-and-drink/${id}`);
-    } else if (page_slug === 'clubs' || page_slug === 'nightlife') {
-      navigate(`/clubs/${id}`);
+      return `/food-and-drink/${id}`;
+    } else if (normalized === 'clubs' || normalized === 'nightlife') {
+      return `/clubs/${id}`;
     } else {
       // Fallback - pokušaj sa page_slug-om
-      navigate(`/${page_slug}/${id}`);
+      return `/${normalized || 'food-and-drink'}/${id}`;
     }
   };
 
@@ -586,7 +636,7 @@ export function UsersAdminSection() {
 
   function renderUserCard(user: User) {
     return (
-      <div key={user.id} className="border border-gray-200 rounded-xl overflow-hidden">
+      <div key={user.id} className="border border-gray-200 rounded-xl bg-white">
         {/* User Header */}
         <div
           onClick={() => toggleUserExpand(user.id, user.email)}
@@ -646,7 +696,7 @@ export function UsersAdminSection() {
 
         {/* Expanded User Submissions */}
         {expandedUserId === user.id && (
-          <div className="border-t border-gray-200 bg-gray-50 p-4">
+          <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-200">
               {/* Master admin is fully protected — no actions allowed */}
@@ -718,58 +768,90 @@ export function UsersAdminSection() {
             {loadingSubmissions[user.id] ? (
               <p className="text-sm text-gray-500">{t('loading')}...</p>
             ) : userSubmissions[user.id]?.length > 0 ? (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm text-gray-700 mb-3">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm text-gray-700 mb-1">
                   {t('submissions')}
                 </h4>
                 {userSubmissions[user.id].map((submission) => (
-                  <div 
-                    key={submission.id} 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSubmissionClick(submission);
+                  <article
+                    key={submission.id}
+                    onClick={(event) => {
+                      if (!shouldHandleSoftRowClick(event)) return;
+                      navigate(getSubmissionHref(submission));
                     }}
-                    className="bg-white rounded-lg p-3 border border-gray-200 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all"
+                    className="border rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
+                    style={{ borderColor: '#F3F4F6', background: '#FFFFFF' }}
                   >
-                    <div className="flex items-start gap-3">
-                      {submission.image && (
-                        <img 
-                          src={submission.image} 
-                          alt={submission.title}
-                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h5 className="font-semibold text-sm truncate">{submission.title}</h5>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getCategoryBadgeColor(submission.page_slug)}`}>
-                            {getCategoryLabel(submission.page_slug)}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h5 className="m-0 leading-tight text-base font-semibold text-gray-900">
+                          <Link
+                            to={getSubmissionHref(submission)}
+                            className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
+                            style={{ color: 'inherit', textDecorationColor: '#0E3DC5', textUnderlineOffset: '2px' }}
+                          >
+                            {language === 'en' ? (submission.title_en || submission.title) : submission.title}
+                          </Link>
+                        </h5>
+                        <span className={`${topBadgeBaseClass} ${getTypeBadgeColor(submission)}`}>
+                          {getTypeLabel(submission)}
+                        </span>
+                        <span className={`${topBadgeBaseClass} ${getStatusBadgeColor(submission.status)}`}>
+                          {getStatusLabel(submission.status)}
+                        </span>
+                        <span
+                          className={`${topBadgeBaseClass} ${
+                            getSubmissionActive(submission) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {getSubmissionActive(submission)
+                            ? (language === 'sr' ? 'Aktivan' : 'Active')
+                            : (language === 'sr' ? 'Neaktivan' : 'Inactive')}
+                        </span>
+                        <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
+                          📅 {formatDate(submission.created_at)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
+                        {submission.city && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Building2 size={14} className="shrink-0" />
+                            <span className="truncate">{submission.city}</span>
                           </span>
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadgeColor(submission.status)}`}>
-                            {getStatusLabel(submission.status)}
+                        )}
+                        {submission.address && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <MapPin size={14} className="shrink-0" />
+                            <span className="truncate">{submission.address}</span>
                           </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500">
-                          {submission.address && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {submission.address}
-                            </span>
-                          )}
-                          {submission.start_at && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              {formatDate(submission.start_at)}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(submission.created_at)}
+                        )}
+                        {submission.start_at && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Calendar size={14} className="shrink-0" />
+                            <span className="truncate">{formatDate(submission.start_at)}</span>
                           </span>
-                        </div>
+                        )}
+                        {(submission.organizer_name || submission.contact_name) && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <User size={14} className="shrink-0" />
+                            <span className="truncate">{submission.organizer_name || submission.contact_name}</span>
+                          </span>
+                        )}
+                        {(submission.organizer_phone || submission.contact_phone) && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Phone size={14} className="shrink-0" />
+                            <span className="truncate">{submission.organizer_phone || submission.contact_phone}</span>
+                          </span>
+                        )}
+                        {(submission.organizer_email || submission.contact_email) && (
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Mail size={14} className="shrink-0" />
+                            <span className="truncate">{submission.organizer_email || submission.contact_email}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             ) : (

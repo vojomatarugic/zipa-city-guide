@@ -6,6 +6,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomDropdown } from '../components/CustomDropdown';
 import { NotificationDialog } from '../components/NotificationDialog';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import DatePickerImport from 'react-datepicker';
 import type { DatePickerProps } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -14,6 +15,7 @@ const DatePicker = DatePickerImport as React.ComponentType<DatePickerProps>;
 import { enUS } from 'date-fns/locale';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import * as dataService from '../utils/dataService';
+import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 
 // Custom srpski latinica locale
 const srLatn = {
@@ -85,10 +87,10 @@ export function SubmitEventPage() {
     eventName: '',
     eventNameEn: '',
     eventDate: '',
-    eventTime: '',
     startTime: '',
     endTime: '',
     venue: '',
+    city: '',
     address: '',
     description: '',
     descriptionEn: '',
@@ -109,6 +111,7 @@ export function SubmitEventPage() {
   const [descriptionEnError, setDescriptionEnError] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [existingEvent, setExistingEvent] = useState<dataService.Item | null>(null);
+  const [isInvalidUserModalOpen, setIsInvalidUserModalOpen] = useState(false);
 
   // 🔥 Admin user search/assign state
   interface SuggestedUser { id: string; email: string; name: string; phone: string; role: string; }
@@ -260,6 +263,7 @@ export function SubmitEventPage() {
         
         // Venue name — check multiple possible column names
         const venueName = event.venue_name || (event as any).venue || '';
+        const cityVal = event.city || '';
         
         // Address
         const address = event.address || '';
@@ -274,10 +278,10 @@ export function SubmitEventPage() {
           eventName: event.title || '',
           eventNameEn: event.title_en || '',
           eventDate,
-          eventTime: event.event_time || '',
           startTime,
           endTime,
           venue: venueName,
+          city: cityVal,
           address,
           description: event.description || '',
           descriptionEn: event.description_en || '',
@@ -302,7 +306,7 @@ export function SubmitEventPage() {
           } catch (e) { /* ignore */ }
         }
         
-        console.log('✅ [EDIT] Form populated — venue:', venueName, '| address:', address, '| date:', eventDate, '| startTime:', startTime);
+        console.log('✅ [EDIT] Form populated — venue:', venueName, '| city:', cityVal, '| address:', address, '| date:', eventDate, '| startTime:', startTime);
       };
       
       if (eventFromState) {
@@ -399,8 +403,27 @@ export function SubmitEventPage() {
 
     setTimeError(''); // Clear any errors before submission
 
-    // Validate address contains a number
-    if (!/\d/.test(formData.address)) {
+    if (!formData.venue.trim()) {
+      alert(language === 'sr'
+        ? 'Unesite naziv lokacije / mjesto održavanja.'
+        : 'Please enter the location name / venue.');
+      return;
+    }
+    if (!formData.city.trim()) {
+      alert(language === 'sr'
+        ? 'Unesite grad.'
+        : 'Please enter the city.');
+      return;
+    }
+
+    const addressTrimmed = formData.address.trim();
+    if (!addressTrimmed) {
+      setAddressError(language === 'sr'
+        ? 'Unesite ulicu i kućni broj.'
+        : 'Please enter street and number.');
+      return;
+    }
+    if (!/\d/.test(addressTrimmed)) {
       setAddressError(language === 'sr'
         ? 'Adresa mora sadržavati kućni broj'
         : 'Address must contain a street number');
@@ -412,7 +435,7 @@ export function SubmitEventPage() {
     if (isAdmin) {
       const readOnlyCreator = !!(id && formData.submittedByEmail && !creatorEditMode);
       if (!readOnlyCreator && !selectedUserId) {
-        alert(t('mustSelectRegisteredUser'));
+        setIsInvalidUserModalOpen(true);
         return;
       }
     } else if (!user?.email) {
@@ -434,24 +457,7 @@ export function SubmitEventPage() {
       return;
     }
 
-    // Map eventType to page_slug
-    const pageSlugMap: Record<string, dataService.ItemCategory> = {
-      'concert': 'concerts',
-      'festival': 'events',
-      'theatre': 'theatre',
-      'standup': 'events',
-      'cinema': 'cinema',
-      'club': 'clubs',
-      'exhibition': 'events',
-      'sport': 'events',
-      'gastro': 'events',
-      'conference': 'events',
-      'workshop': 'events',
-      'kids': 'events',
-      'other': 'events',
-    };
-
-    const page_slug = pageSlugMap[formData.eventType] || 'events';
+    const page_slug = getCanonicalEventPageSlug(formData.eventType);
 
     // ===== CONVERT DATE + TIME TO ISO DATETIME =====
     let startAt: string;
@@ -487,22 +493,16 @@ export function SubmitEventPage() {
       description: formData.description,
       description_en: formData.descriptionEn,
       date: formData.eventDate, // Keep for backward compatibility
-      city: 'Banja Luka',
+      city: formData.city.trim(),
       image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800',
       price: formData.priceType === 'free' ? 'Free' : formData.price,
-      price_en: formData.priceType === 'free' ? 'Free' : (() => {
-        const numMatch = formData.price.match(/[\d.,]+/);
-        const numVal = numMatch ? parseFloat(numMatch[0].replace(',', '.')) : 0;
-        return numVal > 0 ? `≈${(numVal / 1.95583).toFixed(2)} €` : formData.price;
-      })(),
       submitted_by: (isAdmin ? formData.submittedByEmail.trim() : (user?.email || '').trim()),
-      event_time: formData.eventTime,
-      venue_name: formData.venue,
+      venue_name: formData.venue.trim(),
       ticket_link: formData.ticketLink,
       organizer_name: formData.organizerName,
       organizer_phone: formData.organizerPhone,
       organizer_email: formData.organizerEmail,
-      address: formData.address,
+      address: formData.address.trim(),
       // ===== ISO datetime fields =====
       start_at: startAt,
       end_at: endAt,
@@ -799,7 +799,7 @@ export function SubmitEventPage() {
               </p>
             )}
 
-            {/* Mjesto */}
+            {/* Lokacija / naziv mjesta */}
             <div className="mb-4">
               <label 
                 className="block text-[13px] mb-2" 
@@ -810,7 +810,7 @@ export function SubmitEventPage() {
                   letterSpacing: '0.5px'
                 }}
               >
-                {t('eventVenue')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                {t('eventLocationVenueName')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
               </label>
               <input
                 type="text"
@@ -819,6 +819,35 @@ export function SubmitEventPage() {
                 onChange={handleChange}
                 required
                 placeholder={t('eventVenuePlaceholder')}
+                className="w-full px-4 py-3 rounded-lg border transition-all"
+                style={{
+                  borderColor: '#E5E9F0',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)'
+                }}
+              />
+            </div>
+
+            {/* Grad */}
+            <div className="mb-4">
+              <label 
+                className="block text-[13px] mb-2" 
+                style={{ 
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {t('city')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
+                required
+                placeholder={t('eventCityPlaceholder')}
                 className="w-full px-4 py-3 rounded-lg border transition-all"
                 style={{
                   borderColor: '#E5E9F0',
@@ -850,7 +879,7 @@ export function SubmitEventPage() {
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 required
-                placeholder={t('addressPlaceholder')}
+                placeholder={t('eventStreetAndNumberPlaceholder')}
                 className="w-full px-4 py-3 rounded-lg border transition-all"
                 style={{
                   borderColor: addressError ? '#DC2626' : '#E5E9F0',
@@ -1270,6 +1299,19 @@ export function SubmitEventPage() {
           navigate(isAdmin ? '/admin' : '/my-panel');
         }}
       />
+
+      {isInvalidUserModalOpen && (
+        <ConfirmDialog
+          isOpen={true}
+          title={t('invalidUserSelectionTitle')}
+          message={t('invalidUserSelectionMessage')}
+          confirmText={t('okButton')}
+          showCancel={false}
+          variant="danger"
+          onConfirm={() => setIsInvalidUserModalOpen(false)}
+          onCancel={() => setIsInvalidUserModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

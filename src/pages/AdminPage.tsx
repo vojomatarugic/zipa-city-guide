@@ -8,6 +8,8 @@ import { UsersAdminSection } from '../components/UsersAdminSection';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import * as dataService from '../utils/dataService';
 import * as eventService from '../utils/eventService';
+import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
+import { shouldHandleSoftRowClick } from '../utils/rowClick';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { translations } from '../utils/translations';
@@ -16,6 +18,7 @@ import { translations } from '../utils/translations';
 interface Submission {
   id: string;
   title: string;
+  title_en?: string;
   category?: string;
   phone?: string;
   website?: string;
@@ -39,7 +42,6 @@ interface Event {
   id: string;
   title: string;
   title_en?: string;
-  category?: string;
   event_type?: string;
   venue_name?: string;
   start_at?: string | null;
@@ -218,15 +220,17 @@ export function AdminPage() {
         const next = new Set(inactiveVenueIds);
         if (result.is_active) {
           next.delete(id);
-          toast.success(language === 'sr' ? 'Objekat je sada aktivan' : 'Venue is now active');
+          toast.success(t('toastVenueNowActive'));
         } else {
           next.add(id);
-          toast.success(language === 'sr' ? 'Objekat je sada neaktivan' : 'Venue is now inactive');
+          toast.success(t('toastVenueNowInactive'));
         }
         setInactiveVenueIds(next);
+      } else {
+        toast.error(t('toastActiveStatusFailed'));
       }
     } catch (error) {
-      toast.error(language === 'sr' ? 'Greška pri promjeni statusa' : 'Error changing active status');
+      toast.error(t('toastActiveStatusFailed'));
     } finally {
       setTogglingActive(null);
     }
@@ -255,15 +259,17 @@ export function AdminPage() {
         const next = new Set(inactiveEventIds);
         if (result.is_active) {
           next.delete(id);
-          toast.success(language === 'sr' ? 'Događaj je sada aktivan' : 'Event is now active');
+          toast.success(t('toastEventNowActive'));
         } else {
           next.add(id);
-          toast.success(language === 'sr' ? 'Događaj je sada neaktivan' : 'Event is now inactive');
+          toast.success(t('toastEventNowInactive'));
         }
         setInactiveEventIds(next);
+      } else {
+        toast.error(t('toastActiveStatusFailed'));
       }
     } catch (error) {
-      toast.error(language === 'sr' ? 'Greška pri promjeni statusa' : 'Error changing active status');
+      toast.error(t('toastActiveStatusFailed'));
     } finally {
       setTogglingEventActive(null);
     }
@@ -314,8 +320,9 @@ export function AdminPage() {
       // ⚠️ NE filtriramo po page_slug 'clubs' jer ga dijele nightclub VENUES i club EVENTS
       // Umjesto toga koristimo event_type polje za detekciju legacy eventova zaglavljenih u venues tabeli
       const venuesOnly = data.filter(item => {
+        const slug = String(item.page_slug || '').toLowerCase();
         if ((item as any).event_type) return false; // legacy event u venues tabeli
-        if (item.page_slug === 'events' || item.page_slug === 'concerts' || item.page_slug === 'theatre' || item.page_slug === 'cinema') return false;
+        if (['events', 'event', 'exhibition', 'concerts', 'theatre', 'cinema'].includes(slug)) return false;
         return true;
       });
       setSubmissions(venuesOnly as unknown as Submission[]);
@@ -365,6 +372,23 @@ export function AdminPage() {
       // English format: YYYY-MM-DD
       return dateStr.split('T')[0];
     }
+  };
+
+  const getVenueDetailHref = (submission: Submission): string => {
+    const pageSlug = String(submission.page_slug || '').toLowerCase();
+    if (pageSlug === 'clubs' || pageSlug === 'nightlife') return `/clubs/${submission.id}`;
+    if (pageSlug === 'food-and-drink' || pageSlug === 'restaurants' || pageSlug === 'cafes') return `/food-and-drink/${submission.id}`;
+    return `/${pageSlug || 'food-and-drink'}/${submission.id}`;
+  };
+
+  const isEventSubmission = (submission: Submission): boolean => {
+    const eventPageSlugs = ['concerts', 'theatre', 'cinema', 'events', 'event', 'exhibition'];
+    return !!((submission as any).event_type || eventPageSlugs.includes(String(submission.page_slug || '').toLowerCase()));
+  };
+
+  const getEventDetailHref = (eventLike: { id: string; event_type?: string; page_slug?: string }): string => {
+    const categorySlug = getCanonicalEventPageSlug(eventLike.event_type, eventLike.page_slug);
+    return `/${categorySlug}/${eventLike.id}`;
   };
 
   const handleApprove = async (id: string) => {
@@ -1183,7 +1207,10 @@ export function AdminPage() {
 
           {/* USERS MANAGEMENT - NEW SECTION */}
           <div className="mb-8">
-            <UsersAdminSection />
+            <UsersAdminSection
+              inactiveVenueIds={inactiveVenueIds}
+              inactiveEventIds={inactiveEventIds}
+            />
           </div>
 
           {/* VENUES LIST */}
@@ -1349,9 +1376,17 @@ export function AdminPage() {
               ) : (
                 filteredSubmissions.map((submission) => {
                   const isSelected = selectedVenueIds.has(submission.id);
+                  const submissionTitle = language === 'en' ? (submission.title_en || submission.title) : submission.title;
+                  const detailHref = isEventSubmission(submission)
+                    ? getEventDetailHref(submission as unknown as { id: string; event_type?: string; page_slug?: string })
+                    : getVenueDetailHref(submission);
                   return (
                   <div
                     key={submission.id}
+                    onClick={(event) => {
+                      if (!shouldHandleSoftRowClick(event)) return;
+                      navigate(detailHref);
+                    }}
                     className="border rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
                     style={{
                       borderColor: isSelected ? '#0E3DC5' : '#F3F4F6',
@@ -1375,7 +1410,15 @@ export function AdminPage() {
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="m-0">{submission.title}</h3>
+                            <h3 className="m-0 leading-tight">
+                              <Link
+                                to={detailHref}
+                                className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
+                                style={{ color: 'inherit', textDecorationColor: '#0E3DC5', textUnderlineOffset: '2px' }}
+                              >
+                                {submissionTitle}
+                              </Link>
+                            </h3>
                             <span className={`${topBadgeBaseClass} bg-gray-100`}>
                               {t(('venueType' + (submission.venue_type || submission.page_slug || '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')) as any)}
                             </span>
@@ -1499,7 +1542,7 @@ export function AdminPage() {
                         )}
                         <Link
                           to={
-                            ((submission as any).event_type || ['concerts', 'theatre', 'cinema', 'events'].includes(submission.page_slug))
+                            ((submission as any).event_type || ['concerts', 'theatre', 'cinema', 'events', 'event', 'exhibition'].includes(submission.page_slug || ''))
                               ? `/submit-event/${submission.id}`
                               : `/add-venue/${submission.id}`
                           }
@@ -1687,10 +1730,16 @@ export function AdminPage() {
               ) : (
                 filteredEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
+                  const eventTitle = language === 'en' ? (event.title_en || event.title) : event.title;
                   const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
+                  const detailHref = getEventDetailHref(event as { id: string; event_type?: string; page_slug?: string });
                   return (
                   <div
                     key={event.id}
+                    onClick={(eventClick) => {
+                      if (!shouldHandleSoftRowClick(eventClick)) return;
+                      navigate(detailHref);
+                    }}
                     className="border rounded-xl p-4 hover:shadow-md transition-all cursor-pointer"
                     style={{
                       borderColor: isSelected ? '#0E3DC5' : '#F3F4F6',
@@ -1714,7 +1763,15 @@ export function AdminPage() {
                         />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="m-0">{event.title}</h3>
+                            <h3 className="m-0 leading-tight">
+                              <Link
+                                to={detailHref}
+                                className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
+                                style={{ color: 'inherit', textDecorationColor: '#0E3DC5', textUnderlineOffset: '2px' }}
+                              >
+                                {eventTitle}
+                              </Link>
+                            </h3>
                             <span className={`${topBadgeBaseClass} bg-gray-100`}>
                               {eventTypeLabel}
                             </span>

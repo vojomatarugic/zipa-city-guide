@@ -108,8 +108,7 @@ export function HomePage() {
       const freeEventIds = top
         .filter(
           (e) =>
-            /^(free|besplatn|gratis)/i.test(e.price || "") ||
-            /^(free|besplatn|gratis)/i.test(e.price_en || "")
+            /^(free|besplatn|gratis)/i.test(e.price || "")
         )
         .map((e) => e.id);
       if (freeEventIds.length > 0) {

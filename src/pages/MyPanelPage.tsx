@@ -38,6 +38,23 @@ export function MyPanelPage() {
     action: () => void;
   } | null>(null);
   const topBadgeBaseClass = "inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold";
+  const formatDate = (dateStr: string) => {
+    if (language === 'sr') {
+      const date = new Date(dateStr);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}.`;
+    }
+    return dateStr.split('T')[0];
+  };
+
+  const getVenueDetailHref = (venue: dataService.Item): string => {
+    const pageSlug = String(venue.page_slug || '').toLowerCase();
+    if (pageSlug === 'clubs' || pageSlug === 'nightlife') return `/clubs/${venue.id}`;
+    if (pageSlug === 'food-and-drink' || pageSlug === 'restaurants' || pageSlug === 'cafes') return `/food-and-drink/${venue.id}`;
+    return `/${pageSlug || 'food-and-drink'}/${venue.id}`;
+  };
 
   const handleToggleVenueActive = async (id: string, makeActive: boolean) => {
     const currentlyInactive = inactiveVenueIds.has(id);
@@ -47,12 +64,17 @@ export function MyPanelPage() {
     try {
       const result = await dataService.toggleVenueActive(id);
       if (!result) {
-        toast.error(language === 'sr' ? 'Promjena statusa nije uspjela' : 'Failed to change active status');
+        toast.error(t('toastActiveStatusFailed'));
         return;
       }
       const next = new Set(inactiveVenueIds);
-      if (result.is_active) next.delete(id);
-      else next.add(id);
+      if (result.is_active) {
+        next.delete(id);
+        toast.success(t('toastVenueNowActive'));
+      } else {
+        next.add(id);
+        toast.success(t('toastVenueNowInactive'));
+      }
       setInactiveVenueIds(next);
     } finally {
       setTogglingVenueActiveId(null);
@@ -67,12 +89,17 @@ export function MyPanelPage() {
     try {
       const result = await dataService.toggleEventActive(id);
       if (!result) {
-        toast.error(language === 'sr' ? 'Promjena statusa nije uspjela' : 'Failed to change active status');
+        toast.error(t('toastActiveStatusFailed'));
         return;
       }
       const next = new Set(inactiveEventIds);
-      if (result.is_active) next.delete(id);
-      else next.add(id);
+      if (result.is_active) {
+        next.delete(id);
+        toast.success(t('toastEventNowActive'));
+      } else {
+        next.add(id);
+        toast.success(t('toastEventNowInactive'));
+      }
       setInactiveEventIds(next);
     } finally {
       setTogglingEventActiveId(null);
@@ -941,6 +968,8 @@ export function MyPanelPage() {
                   {userVenues.map(venue => {
                     const isSelected = selectedVenueIds.has(venue.id);
                     const isActive = !inactiveVenueIds.has(venue.id);
+                    const venueTitle = language === 'en' ? (venue.title_en || venue.title) : venue.title;
+                    const venueDetailHref = getVenueDetailHref(venue);
                     const statusColor = venue.status === 'approved' ? '#16A34A' : venue.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = venue.status === 'approved' ? '#F0FDF4' : venue.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = venue.status === 'approved' ? t('statusApproved') : venue.status === 'rejected' ? t('statusRejected') : t('statusPending');
@@ -975,7 +1004,9 @@ export function MyPanelPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                             <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
-                              {venue.title}
+                              <Link to={venueDetailHref} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                {venueTitle}
+                              </Link>
                             </h4>
                             <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
                               {typeLabel}
@@ -1018,15 +1049,9 @@ export function MyPanelPage() {
                                 {language === 'sr' ? 'Neaktivan' : 'Inactive'}
                               </button>
                             </div>
-                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
-                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {venue.submitted_by || '-'}
-                            </span>
                             {venue.created_at && (
                               <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
-                                📅 {language === 'sr'
-                                  ? (() => { const d = new Date(venue.created_at); return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}.`; })()
-                                  : new Date(venue.created_at).toISOString().split('T')[0]
-                                }
+                                📅 {formatDate(venue.created_at)}
                               </span>
                             )}
                           </div>
@@ -1186,6 +1211,7 @@ export function MyPanelPage() {
                   {userEvents.map(event => {
                     const isSelected = selectedEventIds.has(event.id);
                     const isActive = !inactiveEventIds.has(event.id);
+                    const eventTitle = language === 'en' ? (event.title_en || event.title) : event.title;
                     const statusColor = event.status === 'approved' ? '#16A34A' : event.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = event.status === 'approved' ? '#F0FDF4' : event.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = event.status === 'approved' ? t('statusApproved') : event.status === 'rejected' ? t('statusRejected') : t('statusPending');
@@ -1222,7 +1248,9 @@ export function MyPanelPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                             <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
-                              {event.title}
+                              <Link to={`/events/${event.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                                {eventTitle}
+                              </Link>
                             </h4>
                             <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
                               {eventTypeLabel}
@@ -1265,9 +1293,6 @@ export function MyPanelPage() {
                                 {language === 'sr' ? 'Neaktivan' : 'Inactive'}
                               </button>
                             </div>
-                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
-                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {event.submitted_by || '-'}
-                            </span>
                             {event.created_at && (
                               <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
                                 📅 {formatDate(event.created_at)}

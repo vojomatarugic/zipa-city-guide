@@ -53,7 +53,7 @@ export function EventsAllPage() {
         setEvents(activeEvents);
         
         const freeIds = activeEvents
-          .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
+          .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
           .map(e => e.id);
         if (freeIds.length > 0) {
           const counts = await eventService.batchGetInterestCounts(freeIds);
@@ -155,7 +155,7 @@ export function EventsAllPage() {
                     <span className="text-sm font-medium" style={{ color: EVENTS_CATEGORY_THEME.accentColor }}>
                       {eventService.translateEventType(event.event_type || event.page_slug || '', language) || (language === "sr" ? "Događaj" : "Event")}
                     </span>
-                    {(/^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '')) && (
+                    {/^(free|besplatn|gratis)/i.test(event.price || '') && (
                       <span className="text-xs font-medium px-2 py-1 rounded" style={{ background: "#F3F4F6", color: "#6B7280" }}>
                         {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
                       </span>

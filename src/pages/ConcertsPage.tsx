@@ -31,7 +31,7 @@ export function ConcertsPage() {
       setIsLoading(false);
 
       const freeIds = concertOnly
-        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || '') || /^(free|besplatn|gratis)/i.test(e.price_en || ''))
+        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
         .map(e => e.id);
       if (freeIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeIds);

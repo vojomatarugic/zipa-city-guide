@@ -1343,18 +1343,20 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       }
       
       const eventType = body.event_type || null;
-      const EVENT_TYPE_TO_PAGE_SLUG: Record<string, string> = {
-        concert: 'concerts', festival: 'events', music: 'concerts',
-        theatre: 'theatre', standup: 'events',
-        cinema: 'cinema',
-        club: 'clubs',
-        exhibition: 'events', sport: 'events',
-        gastro: 'events', conference: 'events',
-        workshop: 'events', kids: 'events',
-        other: 'events',
-      };
+      const canonicalEventPageSlug = (() => {
+        const et = String(eventType || '').toLowerCase().trim();
+        if (et === 'concert') return 'concerts';
+        if (et === 'cinema') return 'cinema';
+        if (et === 'theatre') return 'theatre';
+        if (et) return 'events';
+        const slug = String(body.page_slug || '').toLowerCase().trim();
+        if (slug === 'concerts') return 'concerts';
+        if (slug === 'cinema') return 'cinema';
+        if (slug === 'theatre') return 'theatre';
+        return 'events';
+      })();
       const event = {
-        page_slug: body.page_slug || (eventType ? EVENT_TYPE_TO_PAGE_SLUG[eventType] : null) || 'events',
+        page_slug: canonicalEventPageSlug,
         event_type: eventType,
         title: body.title,
         title_en: body.title_en || body.title,
@@ -1367,14 +1369,12 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         price: body.price || null,
         start_at: body.start_at,
         end_at: body.end_at || null,
-        event_time: body.event_time || null,
         ticket_link: body.ticket_link || null,
         organizer_name: body.organizer_name || null,
         organizer_phone: body.organizer_phone || null,
         organizer_email: body.organizer_email || null,
         status: isSubmitterAdmin ? 'approved' : 'pending',
         submitted_by: finalSubmittedBy,
-        is_custom: true,
       };
       
       console.log(`📋 [CREATE EVENT] table=${tableName} status=${event.status} admin=${isSubmitterAdmin} start_at=${event.start_at}`);
@@ -1811,7 +1811,12 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
     
     // Filter by page_slug (which page this event belongs to)
     if (page_slug) {
-      query = query.eq('page_slug', page_slug);
+      // Treat "events" as the general bucket and include legacy "event"/"exhibition" slugs.
+      if (page_slug === 'events') {
+        query = query.in('page_slug', ['events', 'event', 'exhibition']);
+      } else {
+        query = query.eq('page_slug', page_slug);
+      }
     }
     
     // Filter by city
@@ -2092,6 +2097,19 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       resolvedEventSubmittedBy = resolvedSb;
     }
     
+    const canonicalEventPageSlug = (() => {
+      const et = String(body.event_type || '').toLowerCase().trim();
+      if (et === 'concert') return 'concerts';
+      if (et === 'cinema') return 'cinema';
+      if (et === 'theatre') return 'theatre';
+      if (et) return 'events';
+      const slug = String(body.page_slug || '').toLowerCase().trim();
+      if (slug === 'concerts') return 'concerts';
+      if (slug === 'cinema') return 'cinema';
+      if (slug === 'theatre') return 'theatre';
+      return 'events';
+    })();
+
     // ✅ snake_case only — nema camelCase fallbackova
     const updatePayload = {
       title: body.title,
@@ -2099,7 +2117,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       description: body.description,
       description_en: body.description_en,
       event_type: body.event_type,
-      page_slug: body.page_slug || undefined,
+      page_slug: canonicalEventPageSlug,
       city: body.city,
       venue_name: body.venue_name,
       address: body.address,
@@ -2107,7 +2125,6 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       price: body.price,
       start_at: body.start_at,
       end_at: body.end_at,
-      event_time: body.event_time,
       ticket_link: body.ticket_link,
       organizer_name: body.organizer_name,
       organizer_phone: body.organizer_phone,
@@ -2148,7 +2165,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         description: updatePayload.description ?? venueCheck.description,
         description_en: updatePayload.description_en ?? venueCheck.description_en,
         event_type: updatePayload.event_type || venueCheck.event_type || 'other',
-        page_slug: updatePayload.page_slug || venueCheck.page_slug || 'events',
+        page_slug: canonicalEventPageSlug,
         city: updatePayload.city ?? venueCheck.city,
         venue_name: updatePayload.venue_name ?? venueCheck.venue_name,
         address: updatePayload.address ?? venueCheck.address,
@@ -2156,7 +2173,6 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         price: updatePayload.price ?? venueCheck.price,
         start_at: updatePayload.start_at || venueCheck.start_at,
         end_at: updatePayload.end_at || venueCheck.end_at,
-        event_time: updatePayload.event_time ?? venueCheck.event_time,
         ticket_link: updatePayload.ticket_link ?? venueCheck.ticket_link,
         organizer_name: updatePayload.organizer_name ?? venueCheck.organizer_name,
         organizer_phone: updatePayload.organizer_phone ?? venueCheck.organizer_phone,
@@ -2164,7 +2180,6 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         status: venueCheck.status || 'approved',
         submitted_by:
           resolvedEventSubmittedBy !== undefined ? resolvedEventSubmittedBy : venueCheck.submitted_by,
-        is_custom: venueCheck.is_custom ?? true,
         source: venueCheck.source,
         created_at: venueCheck.created_at,
         updated_at: new Date().toISOString(),
@@ -2950,66 +2965,151 @@ app.get("/make-server-a0e1e9cb/inactive-events", async (c) => {
   }
 });
 
-// PATCH toggle active status for events (admin only)
-app.patch("/make-server-a0e1e9cb/events/:id/toggle-active", requireAdmin, async (c) => {
+/**
+ * Toggle venue active/inactive (kv_store). Admin OR venue owner (submitted_by / contact_email).
+ * Shared by `/venues/:id/toggle-active` and `/my-venues/:id/toggle-active` so production
+ * deployments that only register the former still allow normal users (see gateway 404 on my-*).
+ */
+async function handleToggleVenueActiveRequest(c: any): Promise<Response> {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Venue ID is required' }, 400);
+
+  const accessToken = getTokenFromRequest(c);
+  if (!accessToken) return c.json({ error: 'Unauthorized - please log in' }, 401);
+
+  const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+  if (authError || !user?.email) return c.json({ error: 'Unauthorized - invalid token' }, 401);
+
+  const supabase = sbService();
+  const userEmail = user.email;
+  const isAdmin = user.user_metadata?.role === 'admin' || user.email === MASTER_ADMIN_EMAIL;
+
+  const { data: venue, error: venueError } = await supabase
+    .from('venues_ee0c365c')
+    .select('id, submitted_by, contact_email')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (venueError) return c.json({ error: 'Failed to load venue', details: venueError.message }, 500);
+  if (!venue) return c.json({ error: 'Venue not found' }, 404);
+
+  const ownsVenue = venue.submitted_by === userEmail || venue.contact_email === userEmail;
+  if (!ownsVenue && !isAdmin) return c.json({ error: 'Forbidden - not your venue' }, 403);
+
+  let ids = [...(await loadInactiveIds())];
+  const index = ids.indexOf(id);
+  let is_active: boolean;
+  if (index > -1) {
+    ids.splice(index, 1);
+    is_active = true;
+    console.log(`🟢 Venue ${id} set to ACTIVE. Total inactive: ${ids.length}`);
+  } else {
+    ids.push(id);
+    is_active = false;
+    console.log(`🔴 Venue ${id} set to INACTIVE. Total inactive: ${ids.length}`);
+  }
+
+  await saveInactiveIds(ids);
+  return c.json({ is_active, inactive_count: ids.length, ids });
+}
+
+/**
+ * Toggle event active/inactive (kv_store). Admin OR event owner (events table or legacy venues row).
+ */
+async function handleToggleEventActiveRequest(c: any): Promise<Response> {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Event ID is required' }, 400);
+
+  const accessToken = getTokenFromRequest(c);
+  if (!accessToken) return c.json({ error: 'Unauthorized - please log in' }, 401);
+
+  const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+  if (authError || !user?.email) return c.json({ error: 'Unauthorized - invalid token' }, 401);
+
+  const supabase = sbService();
+  const userEmail = user.email;
+  const isAdmin = user.user_metadata?.role === 'admin' || user.email === MASTER_ADMIN_EMAIL;
+
+  const { data: eventRow, error: eventError } = await supabase
+    .from('events_ee0c365c')
+    .select('id, submitted_by, organizer_email')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (eventError) return c.json({ error: 'Failed to load event', details: eventError.message }, 500);
+
+  let submittedBy: string | null = null;
+  let organizerEmail: string | null = null;
+
+  if (eventRow) {
+    submittedBy = eventRow.submitted_by ?? null;
+    organizerEmail = eventRow.organizer_email ?? null;
+  } else {
+    const { data: legacyVenue, error: legacyErr } = await supabase
+      .from('venues_ee0c365c')
+      .select('id, submitted_by, organizer_email, contact_email, start_at, event_type')
+      .eq('id', id)
+      .maybeSingle();
+    if (legacyErr) return c.json({ error: 'Failed to load legacy event', details: legacyErr.message }, 500);
+    if (!legacyVenue || (!legacyVenue.start_at && !legacyVenue.event_type)) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+    submittedBy = legacyVenue.submitted_by ?? null;
+    organizerEmail = legacyVenue.organizer_email ?? legacyVenue.contact_email ?? null;
+  }
+
+  const ownsEvent =
+    submittedBy === userEmail ||
+    organizerEmail === userEmail;
+  if (!ownsEvent && !isAdmin) return c.json({ error: 'Forbidden - not your event' }, 403);
+
+  let ids = [...(await loadInactiveEventIds())];
+  const index = ids.indexOf(id);
+  let is_active: boolean;
+  if (index > -1) {
+    ids.splice(index, 1);
+    is_active = true;
+    console.log(`🟢 Event ${id} set to ACTIVE. Total inactive: ${ids.length}`);
+  } else {
+    ids.push(id);
+    is_active = false;
+    console.log(`🔴 Event ${id} set to INACTIVE. Total inactive: ${ids.length}`);
+  }
+
+  await saveInactiveEventIds(ids);
+  return c.json({ is_active, inactive_count: ids.length, ids });
+}
+
+app.patch("/make-server-a0e1e9cb/my-events/:id/toggle-active", async (c) => {
   try {
-    const id = c.req.param('id');
-    if (!id) {
-      return c.json({ error: 'Event ID is required' }, 400);
-    }
-    
-    let ids = [...(await loadInactiveEventIds())];
-    
-    const index = ids.indexOf(id);
-    let is_active: boolean;
-    
-    if (index > -1) {
-      ids.splice(index, 1);
-      is_active = true;
-      console.log(`🟢 Event ${id} set to ACTIVE. Total inactive: ${ids.length}`);
-    } else {
-      ids.push(id);
-      is_active = false;
-      console.log(`🔴 Event ${id} set to INACTIVE. Total inactive: ${ids.length}`);
-    }
-    
-    await saveInactiveEventIds(ids);
-    
-    return c.json({ is_active, inactive_count: ids.length, ids });
+    return await handleToggleEventActiveRequest(c);
+  } catch (error) {
+    console.error('❌ Error toggling my event active status:', error);
+    return c.json({ error: 'Failed to toggle my event active status', details: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
+  }
+});
+
+app.patch("/make-server-a0e1e9cb/events/:id/toggle-active", async (c) => {
+  try {
+    return await handleToggleEventActiveRequest(c);
   } catch (error) {
     console.error('❌ Error toggling event active status:', error);
     return c.json({ error: 'Failed to toggle event active status', details: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
   }
 });
 
-// PATCH toggle active status (admin only)
-app.patch("/make-server-a0e1e9cb/venues/:id/toggle-active", requireAdmin, async (c) => {
+app.patch("/make-server-a0e1e9cb/my-venues/:id/toggle-active", async (c) => {
   try {
-    const id = c.req.param('id');
-    if (!id) {
-      return c.json({ error: 'Venue ID is required' }, 400);
-    }
-    
-    let ids = [...(await loadInactiveIds())];
-    
-    const index = ids.indexOf(id);
-    let is_active: boolean;
-    
-    if (index > -1) {
-      // Was inactive, make active
-      ids.splice(index, 1);
-      is_active = true;
-      console.log(`🟢 Venue ${id} set to ACTIVE. Total inactive: ${ids.length}`);
-    } else {
-      // Was active, make inactive
-      ids.push(id);
-      is_active = false;
-      console.log(`🔴 Venue ${id} set to INACTIVE. Total inactive: ${ids.length}`);
-    }
-    
-    await saveInactiveIds(ids);
-    
-    return c.json({ is_active, inactive_count: ids.length, ids });
+    return await handleToggleVenueActiveRequest(c);
+  } catch (error) {
+    console.error('❌ Error toggling my venue active status:', error);
+    return c.json({ error: 'Failed to toggle my venue active status', details: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
+  }
+});
+
+app.patch("/make-server-a0e1e9cb/venues/:id/toggle-active", async (c) => {
+  try {
+    return await handleToggleVenueActiveRequest(c);
   } catch (error) {
     console.error('❌ Error toggling active status:', error);
     return c.json({ error: 'Failed to toggle active status', details: error instanceof Error ? error.message : JSON.stringify(error) }, 500);

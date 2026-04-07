@@ -115,7 +115,6 @@ export interface Item {
   // location removed — consolidated into address
   image?: string;
   price?: string;
-  price_en?: string;
   opening_hours?: string;
   opening_hours_en?: string;
   cuisine?: string;
@@ -125,10 +124,9 @@ export interface Item {
   created_at: string;
   approved_at?: string;
   rejected_at?: string;
-  is_custom: boolean;
+  is_custom?: boolean;
 
   // Event-specific fields
-  event_time?: string;
   venue_name?: string;
   ticket_link?: string;
   organizer_name?: string;
@@ -158,10 +156,22 @@ export interface Item {
 function authHeaders(accessToken?: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${publicAnonKey}`,
+    /** Supabase Edge gateway often requires apikey for routing (same as admin fetch pattern). */
+    'apikey': publicAnonKey,
     'Content-Type': 'application/json',
   };
   if (accessToken) headers['x-auth-token'] = accessToken;
   return headers;
+}
+
+function parseJsonSafe(text: string): Record<string, unknown> {
+  const t = text?.trim();
+  if (!t) return {};
+  try {
+    return JSON.parse(t) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -835,19 +845,47 @@ export async function toggleVenueActive(
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[toggleVenueActive] No access token'); return null; }
+    // Prefer /venues/... first: deployed Edge often routes `venues|events` toggles but not `my-*` (404).
+    const attemptUrls = [
+      `${API_BASE_URL}/venues/${id}/toggle-active`,
+      `${API_BASE_URL}/my-venues/${id}/toggle-active`,
+    ];
 
-    const response = await fetch(`${API_BASE_URL}/venues/${id}/toggle-active`, {
-      method: 'PATCH',
-      headers: authHeaders(accessToken),
-    });
+    for (let i = 0; i < attemptUrls.length; i++) {
+      const url = attemptUrls[i];
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: authHeaders(accessToken),
+      });
+      const responseBody = await response.text().catch(() => '');
 
-    if (!response.ok) {
-      console.error('[toggleVenueActive] Error:', response.status);
-      return null;
+      if (!response.ok) {
+        console.error('[toggleVenueActive] Failed response', {
+          id,
+          url,
+          method: 'PATCH',
+          headers: { hasXAuthToken: true, hasApikey: true },
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody,
+        });
+        // If user endpoint returns auth/ownership error, fallback admin route can still work for admin user.
+        if (i < attemptUrls.length - 1) continue;
+        return null;
+      }
+
+      const data = parseJsonSafe(responseBody);
+      const isActive = data.is_active;
+      if (typeof isActive !== 'boolean') {
+        console.error('[toggleVenueActive] Unexpected JSON (missing is_active)', { id, url, body: responseBody, data });
+        return null;
+      }
+      return {
+        is_active: isActive,
+        inactive_count: typeof data.inactive_count === 'number' ? data.inactive_count : 0,
+      };
     }
-
-    const data = await response.json();
-    return { is_active: data.is_active, inactive_count: data.inactive_count };
+    return null;
   } catch (error) {
     console.error('[toggleVenueActive] Error:', error);
     return null;
@@ -876,19 +914,45 @@ export async function toggleEventActive(
   try {
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[toggleEventActive] No access token'); return null; }
+    const attemptUrls = [
+      `${API_BASE_URL}/events/${id}/toggle-active`,
+      `${API_BASE_URL}/my-events/${id}/toggle-active`,
+    ];
 
-    const response = await fetch(`${API_BASE_URL}/events/${id}/toggle-active`, {
-      method: 'PATCH',
-      headers: authHeaders(accessToken),
-    });
+    for (let i = 0; i < attemptUrls.length; i++) {
+      const url = attemptUrls[i];
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: authHeaders(accessToken),
+      });
+      const responseBody = await response.text().catch(() => '');
 
-    if (!response.ok) {
-      console.error('[toggleEventActive] Error:', response.status);
-      return null;
+      if (!response.ok) {
+        console.error('[toggleEventActive] Failed response', {
+          id,
+          url,
+          method: 'PATCH',
+          headers: { hasXAuthToken: true, hasApikey: true },
+          status: response.status,
+          statusText: response.statusText,
+          body: responseBody,
+        });
+        if (i < attemptUrls.length - 1) continue;
+        return null;
+      }
+
+      const data = parseJsonSafe(responseBody);
+      const isActive = data.is_active;
+      if (typeof isActive !== 'boolean') {
+        console.error('[toggleEventActive] Unexpected JSON (missing is_active)', { id, url, body: responseBody, data });
+        return null;
+      }
+      return {
+        is_active: isActive,
+        inactive_count: typeof data.inactive_count === 'number' ? data.inactive_count : 0,
+      };
     }
-
-    const data = await response.json();
-    return { is_active: data.is_active, inactive_count: data.inactive_count };
+    return null;
   } catch (error) {
     console.error('[toggleEventActive] Error:', error);
     return null;

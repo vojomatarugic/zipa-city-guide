@@ -40,7 +40,7 @@ if (!document.getElementById('heart-pulse-style')) {
 }
 
 function isEventFree(event: Item): boolean {
-  return /^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '');
+  return /^(free|besplatn|gratis)/i.test(event.price || '');
 }
 
 export function EventDetailPage() {
@@ -167,8 +167,8 @@ export function EventDetailPage() {
           
           <div>
             {(() => {
-              const priceStr = (language === 'sr' ? (event.price || event.price_en) : (event.price_en || event.price)) || '';
-              const isFree = /^(free|besplatn|gratis)/i.test(priceStr) || /^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '');
+              const priceStr = event.price || '';
+              const isFree = /^(free|besplatn|gratis)/i.test(priceStr);
               return isFree ? (
               <div
                 style={{
@@ -310,17 +310,6 @@ export function EventDetailPage() {
                 </VenueDetailBottomCardRow>
               }
             >
-              <h2
-                style={{
-                  fontSize: "32px",
-                  fontWeight: 700,
-                  color: "#1A1D29",
-                  marginBottom: "24px",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                }}
-              >
-                {t("aboutEvent")}
-              </h2>
               <p
                 style={{
                   fontSize: "16px",
@@ -392,9 +381,9 @@ export function EventDetailPage() {
                     }}
                   >
                     {(() => {
-                      const p = language === 'sr' ? (event.price || event.price_en) : (event.price_en || event.price);
+                      const p = eventService.formatPrice(event.price, language);
                       if (!p) return '';
-                      if (/^(free|besplatn|gratis)/i.test(p) || /^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '')) {
+                      if (/^(free|besplatn|gratis)/i.test(p)) {
                         return language === 'sr' ? 'Besplatno' : 'Free';
                       }
                       return p;

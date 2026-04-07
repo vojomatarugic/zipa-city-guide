@@ -19,7 +19,7 @@ interface EventCardProps {
 export function EventCard({ event, language, accentColor, imageHeight = "300px", interestCount }: EventCardProps) {
   const locale: "sr" | "en" = language === "en" ? "en" : "sr";
   const title = language === "sr" ? event.title : (event.title_en || event.title);
-  const isFree = /^(free|besplatn|gratis)/i.test(event.price || '') || /^(free|besplatn|gratis)/i.test(event.price_en || '');
+  const isFree = /^(free|besplatn|gratis)/i.test(event.price || '');
   const eventType = eventService.translateEventType(event.event_type || event.page_slug || '', locale);
   const dateLabel = event.start_at ? eventService.getRelativeDateLabel(event.start_at, locale) : '';
   const timeLabel = event.start_at ? eventService.formatEventTime(event.start_at, event.end_at) : '';
