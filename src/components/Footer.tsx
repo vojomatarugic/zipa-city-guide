@@ -378,7 +378,7 @@ export function Footer() {
             color: '#6B7280',
             textAlign: 'center'
           }}>
-            © 2025 {t('banjaLukaGuide')}. {t('allRightsReserved')}.
+            © 2025 {t('appName')}. {t('allRightsReserved')}.
           </div>
         </div>
       </div>

@@ -175,7 +175,7 @@ export function EventsAllPage() {
                       <div className="flex items-center gap-2 mb-1">
                         <Clock size={14} style={{ color: "#6B7280" }} />
                         <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.formatEventTime(event.start_at, event.end_at)}
+                          {eventService.formatEventTime(event.start_at, event.end_at, language === "en" ? "en" : "sr")}
                         </span>
                       </div>
                     </>

@@ -23,7 +23,7 @@ function CinemaCard({ event, language, imageHeight = "300px" }: { event: Item; l
   const isFree = /^(free|besplatn|gratis)/i.test(event.price || '');
   const eventType = eventService.translateEventType(event.event_type || '', lang);
   const dateLabel = event.start_at ? eventService.getRelativeDateLabel(event.start_at, lang) : '';
-  const timeLabel = event.start_at ? eventService.formatEventTime(event.start_at, event.end_at) : '';
+  const timeLabel = event.start_at ? eventService.formatEventTime(event.start_at, event.end_at, lang) : '';
   const venue = event.venue_name || event.address || event.city || '';
 
   return (

@@ -6,6 +6,7 @@ import { BannerUploadCropper } from './BannerUploadCropper';
 import { ConfirmDialog } from './ConfirmDialog';
 import { NotificationDialog } from './NotificationDialog';
 import { useT } from '../hooks/useT';
+import { formatDate as formatAppDate } from '../utils/dateFormat';
 
 interface Banner {
   id: string;
@@ -23,21 +24,7 @@ export function BannerAdminSection() {
   
   // Helper function za formatiranje datuma prema jeziku
   const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    if (language === 'sr') {
-      // Srpski format: DD.MM.YYYY.
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}.${month}.${year}.`;
-    } else {
-      // Engleski format: MMM DD, YYYY
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const month = monthNames[date.getMonth()];
-      const day = date.getDate();
-      const year = date.getFullYear();
-      return `${month} ${day}, ${year}`;
-    }
+    return formatAppDate(timestamp, language === 'en' ? 'en' : 'sr');
   };
   const [banners, setBanners] = useState<Banner[]>(() => {
     const saved = localStorage.getItem('blg-banners');

@@ -13,6 +13,7 @@ import { shouldHandleSoftRowClick } from '../utils/rowClick';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { translations } from '../utils/translations';
+import { formatDate as formatAppDate } from '../utils/dateFormat';
 
 // Interface for Submission (updated to match dataService.Item)
 interface Submission {
@@ -361,17 +362,7 @@ export function AdminPage() {
 
   // Format date based on language
   const formatDate = (dateStr: string) => {
-    if (language === 'sr') {
-      // Serbian format: DD.MM.YYYY.
-      const date = new Date(dateStr);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}.${month}.${year}.`;
-    } else {
-      // English format: YYYY-MM-DD
-      return dateStr.split('T')[0];
-    }
+    return formatAppDate(dateStr, language === 'en' ? 'en' : 'sr');
   };
 
   const getVenueDetailHref = (submission: Submission): string => {

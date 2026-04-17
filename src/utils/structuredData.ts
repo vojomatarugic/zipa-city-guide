@@ -3,8 +3,8 @@
 export const getOrganizationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "BL City Guide",
-  "alternateName": "Banja Luka City Guide",
+  "name": "ZIPA City Guide",
+  "alternateName": "City Guide",
   "url": "https://blcityguide.com",
   "logo": "https://blcityguide.com/logo.png",
   "description": "Kompletan turistički vodič kroz Banja Luku - restorani, dešavanja, noćni život, smještaj i znamenitosti.",
@@ -48,7 +48,7 @@ export const getTouristDestinationSchema = () => ({
 export const getWebSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "BL City Guide",
+  "name": "ZIPA City Guide",
   "url": "https://blcityguide.com",
   "description": "Otkrijte najbolje restorane, dešavanja, noćni život, smještaj i znamenitosti Banjaluke.",
   "inLanguage": ["sr-Latn", "en"],

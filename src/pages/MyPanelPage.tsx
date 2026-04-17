@@ -9,6 +9,7 @@ import * as dataService from '../utils/dataService';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { translations } from '../utils/translations';
+import { formatDate as formatAppDate } from '../utils/dateFormat';
 
 export function MyPanelPage() {
   const { t, language } = useT();
@@ -39,14 +40,7 @@ export function MyPanelPage() {
   } | null>(null);
   const topBadgeBaseClass = "inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold";
   const formatDate = (dateStr: string) => {
-    if (language === 'sr') {
-      const date = new Date(dateStr);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}.${month}.${year}.`;
-    }
-    return dateStr.split('T')[0];
+    return formatAppDate(dateStr, language === 'en' ? 'en' : 'sr');
   };
 
   const getVenueDetailHref = (venue: dataService.Item): string => {
@@ -1216,13 +1210,8 @@ export function MyPanelPage() {
                     const statusBg = event.status === 'approved' ? '#F0FDF4' : event.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = event.status === 'approved' ? t('statusApproved') : event.status === 'rejected' ? t('statusRejected') : t('statusPending');
                     const eventDateLabel = event.start_at
-                      ? (language === 'sr'
-                        ? (() => {
-                            const d = new Date(event.start_at as string);
-                            return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}.`;
-                          })()
-                        : new Date(event.start_at as string).toISOString().split('T')[0])
-                      : (event.date || '');
+                      ? formatAppDate(event.start_at as string, language === 'en' ? 'en' : 'sr')
+                      : formatAppDate(event.date || '', language === 'en' ? 'en' : 'sr');
                     const eventLocation = event.address || event.venue_name || '';
                     const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
                     return (

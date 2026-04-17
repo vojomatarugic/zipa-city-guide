@@ -1,7 +1,7 @@
 {
-  "name": "BL City Guide - Banja Luka",
-  "short_name": "BL Guide",
-  "description": "Kompletan vodič kroz Banja Luku - Restorani, Dešavanja, Noćni Život",
+  "name": "ZIPA City Guide",
+  "short_name": "City Guide",
+  "description": "Otkrij najbolje događaje i mjesta u svom gradu",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",

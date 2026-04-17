@@ -137,6 +137,12 @@ export interface Item {
   // ISO datetime fields for events
   start_at?: string | null;
   end_at?: string | null;
+  /**
+   * Optional extra screenings / terms (e.g. multiple showtimes).
+   * Backend must persist this (JSON column or similar) — see SubmitEventPage payload.
+   * First term should mirror `start_at` / `end_at` for listings and legacy clients.
+   */
+  event_schedules?: { start_at: string; end_at?: string | null }[] | null;
 
   // Venue-specific fields
   contact_name?: string;

@@ -202,7 +202,7 @@ export function SearchResultsPage() {
                     {event.start_at && (
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Clock size={14} />
-                        <span>{eventService.formatEventTime(event.start_at, event.end_at)}</span>
+                        <span>{eventService.formatEventTime(event.start_at, event.end_at, language === "en" ? "en" : "sr")}</span>
                       </div>
                     )}
                     

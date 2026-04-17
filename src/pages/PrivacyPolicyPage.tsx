@@ -12,8 +12,8 @@ export function PrivacyPolicyPage() {
   // SEO Setup
   const title = language === "sr" ? "Politika privatnosti" : "Privacy Policy";
   const description = language === "sr" 
-    ? "Informacije o tome kako Events Guide prikuplja, koristi i štiti vaše lične podatke u skladu sa GDPR propisima."
-    : "Information about how Events Guide collects, uses, and protects your personal data in compliance with GDPR regulations.";
+    ? `Informacije o tome kako ${t("appName")} prikuplja, koristi i štiti vaše lične podatke u skladu sa GDPR propisima.`
+    : `Information about how ${t("appName")} collects, uses, and protects your personal data in compliance with GDPR regulations.`;
 
   useSEO({
     title,
@@ -81,8 +81,8 @@ export function PrivacyPolicyPage() {
             }}
           >
             {language === "sr"
-              ? "Events Guide poštuje privatnost svojih korisnika i obrađuje lične podatke u skladu sa važećim propisima o zaštiti podataka, uključujući Opštu uredbu o zaštiti podataka (GDPR)."
-              : "Events Guide respects the privacy of its users and processes personal data in accordance with applicable data protection regulations, including the General Data Protection Regulation (GDPR)."}
+              ? `${t("appName")} poštuje privatnost svojih korisnika i obrađuje lične podatke u skladu sa važećim propisima o zaštiti podataka, uključujući Opštu uredbu o zaštiti podataka (GDPR).`
+              : `${t("appName")} respects the privacy of its users and processes personal data in accordance with applicable data protection regulations, including the General Data Protection Regulation (GDPR).`}
           </p>
 
           {/* Section 1 */}
@@ -106,8 +106,8 @@ export function PrivacyPolicyPage() {
               }}
             >
               {language === "sr"
-                ? "Events Guide je informativni i vodički web-sajt koji pruža pregled događaja, koncerata, kulturnih dešavanja i drugih sadržaja."
-                : "Events Guide is an informational and guide website that provides an overview of events, concerts, cultural happenings, and other content."}
+                ? `${t("appName")} je informativni i vodički web-sajt koji pruža pregled događaja, koncerata, kulturnih dešavanja i drugih sadržaja.`
+                : `${t("appName")} is an informational and guide website that provides an overview of events, concerts, cultural happenings, and other content.`}
             </p>
             <p
               style={{
@@ -327,8 +327,8 @@ export function PrivacyPolicyPage() {
               }}
             >
               {language === "sr"
-                ? "Events Guide koristi kolačiće:"
-                : "Events Guide uses cookies:"}
+                ? `${t("appName")} koristi kolačiće:`
+                : `${t("appName")} uses cookies:`}
             </p>
             <ul
               className="mb-4"
@@ -426,7 +426,7 @@ export function PrivacyPolicyPage() {
                 color: TEXT.primary,
               }}
             >
-              Events Guide:
+              {t("appName")}:
             </p>
             <ul
               className="mb-4"

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
-import { Calendar, MapPin, Phone, Mail, Globe, Tag, DollarSign, User, CalendarIcon, Clock, UserCheck, Search, X, Pencil } from 'lucide-react';
+import { Calendar, MapPin, Phone, Mail, Globe, DollarSign, User, Clock, UserCheck, Search, X, Pencil, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomDropdown } from '../components/CustomDropdown';
 import { NotificationDialog } from '../components/NotificationDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { ImageUpload } from '../components/ImageUpload';
 import DatePickerImport from 'react-datepicker';
 import type { DatePickerProps } from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -16,6 +17,7 @@ import { enUS } from 'date-fns/locale';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import * as dataService from '../utils/dataService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
+import { scheduleLocalDayKey, getEventScheduleSlots } from '../utils/eventService';
 
 // Custom srpski latinica locale
 const srLatn = {
@@ -56,6 +58,117 @@ const srLatn = {
   },
 };
 
+function newScheduleTermId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `term-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type ScheduleTimeEntry = {
+  id: string;
+  startTime: string;
+  endTime: string;
+};
+
+type ScheduleDateBlock = {
+  id: string;
+  selectedDate: Date | null;
+  times: ScheduleTimeEntry[];
+};
+
+function emptyTimeEntry(): ScheduleTimeEntry {
+  return {
+    id: newScheduleTermId(),
+    startTime: '',
+    endTime: '',
+  };
+}
+
+function emptyScheduleDateBlock(): ScheduleDateBlock {
+  return {
+    id: newScheduleTermId(),
+    selectedDate: null,
+    times: [emptyTimeEntry()],
+  };
+}
+
+function formatWeekdayLabel(d: Date | null, language: string): string {
+  if (!d || isNaN(d.getTime())) return '—';
+  const loc = language === 'sr' ? 'sr-Latn' : 'en-US';
+  const s = d.toLocaleDateString(loc, { weekday: 'long' });
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '—';
+}
+
+/** Build ISO datetimes from one date + one time row; returns null if incomplete. */
+function buildScheduleIsoFromParts(
+  selectedDate: Date | null,
+  time: ScheduleTimeEntry
+): { start_at: string; end_at: string | null } | null {
+  if (!selectedDate || !time.startTime || time.startTime.length !== 5) return null;
+  const [startHrs, startMins] = time.startTime.split(':').map(Number);
+  const startDateTime = new Date(selectedDate);
+  startDateTime.setHours(startHrs || 0, startMins || 0, 0, 0);
+  const start_at = startDateTime.toISOString();
+  let end_at: string | null = null;
+  if (time.endTime && time.endTime.length === 5) {
+    const [endHrs, endMins] = time.endTime.split(':').map(Number);
+    const endDateTime = new Date(selectedDate);
+    endDateTime.setHours(endHrs || 0, endMins || 0, 0, 0);
+    end_at = endDateTime.toISOString();
+  }
+  return { start_at, end_at };
+}
+
+function timeFromIsoForForm(iso: string | null | undefined): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return '';
+  }
+}
+
+/** Group API schedule rows by local calendar day for edit UI (films: several times same day). */
+function groupSlotsIntoDateBlocks(
+  slots: { start_at: string; end_at?: string | null }[]
+): ScheduleDateBlock[] {
+  const byDay = new Map<string, { start_at: string; end_at?: string | null }[]>();
+  for (const s of slots) {
+    const key = scheduleLocalDayKey(s.start_at);
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key)!.push(s);
+  }
+  const keys = Array.from(byDay.keys()).sort();
+  return keys.map((key) => {
+    const daySlots = byDay.get(key)!;
+    daySlots.sort(
+      (a, b) =>
+        new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    );
+    const first = daySlots[0];
+    let parsed: Date | null = null;
+    try {
+      const d = new Date(first.start_at);
+      if (!isNaN(d.getTime())) parsed = d;
+    } catch {
+      parsed = null;
+    }
+    return {
+      id: newScheduleTermId(),
+      selectedDate: parsed,
+      times: daySlots.map((s) => ({
+        id: newScheduleTermId(),
+        startTime: timeFromIsoForForm(s.start_at),
+        endTime: timeFromIsoForForm(s.end_at ?? null),
+      })),
+    };
+  });
+}
+
 export function SubmitEventPage() {
   const { t } = useT();
   const roleLabels: Record<string, string> = {
@@ -84,14 +197,13 @@ export function SubmitEventPage() {
 
   const [formData, setFormData] = useState({
     eventType: '',
+    image: '',
     eventName: '',
     eventNameEn: '',
-    eventDate: '',
-    startTime: '',
-    endTime: '',
     venue: '',
     city: '',
     address: '',
+    mapUrl: '',
     description: '',
     descriptionEn: '',
     ticketLink: '',
@@ -103,7 +215,9 @@ export function SubmitEventPage() {
     submittedByEmail: ''
   });
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [scheduleDateBlocks, setScheduleDateBlocks] = useState<ScheduleDateBlock[]>([
+    emptyScheduleDateBlock(),
+  ]);
   const [showNotification, setShowNotification] = useState(false);
   const [timeError, setTimeError] = useState<string>('');
   const [addressError, setAddressError] = useState<string>('');
@@ -236,37 +350,20 @@ export function SubmitEventPage() {
         console.log('📋 [EDIT] Raw event data keys:', Object.keys(event));
         console.log('📋 [EDIT] Raw event data:', JSON.stringify(event, null, 2));
         
-        // Derive date from start_at if date is missing
-        let eventDate = event.date || '';
-        if (!eventDate && event.start_at) {
-          try {
-            eventDate = new Date(event.start_at).toISOString().split('T')[0];
-            console.log('📋 [EDIT] Derived date from start_at:', eventDate);
-          } catch (e) { /* ignore */ }
+        const slots = getEventScheduleSlots(event as dataService.Item);
+        if (slots.length > 0) {
+          setScheduleDateBlocks(groupSlotsIntoDateBlocks(slots));
+        } else {
+          setScheduleDateBlocks([emptyScheduleDateBlock()]);
         }
-        
-        // Derive start time from start_at
-        let startTime = '';
-        if (event.start_at) {
-          try {
-            startTime = new Date(event.start_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          } catch (e) { /* ignore */ }
-        }
-        
-        // Derive end time from end_at
-        let endTime = '';
-        if (event.end_at) {
-          try {
-            endTime = new Date(event.end_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          } catch (e) { /* ignore */ }
-        }
-        
+
         // Venue name — check multiple possible column names
         const venueName = event.venue_name || (event as any).venue || '';
         const cityVal = event.city || '';
         
         // Address
         const address = event.address || '';
+        const mapUrl = (event as any).map_url || '';
         
         // Ticket link
         const ticketLink = event.ticket_link || '';
@@ -275,14 +372,13 @@ export function SubmitEventPage() {
         
         setFormData({
           eventType: sanitizeEventType(event.event_type || (event as any).venue_type || ''),
+          image: event.image || '',
           eventName: event.title || '',
           eventNameEn: event.title_en || '',
-          eventDate,
-          startTime,
-          endTime,
           venue: venueName,
           city: cityVal,
           address,
+          mapUrl,
           description: event.description || '',
           descriptionEn: event.description_en || '',
           ticketLink,
@@ -293,20 +389,8 @@ export function SubmitEventPage() {
           organizerEmail: event.organizer_email || (event as any).contact_email || event.submitted_by || '',
           submittedByEmail: event.submitted_by || ''
         });
-        
-        // Set selected date — derive from start_at if date missing
-        const dateForPicker = eventDate || (event.start_at ? new Date(event.start_at).toISOString().split('T')[0] : '');
-        if (dateForPicker) {
-          try {
-            const parsed = new Date(dateForPicker);
-            if (!isNaN(parsed.getTime())) {
-              setSelectedDate(parsed);
-              console.log('📋 [EDIT] selectedDate set to:', parsed.toISOString());
-            }
-          } catch (e) { /* ignore */ }
-        }
-        
-        console.log('✅ [EDIT] Form populated — venue:', venueName, '| city:', cityVal, '| address:', address, '| date:', eventDate, '| startTime:', startTime);
+
+        console.log('✅ [EDIT] Form populated — venue:', venueName, '| city:', cityVal, '| address:', address);
       };
       
       if (eventFromState) {
@@ -353,55 +437,103 @@ export function SubmitEventPage() {
       return;
     }
 
-    // Validate required fields — in edit mode, allow keeping existing start_at if user didn't change
+    // —— Schedule date blocks + times: validate; allow edit fallback to existing start_at ——
     const hasExistingStartAt = !!(existingEvent?.start_at);
-    if (!selectedDate || !formData.startTime) {
-      if (id && hasExistingStartAt) {
-        // Edit mode: keep existing date/time if user didn't touch them
-        console.log('📋 [EDIT] Using existing start_at from event:', existingEvent?.start_at);
-      } else {
-        alert(t('pleaseSelectDateAndTime') || 'Molimo izaberite datum i vrijeme početka događaja.');
-        return;
-      }
-    }
-
-    // Validate startTime format (must be exactly HH:MM) — skip if using existing start_at
-    if (formData.startTime && formData.startTime.length !== 5) {
-      setTimeError(language === 'sr' 
-        ? 'Vrijeme početka mora biti u formatu HH:MM (npr. 19:00)' 
-        : 'Start time must be in HH:MM format (e.g. 19:00)');
+    const partialSchedule = scheduleDateBlocks.some((block) => {
+      const anyStart = block.times.some((t) => !!t.startTime);
+      const incompleteStart = block.times.some(
+        (t) => !!t.startTime && t.startTime.length !== 5
+      );
+      const incompleteEnd = block.times.some(
+        (t) => !!t.endTime && t.endTime.length !== 5
+      );
+      const endWithoutStart = block.times.some(
+        (t) =>
+          t.endTime?.length === 5 &&
+          (!t.startTime || t.startTime.length !== 5)
+      );
+      const timeWithoutDate = !block.selectedDate && anyStart;
+      const dateButNoCompleteTime =
+        !!block.selectedDate &&
+        !block.times.some((t) => t.startTime.length === 5) &&
+        anyStart;
+      const dateButAllTimesEmpty =
+        !!block.selectedDate &&
+        !block.times.some((t) => t.startTime.length === 5) &&
+        !anyStart;
+      return (
+        timeWithoutDate ||
+        incompleteStart ||
+        incompleteEnd ||
+        endWithoutStart ||
+        dateButNoCompleteTime ||
+        dateButAllTimesEmpty
+      );
+    });
+    if (partialSchedule) {
+      setTimeError(
+        language === 'sr'
+          ? 'Za svaki datum unesite vrijeme početka (HH:MM) za barem jedan termin; popunite sve započete redove.'
+          : 'For each date, add at least one start time (HH:MM); complete every row you started.'
+      );
       return;
     }
 
-    if (formData.startTime) {
-      const [startHours, startMinutes] = formData.startTime.split(':').map(Number);
-      if (startHours > 23 || startMinutes > 59) {
-        setTimeError(language === 'sr' 
-          ? 'Neispravno vrijeme početka (00:00 - 23:59)' 
-          : 'Invalid start time (00:00 - 23:59)');
-        return;
+    for (const block of scheduleDateBlocks) {
+      for (const time of block.times) {
+        if (!time.startTime || time.startTime.length !== 5) continue;
+        const [sh, sm] = time.startTime.split(':').map(Number);
+        if (sh > 23 || sm > 59) {
+          setTimeError(
+            language === 'sr'
+              ? 'Neispravno vrijeme početka (00:00 - 23:59)'
+              : 'Invalid start time (00:00 - 23:59)'
+          );
+          return;
+        }
+        if (time.endTime) {
+          if (time.endTime.length !== 5) {
+            setTimeError(
+              language === 'sr'
+                ? 'Vrijeme kraja mora biti u formatu HH:MM (npr. 21:00)'
+                : 'End time must be in HH:MM format (e.g. 21:00)'
+            );
+            return;
+          }
+          const [eh, em] = time.endTime.split(':').map(Number);
+          if (eh > 23 || em > 59) {
+            setTimeError(
+              language === 'sr'
+                ? 'Neispravno vrijeme kraja (00:00 - 23:59)'
+                : 'Invalid end time (00:00 - 23:59)'
+            );
+            return;
+          }
+        }
       }
     }
 
-    // Validate endTime format if provided
-    if (formData.endTime) {
-      if (formData.endTime.length !== 5) {
-        setTimeError(language === 'sr' 
-          ? 'Vrijeme kraja mora biti u formatu HH:MM (npr. 21:00)' 
-          : 'End time must be in HH:MM format (e.g. 21:00)');
-        return;
-      }
-
-      const [endHours, endMinutes] = formData.endTime.split(':').map(Number);
-      if (endHours > 23 || endMinutes > 59) {
-        setTimeError(language === 'sr' 
-          ? 'Neispravno vrijeme kraja (00:00 - 23:59)' 
-          : 'Invalid end time (00:00 - 23:59)');
-        return;
+    const builtSlots: { start_at: string; end_at: string | null }[] = [];
+    for (const block of scheduleDateBlocks) {
+      for (const time of block.times) {
+        const slot = buildScheduleIsoFromParts(block.selectedDate, time);
+        if (slot) builtSlots.push(slot);
       }
     }
+    builtSlots.sort(
+      (a, b) =>
+        new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    );
 
-    setTimeError(''); // Clear any errors before submission
+    if (builtSlots.length === 0 && !(id && hasExistingStartAt)) {
+      alert(
+        t('pleaseSelectDateAndTime') ||
+          'Molimo izaberite datum i vrijeme početka događaja.'
+      );
+      return;
+    }
+
+    setTimeError('');
 
     if (!formData.venue.trim()) {
       alert(language === 'sr'
@@ -450,51 +582,58 @@ export function SubmitEventPage() {
         : 'If the event has a price, you must provide a ticket purchase link.');
       return;
     }
-    if (formData.ticketLink.trim() && formData.priceType === 'free') {
-      alert(language === 'sr'
-        ? 'Ako ste unijeli link za karte, morate postaviti cijenu (odaberite "Plaćeni ulaz").'
-        : 'If you provided a ticket link, you must set a price (select "Paid entry").');
-      return;
-    }
 
     const page_slug = getCanonicalEventPageSlug(formData.eventType);
 
-    // ===== CONVERT DATE + TIME TO ISO DATETIME =====
+    // ===== CONVERT schedule terms → ISO (first term mirrors legacy start_at / end_at) =====
     let startAt: string;
     let endAt: string | null = null;
-    
-    if (selectedDate && formData.startTime) {
-      // User provided date + time → build ISO datetime
-      const [startHrs, startMins] = formData.startTime.split(':').map(Number);
-      const startDateTime = new Date(selectedDate);
-      startDateTime.setHours(startHrs || 0, startMins || 0, 0, 0);
-      startAt = startDateTime.toISOString();
-      
-      if (formData.endTime) {
-        const [endHrs, endMins] = formData.endTime.split(':').map(Number);
-        const endDateTime = new Date(selectedDate);
-        endDateTime.setHours(endHrs || 0, endMins || 0, 0, 0);
-        endAt = endDateTime.toISOString();
-      }
+
+    if (builtSlots.length > 0) {
+      startAt = builtSlots[0].start_at;
+      endAt = builtSlots[0].end_at;
     } else if (id && existingEvent?.start_at) {
-      // Edit mode fallback: use existing start_at/end_at
       startAt = existingEvent.start_at;
       endAt = existingEvent.end_at || null;
+      console.log(
+        '📋 [EDIT] Using existing start_at from event:',
+        existingEvent?.start_at
+      );
     } else {
-      alert(t('pleaseSelectDateAndTime') || 'Molimo izaberite datum i vrijeme početka događaja.');
+      alert(
+        t('pleaseSelectDateAndTime') ||
+          'Molimo izaberite datum i vrijeme početka događaja.'
+      );
       return;
     }
 
+    const legacyDateStr =
+      scheduleDateBlocks[0]?.selectedDate != null
+        ? scheduleDateBlocks[0].selectedDate!.toISOString().split('T')[0]
+        : builtSlots[0]
+          ? new Date(builtSlots[0].start_at).toISOString().split('T')[0]
+          : existingEvent?.start_at
+            ? new Date(existingEvent.start_at).toISOString().split('T')[0]
+            : undefined;
+
+    // Full list of screenings; persisted by edge function into `event_schedules` (jsonb). Null clears extras on update.
+    const event_schedules_value =
+      builtSlots.length > 0 ? builtSlots : null;
+
     // Create event submission object
-    const newEvent: Omit<dataService.Item, 'id' | 'created_at' | 'is_custom' | 'status'> & { assign_user_id?: string } = {
+    const newEvent: Omit<dataService.Item, 'id' | 'created_at' | 'is_custom' | 'status'> & {
+      assign_user_id?: string;
+    } = {
       page_slug,
       title: formData.eventName,
       title_en: formData.eventNameEn,
       description: formData.description,
       description_en: formData.descriptionEn,
-      date: formData.eventDate, // Keep for backward compatibility
+      date: legacyDateStr,
       city: formData.city.trim(),
-      image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800',
+      image:
+        formData.image.trim() ||
+        'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800',
       price: formData.priceType === 'free' ? 'Free' : formData.price,
       submitted_by: (isAdmin ? formData.submittedByEmail.trim() : (user?.email || '').trim()),
       venue_name: formData.venue.trim(),
@@ -503,10 +642,12 @@ export function SubmitEventPage() {
       organizer_phone: formData.organizerPhone,
       organizer_email: formData.organizerEmail,
       address: formData.address.trim(),
+      map_url: formData.mapUrl.trim() || undefined,
       // ===== ISO datetime fields =====
       start_at: startAt,
       end_at: endAt,
       event_type: formData.eventType,
+      event_schedules: event_schedules_value,
       // ===== Admin assign user =====
       ...(isAdmin && selectedUserId ? { assign_user_id: selectedUserId } : {}),
     };
@@ -546,41 +687,56 @@ export function SubmitEventPage() {
     const { name, value } = e.target;
     if (name === 'eventNameEn') setEventNameEnError('');
     if (name === 'descriptionEn') setDescriptionEnError('');
-    setFormData({
-      ...formData,
-      [name]: value
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value } as typeof prev;
+      if (name === 'priceType' && value === 'free') {
+        next.ticketLink = '';
+      }
+      return next;
     });
   };
 
-  const handleTimeInput = (e: React.ChangeEvent<HTMLInputElement>, field: 'startTime' | 'endTime') => {
-    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
-    
+  const handleTimeInputForEntry = (
+    blockId: string,
+    timeId: string,
+    field: 'startTime' | 'endTime',
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    let value = e.target.value.replace(/\D/g, '');
+
     if (value.length >= 2) {
       const hours = value.substring(0, 2);
       const minutes = value.substring(2, 4);
       value = hours + (minutes ? ':' + minutes : '');
     }
-    
-    // Validate time format when complete (HH:MM = 5 characters)
+
     if (value.length === 5) {
       const [hours, minutes] = value.split(':').map(Number);
-      
       if (hours > 23 || minutes > 59) {
-        setTimeError(language === 'sr' 
-          ? 'Neispravno vrijeme (00:00 - 23:59)' 
-          : 'Invalid time (00:00 - 23:59)');
-        return; // Don't update if invalid
-      } else {
-        setTimeError(''); // Clear error on valid input
+        setTimeError(
+          language === 'sr'
+            ? 'Neispravno vrijeme (00:00 - 23:59)'
+            : 'Invalid time (00:00 - 23:59)'
+        );
+        return;
       }
+      setTimeError('');
     } else if (value.length > 0 && value.length < 5) {
-      setTimeError(''); // Clear error while typing
+      setTimeError('');
     }
-    
-    setFormData({
-      ...formData,
-      [field]: value
-    });
+
+    setScheduleDateBlocks((prev) =>
+      prev.map((block) =>
+        block.id !== blockId
+          ? block
+          : {
+              ...block,
+              times: block.times.map((row) =>
+                row.id === timeId ? { ...row, [field]: value } : row
+              ),
+            }
+      )
+    );
   };
 
   return (
@@ -705,93 +861,266 @@ export function SubmitEventPage() {
               )}
             </div>
 
-            {/* Datum i vrijeme */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label 
-                  className="block text-[13px] mb-2" 
-                  style={{ 
-                    color: 'var(--text-primary)',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
+            {/* Datumi i vremena: više datuma, više vremena po datumu */}
+            <div className="mb-4 rounded-xl border border-[#E5E9F0] bg-[#FAFBFC] p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Clock className="h-5 w-5 flex-shrink-0" style={{ color: '#0E3DC5' }} />
+                <span
+                  className="text-[13px] font-semibold uppercase tracking-wide"
+                  style={{ color: 'var(--text-primary)' }}
                 >
-                  {t('eventDate')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
-                </label>
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => {
-                    setSelectedDate(date);
-                    setFormData({ ...formData, eventDate: date ? date.toISOString().split('T')[0] : '' });
-                  }}
-                  required
-                  locale={language === 'sr' ? srLatn as any : enUS}
-                  dateFormat={language === 'sr' ? 'dd.MM.yyyy' : 'MM/dd/yyyy'}
-                  placeholderText={language === 'sr' ? 'dd.mm.gggg' : 'mm/dd/yyyy'}
-                  calendarStartDay={1}
-                  className="w-full px-4 py-3 rounded-lg border transition-all"
-                  wrapperClassName="w-full"
-                  calendarClassName="custom-datepicker-calendar"
-                />
+                  {t('eventScheduleSection')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label 
-                    className="block text-[13px] mb-2" 
-                    style={{ 
-                      color: 'var(--text-primary)',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}
+              <div className="flex flex-col gap-4">
+                {scheduleDateBlocks.map((block, blockIdx) => (
+                  <div
+                    key={block.id}
+                    className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
                   >
-                    {t('startTime')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={(e) => handleTimeInput(e, 'startTime')}
-                    required
-                    placeholder="--:--"
-                    maxLength={5}
-                    className="w-full px-3 py-3 rounded-lg border transition-all text-center"
-                    style={{
-                      borderColor: timeError ? '#DC2626' : '#E5E9F0',
-                      fontSize: '14px',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label 
-                    className="block text-[13px] mb-2" 
-                    style={{ 
-                      color: 'var(--text-primary)',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}
-                  >
-                    {t('endTime')}
-                  </label>
-                  <input
-                    type="text"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={(e) => handleTimeInput(e, 'endTime')}
-                    placeholder="--:--"
-                    maxLength={5}
-                    className="w-full px-3 py-3 rounded-lg border transition-all text-center"
-                    style={{
-                      borderColor: timeError ? '#DC2626' : '#E5E9F0',
-                      fontSize: '14px',
-                      color: 'var(--text-primary)'
-                    }}
-                  />
-                </div>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <span
+                        className="text-xs font-semibold uppercase tracking-wide"
+                        style={{ color: '#64748b' }}
+                      >
+                        {t('eventDate')} {blockIdx + 1}
+                      </span>
+                      {scheduleDateBlocks.length > 1 && (
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 rounded-md border-0 bg-transparent p-1.5 text-red-600 hover:bg-red-50"
+                          aria-label={language === 'sr' ? 'Ukloni datum' : 'Remove date'}
+                          onClick={() =>
+                            setScheduleDateBlocks((prev) => {
+                              const next = prev.filter((b) => b.id !== block.id);
+                              return next.length === 0
+                                ? [emptyScheduleDateBlock()]
+                                : next;
+                            })
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                      <div>
+                        <label
+                          className="mb-2 block text-[13px]"
+                          style={{
+                            color: 'var(--text-primary)',
+                            fontWeight: 600,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          {t('eventDate')}
+                        </label>
+                        <DatePicker
+                          selected={block.selectedDate}
+                          onChange={(date) => {
+                            setScheduleDateBlocks((prev) =>
+                              prev.map((b) =>
+                                b.id === block.id
+                                  ? { ...b, selectedDate: date }
+                                  : b
+                              )
+                            );
+                          }}
+                          locale={language === 'sr' ? (srLatn as any) : enUS}
+                          dateFormat={
+                            language === 'sr' ? 'dd.MM.yyyy' : 'MM/dd/yyyy'
+                          }
+                          placeholderText={
+                            language === 'sr' ? 'dd.mm.gggg' : 'mm/dd/yyyy'
+                          }
+                          calendarStartDay={1}
+                          className="w-full rounded-lg border border-[#E5E9F0] px-4 py-3 text-[14px] text-[var(--text-primary)] transition-all"
+                          wrapperClassName="w-full"
+                          calendarClassName="custom-datepicker-calendar"
+                        />
+                        <p
+                          className="mb-0 mt-2 text-[13px]"
+                          style={{ color: '#64748b' }}
+                        >
+                          <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {t('scheduleWeekdayHint')}:
+                          </span>{' '}
+                          {formatWeekdayLabel(block.selectedDate, language)}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span
+                            className="block text-[13px]"
+                            style={{
+                              color: 'var(--text-primary)',
+                              fontWeight: 600,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px',
+                            }}
+                          >
+                            {t('eventTime')}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {block.times.map((timeRow) => (
+                            <div
+                              key={timeRow.id}
+                              className="rounded-md border border-[#EEF2F7] bg-[#FAFBFC] p-3"
+                            >
+                              {block.times.length > 1 && (
+                                <div className="mb-2 flex items-center justify-end">
+                                  <button
+                                    type="button"
+                                    className="inline-flex items-center gap-1 rounded-md border-0 bg-transparent p-1 text-red-600 hover:bg-red-50"
+                                    aria-label={
+                                      language === 'sr'
+                                        ? 'Ukloni vrijeme'
+                                        : 'Remove time'
+                                    }
+                                    onClick={() =>
+                                      setScheduleDateBlocks((prev) =>
+                                        prev.map((b) => {
+                                          if (b.id !== block.id) return b;
+                                          if (b.times.length <= 1) {
+                                            return {
+                                              ...b,
+                                              times: [
+                                                {
+                                                  ...b.times[0],
+                                                  startTime: '',
+                                                  endTime: '',
+                                                },
+                                              ],
+                                            };
+                                          }
+                                          return {
+                                            ...b,
+                                            times: b.times.filter(
+                                              (t) => t.id !== timeRow.id
+                                            ),
+                                          };
+                                        })
+                                      )
+                                    }
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label
+                                    className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide"
+                                    style={{ color: '#64748b' }}
+                                  >
+                                    {t('startTime')}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={timeRow.startTime}
+                                    onChange={(e) =>
+                                      handleTimeInputForEntry(
+                                        block.id,
+                                        timeRow.id,
+                                        'startTime',
+                                        e
+                                      )
+                                    }
+                                    placeholder="--:--"
+                                    maxLength={5}
+                                    className="w-full rounded-lg border px-3 py-2.5 text-center transition-all"
+                                    style={{
+                                      borderColor: timeError
+                                        ? '#DC2626'
+                                        : '#E5E9F0',
+                                      fontSize: '14px',
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide"
+                                    style={{ color: '#64748b' }}
+                                  >
+                                    {t('endTime')}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={timeRow.endTime}
+                                    onChange={(e) =>
+                                      handleTimeInputForEntry(
+                                        block.id,
+                                        timeRow.id,
+                                        'endTime',
+                                        e
+                                      )
+                                    }
+                                    placeholder="--:--"
+                                    maxLength={5}
+                                    className="w-full rounded-lg border px-3 py-2.5 text-center transition-all"
+                                    style={{
+                                      borderColor: timeError
+                                        ? '#DC2626'
+                                        : '#E5E9F0',
+                                      fontSize: '14px',
+                                      color: 'var(--text-primary)',
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed py-2.5 text-[13px] font-semibold transition-colors"
+                          style={{
+                            borderColor: '#0E3DC5',
+                            color: '#0E3DC5',
+                            background: 'rgba(14, 61, 197, 0.04)',
+                          }}
+                          onClick={() =>
+                            setScheduleDateBlocks((prev) =>
+                              prev.map((b) =>
+                                b.id === block.id
+                                  ? {
+                                      ...b,
+                                      times: [...b.times, emptyTimeEntry()],
+                                    }
+                                  : b
+                              )
+                            )
+                          }
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t('addAnotherTimeRow')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+              <button
+                type="button"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed py-3 text-[14px] font-semibold transition-colors"
+                style={{
+                  borderColor: '#0E3DC5',
+                  color: '#0E3DC5',
+                  background: 'rgba(14, 61, 197, 0.04)',
+                }}
+                onClick={() =>
+                  setScheduleDateBlocks((prev) => [
+                    ...prev,
+                    emptyScheduleDateBlock(),
+                  ])
+                }
+              >
+                <Plus className="h-4 w-4" />
+                {t('addAnotherDateBlock')}
+              </button>
             </div>
             {timeError && (
               <p className="text-sm mt-2 m-0" style={{ color: '#DC2626' }}>
@@ -892,6 +1221,24 @@ export function SubmitEventPage() {
                   ⚠️ {addressError}
                 </p>
               )}
+              <div className="mt-2">
+                <input
+                  type="url"
+                  name="mapUrl"
+                  value={formData.mapUrl}
+                  onChange={handleChange}
+                  placeholder="https://maps.google.com/?q=... (link za Google Maps)"
+                  className="w-full px-4 py-3 rounded-lg border transition-all"
+                  style={{
+                    borderColor: '#E5E9F0',
+                    fontSize: '13px',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+                <p className="mt-1 m-0" style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                  Opcionalno — adresa na kartici ce biti klikabilna ako uneses link
+                </p>
+              </div>
             </div>
 
             {/* Opis */}
@@ -958,48 +1305,7 @@ export function SubmitEventPage() {
               )}
             </div>
 
-            {/* Link ka ticketima */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Globe className="w-4 h-4" style={{ color: '#0E3DC5' }} />
-                <label 
-                  className="text-[13px] m-0" 
-                  style={{ 
-                    color: 'var(--text-primary)',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}
-                >
-                  {t('ticketLink')}
-                </label>
-              </div>
-              <input
-                type="url"
-                name="ticketLink"
-                value={formData.ticketLink}
-                onChange={handleChange}
-                placeholder={t('ticketLinkPlaceholder')}
-                className="w-full px-4 py-3 rounded-lg border transition-all"
-                style={{
-                  borderColor: (formData.priceType === 'paid' && !formData.ticketLink.trim()) ? '#DC2626' : '#E5E9F0',
-                  fontSize: '14px',
-                  color: 'var(--text-primary)'
-                }}
-              />
-              {formData.priceType === 'paid' && !formData.ticketLink.trim() && (
-                <p className="text-xs mt-1 m-0" style={{ color: '#DC2626' }}>
-                  ⚠️ {language === 'sr' ? 'Obavezno za plaćene događaje' : 'Required for paid events'}
-                </p>
-              )}
-              {formData.ticketLink.trim() && formData.priceType === 'free' && (
-                <p className="text-xs mt-1 m-0" style={{ color: '#F59E0B' }}>
-                  ⚠️ {language === 'sr' ? 'Ako ste unijeli link za karte, morate odabrati "Plaćeni ulaz"' : 'If you entered a ticket link, you must select "Paid entry"'}
-                </p>
-              )}
-            </div>
-
-            {/* Cijena - besplatno/plaćeno */}
+            {/* Cijena - besplatno/plaćeno (prije linka za karte — jasniji tok) */}
             <div className="mb-4">
               <label 
                 className="block text-[13px] mb-2" 
@@ -1069,6 +1375,73 @@ export function SubmitEventPage() {
                   </p>
                 ) : null;
               })()}
+            </div>
+
+            {/* Link ka ticketima — onemogućen za slobodan ulaz */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+                <label 
+                  className="text-[13px] m-0" 
+                  style={{ 
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {t('ticketLink')}
+                </label>
+              </div>
+              <input
+                type="url"
+                name="ticketLink"
+                value={formData.ticketLink}
+                onChange={handleChange}
+                disabled={formData.priceType === 'free'}
+                placeholder={t('ticketLinkPlaceholder')}
+                className={`w-full px-4 py-3 rounded-lg border transition-all ${formData.priceType === 'free' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                style={{
+                  borderColor: (formData.priceType === 'paid' && !formData.ticketLink.trim()) ? '#DC2626' : '#E5E9F0',
+                  fontSize: '14px',
+                  color: 'var(--text-primary)'
+                }}
+              />
+              {formData.priceType === 'paid' && !formData.ticketLink.trim() && (
+                <p className="text-xs mt-1 m-0" style={{ color: '#DC2626' }}>
+                  ⚠️ {language === 'sr' ? 'Obavezno za plaćene događaje' : 'Required for paid events'}
+                </p>
+              )}
+              {formData.priceType === 'free' && (
+                <p className="text-xs mt-1 m-0" style={{ color: '#9CA3AF' }}>
+                  {language === 'sr'
+                    ? 'Link za karte nije potreban za slobodan ulaz.'
+                    : 'Ticket link is not used for free entry.'}
+                </p>
+              )}
+            </div>
+
+            {/* Slika — ista pozicija kao VenueForm (kraj glavne sekcije, prije kontakta/organizatora) */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+                <label
+                  className="text-[13px] m-0"
+                  style={{
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  {t('addImage') || 'Dodaj sliku/e'} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                </label>
+              </div>
+              <ImageUpload
+                value={formData.image}
+                onChange={(url) => setFormData((prev) => ({ ...prev, image: url }))}
+                required
+              />
             </div>
           </div>
 

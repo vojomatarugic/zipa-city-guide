@@ -90,7 +90,7 @@ export function Header() {
               color: '#0E3DC5',
               letterSpacing: '-0.5px'
             }}>
-              Events Guide
+              {t('appName')}
             </div>
           </Link>
 

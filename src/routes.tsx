@@ -1,8 +1,8 @@
 import { createBrowserRouter } from "react-router";
 import { RootLayout } from "./components/RootLayout";
 import { HomePage } from "./pages/HomePage";
-import { FoodAndDrinkPage } from "./pages/food-and-drink-page";
-import { FoodAndDrinkDetailPage } from "./pages/food-and-drink-detail-page";
+import { FoodAndDrinkPage } from "./pages/FoodAndDrinkPage";
+import { FoodAndDrinkDetailPage } from "./pages/FoodAndDrinkDetailPage";
 import { EventsPage } from "./pages/EventsPage";
 import { ClubsPage } from "./pages/ClubsPage";
 import { ConcertsPage } from "./pages/ConcertsPage";
@@ -144,11 +144,19 @@ export const router = createBrowserRouter([
         Component: PrivacyPolicyPage,
       },
       {
+        path: "politika-privatnosti",
+        Component: PrivacyPolicyPage,
+      },
+      {
         path: "legalNotice",
         Component: ContactPage,
       },
       {
         path: "termsOfService",
+        Component: TermsOfServicePage,
+      },
+      {
+        path: "uslovi-koristenja",
         Component: TermsOfServicePage,
       },
       {

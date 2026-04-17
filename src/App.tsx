@@ -12,8 +12,11 @@ export default function App() {
   // Set meta tags for SEO and social sharing
   useEffect(() => {
     try {
+      const appTitle = 'ZIPA City Guide';
+      const appDescription = 'Otkrij najbolje događaje i mjesta u svom gradu';
+
       // Set page title
-      document.title = 'BL City Guide | Banja Luka - Vodič kroz grad';
+      document.title = appTitle;
       
       // Set or update meta tags
       const setMetaTag = (property: string, content: string, isProperty = true) => {
@@ -28,15 +31,15 @@ export default function App() {
       };
 
       // Primary meta tags
-      setMetaTag('description', 'Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan vodič kroz grad sa preporukama lokalaca.', false);
+      setMetaTag('description', appDescription, false);
       setMetaTag('keywords', 'Banja Luka, turizam, restorani, noćni život, dešavanja, vodič, Republika Srpska, kultura, magazin', false);
       setMetaTag('author', 'ZIPA Agency', false);
       
       // Open Graph / Facebook
       setMetaTag('og:type', 'website');
       setMetaTag('og:url', 'https://blcityguide.com/');
-      setMetaTag('og:title', 'BL City Guide | Banja Luka - Vodič kroz grad');
-      setMetaTag('og:description', 'Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan turistički vodič kroz grad.');
+      setMetaTag('og:title', appTitle);
+      setMetaTag('og:description', appDescription);
       setMetaTag('og:image', ogImage);
       setMetaTag('og:image:width', '1200');
       setMetaTag('og:image:height', '630');
@@ -44,8 +47,8 @@ export default function App() {
       // Twitter
       setMetaTag('twitter:card', 'summary_large_image');
       setMetaTag('twitter:url', 'https://blcityguide.com/');
-      setMetaTag('twitter:title', 'BL City Guide | Banja Luka - Vodič kroz grad');
-      setMetaTag('twitter:description', 'Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan turistički vodič kroz grad.');
+      setMetaTag('twitter:title', appTitle);
+      setMetaTag('twitter:description', appDescription);
       setMetaTag('twitter:image', ogImage);
       
       // Theme color
@@ -78,7 +81,7 @@ export default function App() {
       // Additional iOS meta tags
       setMetaTag('apple-mobile-web-app-capable', 'yes', false);
       setMetaTag('apple-mobile-web-app-status-bar-style', 'default', false);
-      setMetaTag('apple-mobile-web-app-title', 'BL Guide', false);
+      setMetaTag('apple-mobile-web-app-title', 'City Guide', false);
       
       // Web App Manifest
       setLinkTag('manifest', `/manifest.json?v=${Date.now()}`);

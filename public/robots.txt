@@ -1,4 +1,4 @@
-# BL City Guide - Robots.txt
+# ZIPA City Guide - Robots.txt
 
 User-agent: *
 Allow: /

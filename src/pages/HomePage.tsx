@@ -35,6 +35,7 @@ import {
   getGradientTextStyle,
 } from "../utils/colors";
 import { translations } from "../utils/translations";
+import { formatDate as formatAppDate } from "../utils/dateFormat";
 import kastelHeroImage from "../assets/2cc3b226c8687491df7c5255c57428c1428bdda2.png";
 import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
 import cityModalBg from "../assets/4e00219e8da31038f51e64d45285bbc6d7f6feaa.png";
@@ -755,7 +756,7 @@ export function HomePage() {
                             className="text-sm"
                             style={{ color: "#6B7280" }}
                           >
-                            {eventService.formatEventTime(event.start_at, event.end_at)}
+                            {eventService.formatEventTime(event.start_at, event.end_at, language === "en" ? "en" : "sr")}
                           </span>
                         </div>
                       </>
@@ -1883,14 +1884,7 @@ export function HomePage() {
 
           const handleSave = () => {
             if (selectedStartDate) {
-              const formatDate = (date: Date) => {
-                const day = date.getDate();
-                const month = date.toLocaleDateString(
-                  language === "sr" ? "sr-Latn-RS" : "en-US",
-                  { month: "short" },
-                );
-                return `${day}. ${month}`;
-              };
+              const locale = language === "en" ? "en" : "sr";
 
               if (
                 selectedEndDate &&
@@ -1898,12 +1892,12 @@ export function HomePage() {
               ) {
                 // Range
                 setSelectedDateRange(
-                  `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}`,
+                  `${formatAppDate(selectedStartDate, locale)} - ${formatAppDate(selectedEndDate, locale)}`,
                 );
               } else {
                 // Single date
                 setSelectedDateRange(
-                  formatDate(selectedStartDate),
+                  formatAppDate(selectedStartDate, locale),
                 );
               }
               setIsDatePickerOpen(false);

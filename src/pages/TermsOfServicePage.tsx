@@ -95,8 +95,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? 'Korišćenjem web-sajta Banja Luka Guide (u daljem tekstu: "Sajt") potvrđujete da ste upoznati sa ovim Uslovima korišćenja i da ih u potpunosti prihvatate. Ukoliko se ne slažete sa Uslovima, molimo vas da ne koristite Sajt.'
-                : 'By using the Banja Luka Guide website (hereinafter: "Site"), you confirm that you are familiar with these Terms of Service and accept them in full. If you do not agree with the Terms, please do not use the Site.'}
+                ? `Korišćenjem web-sajta ${t("appName")} (u daljem tekstu: "Sajt") potvrđujete da ste upoznati sa ovim Uslovima korišćenja i da ih u potpunosti prihvatate. Ukoliko se ne slažete sa Uslovima, molimo vas da ne koristite Sajt.`
+                : `By using the ${t("appName")} website (hereinafter: "Site"), you confirm that you are familiar with these Terms of Service and accept them in full. If you do not agree with the Terms, please do not use the Site.`}
             </p>
             <p
               className="mt-4"
@@ -135,8 +135,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? "Banja Luka Guide je informativni i vodički web-sajt koji korisnicima pruža pregled događaja, koncerata, kulturnih manifestacija, restorana i drugih dešavanja."
-                : "Banja Luka Guide is an informative and guide website that provides users with an overview of events, concerts, cultural events, restaurants, and other happenings."}
+                ? `${t("appName")} je informativni i vodički web-sajt koji korisnicima pruža pregled događaja, koncerata, kulturnih manifestacija, restorana i drugih dešavanja.`
+                : `${t("appName")} is an informative and guide website that provides users with an overview of events, concerts, cultural events, restaurants, and other happenings.`}
             </p>
             <p
               style={{
@@ -225,8 +225,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? "Banja Luka Guide ne kontroliše sadržaj tih sajtova i ne snosi odgovornost za:"
-                : "Banja Luka Guide does not control the content of those sites and is not responsible for:"}
+                ? `${t("appName")} ne kontroliše sadržaj tih sajtova i ne snosi odgovornost za:`
+                : `${t("appName")} does not control the content of those sites and is not responsible for:`}
             </p>
             <ul
               className="ml-6 mb-3"
@@ -289,8 +289,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? "Iako nastojimo da informacije na Sajtu budu tačne i ažurne, Banja Luka Guide ne garantuje potpunu tačnost, potpunost ili pravovremenost svih objavljenih podataka."
-                : "While we strive to ensure that the information on the Site is accurate and up-to-date, Banja Luka Guide does not guarantee complete accuracy, completeness, or timeliness of all published data."}
+                ? `Iako nastojimo da informacije na Sajtu budu tačne i ažurne, ${t("appName")} ne garantuje potpunu tačnost, potpunost ili pravovremenost svih objavljenih podataka.`
+                : `While we strive to ensure that the information on the Site is accurate and up-to-date, ${t("appName")} does not guarantee complete accuracy, completeness, or timeliness of all published data.`}
             </p>
             <p
               style={{
@@ -340,8 +340,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? "Banja Luka Guide nije ugovorna strana u tim odnosima i ne snosi odgovornost za:"
-                : "Banja Luka Guide is not a contracting party in these relationships and is not responsible for:"}
+                ? `${t("appName")} nije ugovorna strana u tim odnosima i ne snosi odgovornost za:`
+                : `${t("appName")} is not a contracting party in these relationships and is not responsible for:`}
             </p>
             <ul
               className="ml-6"
@@ -462,8 +462,8 @@ export function TermsOfServicePage() {
               }}
             >
               {language === "sr"
-                ? "Banja Luka Guide ne snosi odgovornost za:"
-                : "Banja Luka Guide is not responsible for:"}
+                ? `${t("appName")} ne snosi odgovornost za:`
+                : `${t("appName")} is not responsible for:`}
             </p>
             <ul
               className="ml-6 mb-3"

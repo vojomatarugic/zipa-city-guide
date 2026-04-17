@@ -1,4 +1,9 @@
 export const translations = {
+  appName: {
+    lat: "City Guide",
+    en: "City Guide",
+  },
+
   // Navigation
   home: {
     lat: "Početna",
@@ -401,8 +406,8 @@ export const translations = {
     en: "All rights reserved",
   },
   banjaLukaGuide: {
-    lat: "Zipa Events Guide",
-    en: "Zipa Events Guide",
+    lat: "City Guide",
+    en: "City Guide",
   },
   about: {
     lat: "O nama",
@@ -599,8 +604,8 @@ export const translations = {
     en: "Bloger Krule Stand Up @ Đurđevac",
   },
   nearbyEvent1Date: {
-    lat: "Sub, 07 Feb • 19:00",
-    en: "Sat, 07 Feb • 19:00",
+    lat: "Sub, 07 Feb ⬢ 19:00",
+    en: "Sat, 07 Feb ⬢ 19:00",
   },
   nearbyEvent1City: {
     lat: "Zenica",
@@ -612,8 +617,8 @@ export const translations = {
     en: "WHAT YOUR WIFE IS LIKE, SO IS YOUR LIFE IN ZENICA",
   },
   nearbyEvent2Date: {
-    lat: "Čet, 12 Feb • 19:00",
-    en: "Thu, 12 Feb • 19:00",
+    lat: "Čet, 12 Feb ⬢ 19:00",
+    en: "Thu, 12 Feb ⬢ 19:00",
   },
   nearbyEvent2City: {
     lat: "Zenica",
@@ -625,8 +630,8 @@ export const translations = {
     en: "PAS MATTER IN ZENICA",
   },
   nearbyEvent3Date: {
-    lat: "Čet, 29 Jan • 20:00",
-    en: "Thu, 29 Jan • 20:00",
+    lat: "Čet, 29 Jan ⬢ 20:00",
+    en: "Thu, 29 Jan ⬢ 20:00",
   },
   nearbyEvent3City: {
     lat: "Zenica",
@@ -638,8 +643,8 @@ export const translations = {
     en: "15th Winter Grmeč March",
   },
   nearbyEvent4Date: {
-    lat: "Ned, 08 Feb • 08:00",
-    en: "Sun, 08 Feb • 08:00",
+    lat: "Ned, 08 Feb ⬢ 08:00",
+    en: "Sun, 08 Feb ⬢ 08:00",
   },
   nearbyEvent4City: {
     lat: "Bihać",
@@ -651,8 +656,8 @@ export const translations = {
     en: "9th Jumbo Fest 2026",
   },
   nearbyEvent5Date: {
-    lat: "Ned, 07 Jun • 12:00",
-    en: "Sun, 07 Jun • 12:00",
+    lat: "Ned, 07 Jun ⬢ 12:00",
+    en: "Sun, 07 Jun ⬢ 12:00",
   },
   nearbyEvent5City: {
     lat: "Gradiška",
@@ -664,8 +669,8 @@ export const translations = {
     en: "Blatnica Medieval Festival 2",
   },
   nearbyEvent6Date: {
-    lat: "Sub, 08 Avg • 10:00",
-    en: "Sat, 08 Aug • 10:00",
+    lat: "Sub, 08 Avg ⬢ 10:00",
+    en: "Sat, 08 Aug ⬢ 10:00",
   },
   nearbyEvent6City: {
     lat: "Zenica",
@@ -1185,13 +1190,13 @@ export const translations = {
     en: "Lunch Rare Area",
   },
   lunchRareAreaDesc: {
-    lat: "Lokalna kuhinja • Centar grada",
-    en: "Local cuisine • City Center",
+    lat: "Lokalna kuhinja ⬢ Centar grada",
+    en: "Local cuisine ⬢ City Center",
   },
   staroBure: { lat: "Staro Bure", en: "Staro Bure" },
   staroBureDesc: {
-    lat: "Ro��tilji • Nova Varoš",
-    en: "Grills • Nova Varos",
+    lat: "Ročtilji ⬢ Nova Varoš",
+    en: "Grills ⬢ Nova Varos",
   },
   staroBureHours: {
     lat: "Pon-Ned: 10:00-23:00",
@@ -1202,8 +1207,8 @@ export const translations = {
     en: "Gatto Trattoria",
   },
   gattoTrattoriaDesc: {
-    lat: "Italijanska • Centar grada",
-    en: "Italian • City Center",
+    lat: "Italijanska ⬢ Centar grada",
+    en: "Italian ⬢ City Center",
   },
   gattoTrattoriaHours: {
     lat: "Uto-Sub: 12:00-00:00",
@@ -1211,8 +1216,8 @@ export const translations = {
   },
   kodBrke: { lat: "Kod Brke", en: "Kod Brke" },
   kodBrkeDesc: {
-    lat: "Lokalna kuhinja • Centar grada",
-    en: "Local Cuisine • City Center",
+    lat: "Lokalna kuhinja ⬢ Centar grada",
+    en: "Local Cuisine ⬢ City Center",
   },
   kodBrkeHours: {
     lat: "Pon-Ned: 11:00-23:00",
@@ -1319,8 +1324,8 @@ export const translations = {
     en: "From traditional local dishes to international specialties.",
   },
   cuisineLongText1: {
-    lat: "Najbolji restorani u Banjaluci su oni koje sami otkrijete. Istražite raznovrsnu ponudu hrane i budite sigurni da ćete nahraniti baš svako čulo. Restorani za doručak u Banjaluci, sushi lokali, veganska i vegetarijanska kuhinja, restorani u kojima je meso u centru pažnje, provjereni restorani za lagane obroke, mjesta sa odličnom morskom hranom, latino specijalitetima, te jelima iz Meksika i Azije — sve se to sprema svakog dana u Banjaluci.",
-    en: "The best restaurants in Banja Luka are the ones you discover yourself. Explore the diverse food offerings and be sure to feed every sense. Breakfast restaurants in Banja Luka, sushi bars, vegan and vegetarian cuisine, restaurants where meat is the center of attention, proven restaurants for light meals, places with excellent seafood, Latino specialties, and dishes from Mexico and Asia — all of this is prepared every day in Banja Luka.",
+    lat: "Najbolji restorani u Banjaluci su oni koje sami otkrijete. Istražite raznovrsnu ponudu hrane i budite sigurni da ćete nahraniti baš svako čulo. Restorani za doručak u Banjaluci, sushi lokali, veganska i vegetarijanska kuhinja, restorani u kojima je meso u centru pažnje, provjereni restorani za lagane obroke, mjesta sa odličnom morskom hranom, latino specijalitetima, te jelima iz Meksika i Azije – sve se to sprema svakog dana u Banjaluci.",
+    en: "The best restaurants in Banja Luka are the ones you discover yourself. Explore the diverse food offerings and be sure to feed every sense. Breakfast restaurants in Banja Luka, sushi bars, vegan and vegetarian cuisine, restaurants where meat is the center of attention, proven restaurants for light meals, places with excellent seafood, Latino specialties, and dishes from Mexico and Asia – all of this is prepared every day in Banja Luka.",
   },
   cuisineLongText2: {
     lat: "Srpska kuhinja i najbolji roštilj u Banjaluci uvijek su u trendu, baš kao i italijanska kuhinja. Najbolja pizza u Banjaluci, domaća pasta, rizoto i porcije istinog gastronomskog zadovoljstva poslužuju se širom grada. Mediteranska kuhinja i riblji restorani savršen su izbor u danima posta, u trenucima kada birate zdraviju ishranu ili svaki put kada poželite dašak ljeta na nepcima.",
@@ -1348,7 +1353,7 @@ export const translations = {
   },
   eventsLongText2: {
     lat: "Dešavanja u Banjaluci uključuju sve – od besplatnih koncerata na otvorenom do ekskluzivnih klubskih žurki. Pozorišne predstave, izložbe, sportske utakmice i šetnje uz rijeku – sve se može pronaći na ovoj stranici.",
-    en: "Events in Banja Luka include everything ��� from free outdoor concerts to exclusive club parties. Theater performances, exhibitions, sports matches and walks along the river – everything can be found on this page.",
+    en: "Events in Banja Luka include everything – from free outdoor concerts to exclusive club parties. Theater performances, exhibitions, sports matches and walks along the river – everything can be found on this page.",
   },
   eventsMapLongText: {
     lat: "Koristite našu interaktivnu mapu da pronađete gdje se tačno odvija dešavanje koje vas zanima. Sva mjesta su označena, sa detaljnim opisima i pravcima.",
@@ -1367,7 +1372,7 @@ export const translations = {
 
   // Accommodation Page - Long Texts
   accommodationLongText1: {
-    lat: "Smještaj u Banjaluci uključuje sve – od luksuznih hotela sa spa centrima do ekonomičnih apartmana za duže boravke. U centru grada nalaze se moderni hoteli sa pogledom, dok su porodi��ni apartmani raspoređeni širom grada.",
+    lat: "Smještaj u Banjaluci uključuje sve – od luksuznih hotela sa spa centrima do ekonomičnih apartmana za duže boravke. U centru grada nalaze se moderni hoteli sa pogledom, dok su porodični apartmani raspoređeni širom grada.",
     en: "Accommodation in Banja Luka includes everything – from luxury hotels with spa centers to budget apartments for longer stays. In the city center there are modern hotels with views, while family apartments are spread throughout the city.",
   },
   accommodationLongText2: {
@@ -1465,7 +1470,7 @@ export const translations = {
     en: "24 Hours in Banja Luka",
   },
   twentyFourHoursDesc: {
-    lat: "Kompletan vodič kroz savr��en dan u gradu.",
+    lat: "Kompletan vodič kroz savrčen dan u gradu.",
     en: "Complete guide to a perfect day in the city.",
   },
 
@@ -1666,7 +1671,7 @@ export const translations = {
   venueTypeClubs: { lat: "Klubovi", en: "Clubs" },
   venueTypeCafes: { lat: "Kafići", en: "Cafes" },
   venueTypeRestaurants: { lat: "Restorani", en: "Restaurants" },
-  // Cuisine picker labels (slug → cuisineOpt + PascalCase of slug segments)
+  // Cuisine picker labels (slug Ć cuisineOpt + PascalCase of slug segments)
   cuisineOptAmericka: { lat: "Američka", en: "American" },
   cuisineOptAutorska: { lat: "Autorska", en: "Signature" },
   cuisineOptAzijska: { lat: "Azijska", en: "Asian" },
@@ -1935,6 +1940,28 @@ export const translations = {
     en: "e.g. Bijelo Dugme Concert",
   },
   eventDate: { lat: "Datum", en: "Date" },
+  /** Submit event: repeatable date/time terms */
+  eventScheduleSection: {
+    lat: "Datumi i vremena",
+    en: "Dates & times",
+  },
+  addAnotherEventTerm: {
+    lat: "Dodaj još jedan termin",
+    en: "Add another date / time",
+  },
+  addAnotherDateBlock: {
+    lat: "Dodaj još jedan datum",
+    en: "Add another date",
+  },
+  addAnotherTimeRow: {
+    lat: "Dodaj vrijeme (isti datum)",
+    en: "Add another time (same day)",
+  },
+  scheduleWeekdayHint: {
+    lat: "Dan u sedmici",
+    en: "Weekday",
+  },
+  eventTermLabel: { lat: "Termin", en: "Showing" },
   eventTime: { lat: "Vrijeme", en: "Time" },
   startTime: { lat: "Početak", en: "Start" },
   endTime: { lat: "Kraj (opcionalno)", en: "End (optional)" },
@@ -2505,7 +2532,7 @@ export const translations = {
     lat: "Svi klubovi u Banjaluci",
     en: "All Clubs in Banja Luka",
   },
-  /** Clubs /all hero second line — matches ConcertsAllPage “na jednom mjestu” pattern */
+  /** Clubs /all hero second line – matches ConcertsAllPage "na jednom mjestu" pattern */
   clubsAllHeroSubline: {
     lat: "na jednom mjestu",
     en: "in one place",
@@ -2892,8 +2919,8 @@ export const translations = {
 
   // ==== EVENTS - DATES ====
   eventDate1: {
-    lat: "Subota, 7. dec • 20:00",
-    en: "Saturday, Dec 7 • 20:00",
+    lat: "Subota, 7. dec ⬢ 20:00",
+    en: "Saturday, Dec 7 ⬢ 20:00",
   },
   eventDate2: { lat: "5. dec - 20. dec", en: "Dec 5 - Dec 20" },
 
@@ -3051,33 +3078,33 @@ export const translations = {
   },
   toggleMenu: { lat: "Otvori/zatvori meni", en: "Toggle menu" },
   eventDate3: {
-    lat: "Petak - Nedjelja • Cijeli dan",
-    en: "Friday - Sunday • All day",
+    lat: "Petak - Nedjelja ⬢ Cijeli dan",
+    en: "Friday - Sunday ⬢ All day",
   },
-  eventDate4: { lat: "Subota • 22:00", en: "Saturday • 22:00" },
+  eventDate4: { lat: "Subota ⬢ 22:00", en: "Saturday ⬢ 22:00" },
   eventDate5: {
-    lat: "Petak, 6. dec • 21:00",
-    en: "Friday, Dec 6 • 21:00",
+    lat: "Petak, 6. dec ⬢ 21:00",
+    en: "Friday, Dec 6 ⬢ 21:00",
   },
   eventDate6: {
-    lat: "Subota, 7. dec • 10:00",
-    en: "Saturday, Dec 7 • 10:00",
+    lat: "Subota, 7. dec ⬢ 10:00",
+    en: "Saturday, Dec 7 ⬢ 10:00",
   },
   eventDate7: {
-    lat: "Nedjelja, 8. dec • 11:00",
-    en: "Sunday, Dec 8 • 11:00",
+    lat: "Nedjelja, 8. dec ⬢ 11:00",
+    en: "Sunday, Dec 8 ⬢ 11:00",
   },
   eventDate8: {
-    lat: "Petak, 13. dec • 20:30",
-    en: "Friday, Dec 13 • 20:30",
+    lat: "Petak, 13. dec ⬢ 20:30",
+    en: "Friday, Dec 13 ⬢ 20:30",
   },
   eventDate9: {
     lat: "10. dec - 30. dec",
     en: "Dec 10 - Dec 30",
   },
   eventDate10: {
-    lat: "Subota, 14. dec • Cijeli dan",
-    en: "Saturday, Dec 14 • All day",
+    lat: "Subota, 14. dec ⬢ Cijeli dan",
+    en: "Saturday, Dec 14 ⬢ All day",
   },
 
   // ==== EVENTS - PRICES ====
@@ -3450,8 +3477,8 @@ export const translations = {
   // ==== SEO META TAGS ====
   // Home Page SEO
   seoHomeTitle: {
-    lat: "BL City Guide | Banja Luka - Vodič kroz grad | Otkrijte Banjaluku",
-    en: "BL City Guide | Banja Luka - City Guide | Discover Banja Luka",
+    lat: "ZIPA City Guide | Banja Luka - Vodič kroz grad | Otkrijte Banjaluku",
+    en: "ZIPA City Guide | Banja Luka - City Guide | Discover Banja Luka",
   },
   seoHomeDescription: {
     lat: "Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan vodič kroz grad sa preporukama lokalaca.",
@@ -3464,8 +3491,8 @@ export const translations = {
 
   // Restaurants Page SEO
   seoRestaurantsTitle: {
-    lat: "Hrana i piće u Banjoj Luci | BL City Guide - Gastronomija",
-    en: "Food & Drink in Banja Luka | BL City Guide - Best Gastronomy",
+    lat: "Hrana i piće u Banjoj Luci | ZIPA City Guide - Gastronomija",
+    en: "Food & Drink in Banja Luka | ZIPA City Guide - Best Gastronomy",
   },
   seoRestaurantsDescription: {
     lat: "Pronađite najbolje restorane u Banjoj Luci. Tradicionalna kuhinja, internacionalni specijaliteti, live muzika, terase. Recenzije i preporuke lokalaca.",
@@ -3478,8 +3505,8 @@ export const translations = {
 
   // Events Page SEO
   seoEventsTitle: {
-    lat: "Dešavanja u Banjoj Luci | BL City Guide - Eventi, koncerti, kultura",
-    en: "Events in Banja Luka | BL City Guide - Events, concerts, culture",
+    lat: "Dešavanja u Banjoj Luci | ZIPA City Guide - Eventi, koncerti, kultura",
+    en: "Events in Banja Luka | ZIPA City Guide - Events, concerts, culture",
   },
   seoEventsDescription: {
     lat: "Kalendar svih dešavanja u Banjoj Luci. Koncerti, festivali, sportski događaji, kulturne manifestacije, pozorište, izložbe. Uvijek ažurno!",
@@ -3492,8 +3519,8 @@ export const translations = {
 
   // Nightlife Page SEO
   seoNightlifeTitle: {
-    lat: "Noćni život u Banjoj Luci | BL City Guide - Klubovi, barovi, žurke",
-    en: "Nightlife in Banja Luka | BL City Guide - Clubs, bars, parties",
+    lat: "Noćni život u Banjoj Luci | ZIPA City Guide - Klubovi, barovi, žurke",
+    en: "Nightlife in Banja Luka | ZIPA City Guide - Clubs, bars, parties",
   },
   seoNightlifeDescription: {
     lat: "Najbolji klubovi, barovi i kafići u Banjoj Luci. DJ nastupi, live muzika, cocktail barovi. Pronađite savršeno mjesto za izlazak!",
@@ -3506,12 +3533,12 @@ export const translations = {
 
   // Clubs Page SEO
   seoClubsTitle: {
-    lat: "Klubovi u Banjoj Luci | BL City Guide - Noćni život, žurke, DJ",
-    en: "Clubs in Banja Luka | BL City Guide - Nightlife, parties, DJs",
+    lat: "Klubovi u Banjoj Luci | ZIPA City Guide - Noćni život, žurke, DJ",
+    en: "Clubs in Banja Luka | ZIPA City Guide - Nightlife, parties, DJs",
   },
   seoClubsDescription: {
-    lat: "Najbolji klubovi i noćni život u Banjoj Luci. DJ nastupi, žurke, barovi. Pronađite mjesto za izlazak uz BL City Guide.",
-    en: "Best clubs and nightlife in Banja Luka. DJ sets, parties, bars. Find where to go out with BL City Guide.",
+    lat: "Najbolji klubovi i noćni život u Banjoj Luci. DJ nastupi, žurke, barovi. Pronađite mjesto za izlazak uz ZIPA City Guide.",
+    en: "Best clubs and nightlife in Banja Luka. DJ sets, parties, bars. Find where to go out with ZIPA City Guide.",
   },
   seoClubsKeywords: {
     lat: "klubovi Banja Luka, noćni život, žurke, DJ, party, izlazak, kafići, barovi",
@@ -3520,36 +3547,36 @@ export const translations = {
 
   // Contact Page SEO
   seoContactTitle: {
-    lat: "Kontakt - BL City Guide | Banja Luka",
-    en: "Contact - BL City Guide | Banja Luka",
+    lat: "Kontakt - ZIPA City Guide | Banja Luka",
+    en: "Contact - ZIPA City Guide | Banja Luka",
   },
   seoContactDescription: {
-    lat: "Kontaktirajte BL City Guide tim. Pošaljite nam poruku ili nas posjetite u ZIPA Agency kancelariji u Banjaluci.",
-    en: "Contact the BL City Guide team. Send us a message or visit us at the ZIPA Agency office in Banja Luka.",
+    lat: "Kontaktirajte ZIPA City Guide tim. Pošaljite nam poruku ili nas posjetite u ZIPA Agency kancelariji u Banjaluci.",
+    en: "Contact the ZIPA City Guide team. Send us a message or visit us at the ZIPA Agency office in Banja Luka.",
   },
   seoContactKeywords: {
-    lat: "kontakt, Banja Luka Guide, ZIPA Agency, kontakt forma",
-    en: "contact, Banja Luka Guide, ZIPA Agency, contact form",
+    lat: "kontakt, City Guide, ZIPA Agency, kontakt forma",
+    en: "contact, City Guide, ZIPA Agency, contact form",
   },
 
   // Terms of Service Page SEO
   seoTermsTitle: {
-    lat: "Uslovi korišćenja - BL City Guide | Banja Luka",
-    en: "Terms of Service - BL City Guide | Banja Luka",
+    lat: "Uslovi korišćenja - ZIPA City Guide | Banja Luka",
+    en: "Terms of Service - ZIPA City Guide | Banja Luka",
   },
   seoTermsDescription: {
-    lat: "Pročitajte Uslove korišćenja BL City Guide platforme. Pravila, odgovornosti i pravne informacije.",
-    en: "Read the Terms of Service of BL City Guide platform. Rules, responsibilities, and legal information.",
+    lat: "Pročitajte Uslove korišćenja ZIPA City Guide platforme. Pravila, odgovornosti i pravne informacije.",
+    en: "Read the Terms of Service of ZIPA City Guide platform. Rules, responsibilities, and legal information.",
   },
   seoTermsKeywords: {
-    lat: "uslovi korišćenja, pravila, politika, Banja Luka Guide",
-    en: "terms of service, rules, policy, Banja Luka Guide",
+    lat: "uslovi korišćenja, pravila, politika, City Guide",
+    en: "terms of service, rules, policy, City Guide",
   },
 
   // Theatre Page SEO
   seoTheatreTitle: {
-    lat: "Pozorište u Banjoj Luci | BL City Guide - Predstave, balet, opera",
-    en: "Theatre in Banja Luka | BL City Guide - Plays, ballet, opera",
+    lat: "Pozorište u Banjoj Luci | ZIPA City Guide - Predstave, balet, opera",
+    en: "Theatre in Banja Luka | ZIPA City Guide - Plays, ballet, opera",
   },
   seoTheatreDescription: {
     lat: "Pozorišni repertoar Banje Luke. Predstave, balet, opera, pozorišne večeri. Kompletan vodič kroz pozorišni život grada.",
@@ -3562,8 +3589,8 @@ export const translations = {
 
   // Cinema Page SEO
   seoCinemaTitle: {
-    lat: "Bioskopi u Banjoj Luci | BL City Guide - Filmovi, repertoar, projekcije",
-    en: "Cinemas in Banja Luka | BL City Guide - Movies, repertoire, screenings",
+    lat: "Bioskopi u Banjoj Luci | ZIPA City Guide - Filmovi, repertoar, projekcije",
+    en: "Cinemas in Banja Luka | ZIPA City Guide - Movies, repertoire, screenings",
   },
   seoCinemaDescription: {
     lat: "Bioskopski repertoar u Banjoj Luci. Svi bioskopi, filmovi na repertoaru, projekcije. Pronađite gdje gledati najnovije filmove.",
@@ -3576,12 +3603,12 @@ export const translations = {
 
   // Concerts Page SEO
   seoConcertsTitle: {
-    lat: "Koncerti u Banjoj Luci | BL City Guide - Muzika, festivali, živa muzika",
-    en: "Concerts in Banja Luka | BL City Guide - Music, festivals, live shows",
+    lat: "Koncerti u Banjoj Luci | ZIPA City Guide - Muzika, festivali, živa muzika",
+    en: "Concerts in Banja Luka | ZIPA City Guide - Music, festivals, live shows",
   },
   seoConcertsDescription: {
-    lat: "Koncerti i muzička dešavanja u Banjoj Luci. Rock, pop, jazz, festivali i živa muzika. Pronađite sljedeći koncert uz BL City Guide.",
-    en: "Concerts and music events in Banja Luka. Rock, pop, jazz, festivals, and live music. Find your next concert with BL City Guide.",
+    lat: "Koncerti i muzička dešavanja u Banjoj Luci. Rock, pop, jazz, festivali i živa muzika. Pronađite sljedeći koncert uz ZIPA City Guide.",
+    en: "Concerts and music events in Banja Luka. Rock, pop, jazz, festivals, and live music. Find your next concert with ZIPA City Guide.",
   },
   seoConcertsKeywords: {
     lat: "koncerti Banja Luka, muzika, festivali, živa muzika, rock, jazz, događaji",
@@ -4082,6 +4109,36 @@ export const translations = {
   enterPassword: { lat: "Unesite lozinku", en: "Enter your password" },
   enterPhone: { lat: "Unesite broj telefona", en: "Enter your phone number" },
   formLoading: { lat: "Učitavanje...", en: "Loading..." },
+  continue: { lat: "Nastavi", en: "Continue" },
+  back: { lat: "Nazad", en: "Back" },
+  close: { lat: "Zatvori", en: "Close" },
+  password: { lat: "Lozinka", en: "Password" },
+  forgotPassword: { lat: "Zaboravljena lozinka?", en: "Forgot your password?" },
+
+  // Auth Modal
+  authModalTitle: { lat: "Prijavi se ili kreiraj nalog", en: "Sign in or create an account" },
+  authModalSubtitle: { lat: "Odaberi način prijave", en: "Choose a sign-in method" },
+  authModalContinueWithGoogle: { lat: "Nastavi sa Google", en: "Continue with Google" },
+  authModalContinueWithEmail: { lat: "Nastavi sa email adresom", en: "Continue with email address" },
+  authModalDividerOr: { lat: "ili", en: "or" },
+  authModalConnecting: { lat: "Povezivanje...", en: "Connecting..." },
+  authModalLegalPrefix: {
+    lat: "Prijavom prihvataš",
+    en: "By signing in, you agree to",
+  },
+  authModalLegalAnd: { lat: "i", en: "and" },
+  authModalPrivacyPolicy: { lat: "Politiku privatnosti", en: "Privacy Policy" },
+  authModalTermsOfUse: { lat: "Uslove korištenja", en: "Terms of Use" },
+  authModalInvalidEmail: { lat: "Unesi validnu email adresu", en: "Enter a valid email address" },
+  authModalResetEmailRequired: {
+    lat: "Unesi email adresu za reset lozinke",
+    en: "Enter your email address for password reset",
+  },
+  authModalResetPasswordSent: {
+    lat: "Link za reset lozinke je poslan na navedeni email",
+    en: "Password reset link has been sent to the provided email",
+  },
+  authModalGenericError: { lat: "Došlo je do greške", en: "Something went wrong" },
 
   // Event filters
   pleaseSelectDateAndTime: { 
@@ -4123,7 +4180,7 @@ export const translations = {
     en: "Deleting...",
   },
 
-  /** Venue/event active toggle — shared by My Panel and Admin (sonner success/error) */
+  /** Venue/event active toggle – shared by My Panel and Admin (sonner success/error) */
   toastVenueNowActive: {
     lat: "Objekat je sada aktivan",
     en: "Venue is now active",

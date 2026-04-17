@@ -9,6 +9,7 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { supabase } from '../utils/authService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
+import { formatDate as formatAppDate, formatDateTime as formatAppDateTime } from '../utils/dateFormat';
 interface User {
   id: string;
   email: string;
@@ -239,24 +240,11 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    // ✅ POPRAVKA: Koristi 'sr-Latn' za latinicu umesto 'sr-RS' koja vraća ćirilicu
-    return date.toLocaleDateString(language === 'sr' ? 'sr-Latn' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    return formatAppDate(dateString, language === 'en' ? 'en' : 'sr');
   };
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(language === 'sr' ? 'sr-Latn' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return formatAppDateTime(dateString, language === 'en' ? 'en' : 'sr');
   };
 
   const getCategoryLabel = (category: string) => {

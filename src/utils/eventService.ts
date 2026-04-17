@@ -5,6 +5,7 @@
 import { projectId, publicAnonKey } from './supabase/info';
 import { Item } from './dataService';
 import { supabase } from './supabaseClient';
+import { formatDate } from './dateFormat';
 
 const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
 
@@ -145,46 +146,191 @@ export async function getEventById(id: string): Promise<Item | null> {
  * Format event datetime for display
  */
 export function formatEventDate(startAt: string, language: 'sr' | 'en' = 'sr'): string {
-  try {
-    const date = new Date(startAt);
-    
-    if (language === 'sr') {
-      const day = date.getDate();
-      const month = date.toLocaleDateString('sr-Latn', { month: 'long' });
-      const year = date.getFullYear();
-      return `${day}. ${month} ${year}.`;
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'long', 
-        day: 'numeric', 
-        year: 'numeric' 
-      });
-    }
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return startAt;
-  }
+  return formatDate(startAt, language);
 }
 
 /**
  * Format event time for display
  */
-export function formatEventTime(startAt: string, endAt?: string | null): string {
+export type EventScheduleSlot = { start_at: string; end_at?: string | null };
+
+/**
+ * Parse `event_schedules` from API/DB (may be JSON string, camelCase keys, or missing).
+ */
+export function parseEventSchedulesField(raw: unknown): EventScheduleSlot[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === 'string') {
+    const t = raw.trim();
+    if (!t) return null;
+    try {
+      return parseEventSchedulesField(JSON.parse(t));
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(raw)) return null;
+  const out: EventScheduleSlot[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') continue;
+    const o = row as Record<string, unknown>;
+    const start = o.start_at ?? o.startAt;
+    if (typeof start !== 'string' || !start.trim()) continue;
+    const endRaw = o.end_at ?? o.endAt;
+    const end_at =
+      typeof endRaw === 'string' && endRaw.trim() ? endRaw.trim() : null;
+    out.push({ start_at: start.trim(), end_at });
+  }
+  return out.length ? out : null;
+}
+
+function mergeScheduleSources(
+  fromJson: EventScheduleSlot[] | null,
+  legacyStart: string | null | undefined,
+  legacyEnd: string | null | undefined
+): EventScheduleSlot[] {
+  const seen = new Set<string>();
+  const out: EventScheduleSlot[] = [];
+  const add = (s: EventScheduleSlot) => {
+    const key = `${s.start_at}\0${s.end_at ?? ''}`;
+    if (!s.start_at || seen.has(key)) return;
+    seen.add(key);
+    out.push({ start_at: s.start_at, end_at: s.end_at ?? null });
+  };
+  if (fromJson?.length) {
+    for (const s of fromJson) add(s);
+  }
+  if (legacyStart) {
+    add({ start_at: legacyStart, end_at: legacyEnd ?? null });
+  }
+  out.sort(
+    (a, b) =>
+      new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+  );
+  return out;
+}
+
+/** All screenings: merged `event_schedules` JSON + legacy `start_at`/`end_at` (deduped). */
+export function getEventScheduleSlots(event: Item): EventScheduleSlot[] {
+  const ev = event as Item & {
+    event_schedules?: unknown;
+    eventSchedules?: unknown;
+  };
+  const parsed =
+    parseEventSchedulesField(ev.event_schedules) ??
+    parseEventSchedulesField(ev.eventSchedules);
+  const merged = mergeScheduleSources(
+    parsed,
+    event.start_at ?? null,
+    event.end_at ?? null
+  );
+  const seenDayTime = new Set<string>();
+  const deduped: EventScheduleSlot[] = [];
+  for (const s of merged) {
+    const k = scheduleSlotDayTimeKey(s.start_at);
+    if (seenDayTime.has(k)) continue;
+    seenDayTime.add(k);
+    deduped.push(s);
+  }
+  return deduped;
+}
+
+/** Local calendar day key for grouping screenings (YYYY-MM-DD). */
+export function scheduleLocalDayKey(iso: string): string {
   try {
-    const start = new Date(startAt);
-    const startTime = start.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: false 
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return iso;
+  }
+}
+
+/** Dedupe key: same local calendar day + same clock time (ignores seconds / duplicate rows). */
+function scheduleSlotDayTimeKey(startAt: string): string {
+  try {
+    const d = new Date(startAt);
+    if (isNaN(d.getTime())) return startAt;
+    const day = scheduleLocalDayKey(startAt);
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${day}|${h}:${min}`;
+  } catch {
+    return startAt;
+  }
+}
+
+/**
+ * Full weekday + date for schedule rows, e.g. "Srijeda, 23. april 2026." (sr) or "Wednesday, April 23, 2026" (en).
+ */
+export function formatWeekdayWithDate(iso: string, language: 'sr' | 'en'): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const loc = language === 'sr' ? 'sr-Latn' : 'en-US';
+    const weekday = new Intl.DateTimeFormat(loc, { weekday: 'long' }).format(d);
+    const normalizedWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : weekday;
+    return `${normalizedWeekday}, ${formatDate(d, language)}`;
+  } catch {
+    return iso;
+  }
+}
+
+export type GroupedScheduleRow = {
+  dayKey: string;
+  weekdayDateLabel: string;
+  timeLabels: string[];
+};
+
+/**
+ * Group schedule slots by local calendar day; multiple times on the same day appear once on the left with all times on the right.
+ */
+export function getGroupedEventSchedule(
+  event: Item,
+  language: 'sr' | 'en'
+): GroupedScheduleRow[] {
+  const slots = getEventScheduleSlots(event);
+  const byDay = new Map<string, { start_at: string; end_at?: string | null }[]>();
+  for (const slot of slots) {
+    const key = scheduleLocalDayKey(slot.start_at);
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key)!.push(slot);
+  }
+  const rows: GroupedScheduleRow[] = [];
+  for (const [dayKey, daySlots] of byDay) {
+    daySlots.sort(
+      (a, b) =>
+        new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    );
+    const first = daySlots[0].start_at;
+    rows.push({
+      dayKey,
+      weekdayDateLabel: formatWeekdayWithDate(first, language),
+      timeLabels: daySlots.map((s) => formatEventTime(s.start_at, s.end_at, language)),
     });
+  }
+  rows.sort((a, b) => a.dayKey.localeCompare(b.dayKey));
+  return rows;
+}
+
+export function formatEventTime(startAt: string, endAt?: string | null, language: 'sr' | 'en' = 'sr'): string {
+  try {
+    const locale = language === 'sr' ? 'sr-Latn' : 'en-US';
+    const formatter = new Intl.DateTimeFormat(locale, {
+      hour: language === 'sr' ? '2-digit' : 'numeric',
+      minute: '2-digit',
+      hour12: language === 'en',
+    });
+    const start = new Date(startAt);
+    if (isNaN(start.getTime())) return '';
+    const startTime = formatter.format(start);
     
     if (endAt) {
       const end = new Date(endAt);
-      const endTime = end.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      });
+      if (isNaN(end.getTime())) return startTime;
+      const endTime = formatter.format(end);
       return `${startTime} - ${endTime}`;
     }
     

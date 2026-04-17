@@ -99,6 +99,35 @@ function sbService() {
 // Legacy helper for backward compatibility
 const getSupabaseClient = sbService;
 
+type EventScheduleRow = { start_at: string; end_at?: string | null };
+
+/** Client/DB → JSON array for `events_ee0c365c.event_schedules` (jsonb). */
+function normalizeEventSchedulesInput(raw: unknown): EventScheduleRow[] | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t) return null;
+    try {
+      return normalizeEventSchedulesInput(JSON.parse(t));
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(raw)) return null;
+  const out: EventScheduleRow[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const o = row as Record<string, unknown>;
+    const start = o.start_at ?? o.startAt;
+    if (typeof start !== "string" || !start.trim()) continue;
+    const endRaw = o.end_at ?? o.endAt;
+    const end_at =
+      typeof endRaw === "string" && endRaw.trim() ? endRaw.trim() : null;
+    out.push({ start_at: start.trim(), end_at });
+  }
+  return out.length ? out : null;
+}
+
 /** Canonical email from Supabase Auth if registered; otherwise null. Paginates listUsers. */
 async function resolveRegisteredSubmitterEmail(
   serviceClient: ReturnType<typeof sbService>,
@@ -1367,8 +1396,11 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         address: body.address || null,
         image: body.image || null,
         price: body.price || null,
+        date: body.date || null,
+        map_url: body.map_url || null,
         start_at: body.start_at,
         end_at: body.end_at || null,
+        event_schedules: normalizeEventSchedulesInput(body.event_schedules),
         ticket_link: body.ticket_link || null,
         organizer_name: body.organizer_name || null,
         organizer_phone: body.organizer_phone || null,
@@ -2111,7 +2143,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     })();
 
     // ✅ snake_case only — nema camelCase fallbackova
-    const updatePayload = {
+    const updatePayload: Record<string, unknown> = {
       title: body.title,
       title_en: body.title_en,
       description: body.description,
@@ -2132,6 +2164,11 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       ...(resolvedEventSubmittedBy !== undefined ? { submitted_by: resolvedEventSubmittedBy } : {}),
       updated_at: new Date().toISOString(),
     };
+    if (body.date !== undefined) updatePayload.date = body.date ?? null;
+    if (body.map_url !== undefined) updatePayload.map_url = body.map_url ?? null;
+    if (body.event_schedules !== undefined) {
+      updatePayload.event_schedules = normalizeEventSchedulesInput(body.event_schedules);
+    }
 
     // 1️⃣ Try events table first
     const { data: eventsRows, error: eventsError } = await supabase
@@ -2171,8 +2208,14 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         address: updatePayload.address ?? venueCheck.address,
         image: updatePayload.image ?? venueCheck.image,
         price: updatePayload.price ?? venueCheck.price,
+        date: updatePayload.date ?? venueCheck.date ?? null,
+        map_url: updatePayload.map_url ?? venueCheck.map_url ?? null,
         start_at: updatePayload.start_at || venueCheck.start_at,
         end_at: updatePayload.end_at || venueCheck.end_at,
+        event_schedules:
+          body.event_schedules !== undefined
+            ? updatePayload.event_schedules
+            : (venueCheck as { event_schedules?: unknown }).event_schedules ?? null,
         ticket_link: updatePayload.ticket_link ?? venueCheck.ticket_link,
         organizer_name: updatePayload.organizer_name ?? venueCheck.organizer_name,
         organizer_phone: updatePayload.organizer_phone ?? venueCheck.organizer_phone,

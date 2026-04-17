@@ -38,10 +38,13 @@ export function VenueHeroVenueTypeLabel({
   venue_type,
   t,
   accentColor,
+  tone = 'onDark',
 }: {
   venue_type?: string | null;
   t: (key: TranslationKey) => string;
   accentColor: string;
+  /** `onLight`: no shadow — use under the main image on detail pages. */
+  tone?: 'onDark' | 'onLight';
 }) {
   const vt = (venue_type || '').trim();
   if (!vt) return null;
@@ -56,7 +59,9 @@ export function VenueHeroVenueTypeLabel({
         color: accentColor,
         margin: 0,
         marginBottom: '10px',
-        textShadow: '0 1px 3px rgba(0,0,0,0.35)',
+        ...(tone === 'onDark'
+          ? { textShadow: '0 1px 3px rgba(0,0,0,0.35)' }
+          : {}),
       }}
     >
       {label}

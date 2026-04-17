@@ -10,23 +10,23 @@ import {
   VenueDetailHoursCard,
   VenueDetailAddressCard,
 } from "../components/VenueDetailLayout";
-import { CLUBS_CATEGORY_THEME } from "../utils/categoryThemes";
+import { FOOD_VENUE_THEME } from "../utils/categoryThemes";
 
-export function ClubDetailPage() {
+export function FoodAndDrinkDetailPage() {
   const { id } = useParams();
   const { t, language } = useT();
-  const [club, setClub] = useState<Item | null>(null);
+  const [restaurant, setRestaurant] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchClub() {
+    async function fetchRestaurant() {
       if (!id) return;
       setIsLoading(true);
-      const fetchedClub = await getVenueById(id);
-      setClub(fetchedClub);
+      const fetchedRestaurant = await getVenueById(id);
+      setRestaurant(fetchedRestaurant);
       setIsLoading(false);
     }
-    fetchClub();
+    fetchRestaurant();
   }, [id]);
 
   if (isLoading) {
@@ -42,15 +42,15 @@ export function ClubDetailPage() {
     );
   }
 
-  if (!club) {
+  if (!restaurant) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
         <div className="max-w-7xl mx-auto px-4 py-16 text-center flex flex-col gap-4">
           <p className="text-gray-600 text-lg">
-            {t("clubNotFound") || "Club not found"}
+            {t("venueNotFound") || "Restaurant not found"}
           </p>
-          <Link to="/clubs" className="text-blue-600 hover:underline">
-            {t("backToClubs") || "Back to Clubs"}
+          <Link to="/food-and-drink" className="text-blue-600 hover:underline">
+            {t("backToRestaurants") || "Back to Restaurants"}
           </Link>
         </div>
       </div>
@@ -58,11 +58,13 @@ export function ClubDetailPage() {
   }
 
   const title =
-    language === "en" && club.title_en ? club.title_en : club.title;
+    language === "en" && restaurant.title_en
+      ? restaurant.title_en
+      : restaurant.title;
   const description =
-    language === "en" && club.description_en
-      ? club.description_en
-      : club.description;
+    language === "en" && restaurant.description_en
+      ? restaurant.description_en
+      : restaurant.description;
 
   return (
     <div key={language} style={{ background: "#FAFBFC", minHeight: "100vh" }}>
@@ -81,8 +83,8 @@ export function ClubDetailPage() {
         >
           <ImageWithFallback
             src={
-              club.image ||
-              "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200"
+              restaurant.image ||
+              "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200"
             }
             alt={title}
             className="h-full w-full"
@@ -99,9 +101,9 @@ export function ClubDetailPage() {
           <div className="col-span-1 flex h-full min-h-0 min-w-0 flex-col lg:col-span-2">
             <div className="flex h-full min-h-0 flex-col">
               <VenueHeroVenueTypeLabel
-                venue_type={club.venue_type || "nightclub"}
+                venue_type={restaurant.venue_type}
                 t={t}
-                accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                accentColor={FOOD_VENUE_THEME.accentColor}
                 tone="onLight"
               />
               <h1
@@ -118,9 +120,9 @@ export function ClubDetailPage() {
               </h1>
 
               <VenueBadgeRow
-                cuisine={club.cuisine}
-                cuisine_en={club.cuisine_en}
-                tags={club.tags}
+                cuisine={restaurant.cuisine}
+                cuisine_en={restaurant.cuisine_en}
+                tags={restaurant.tags}
                 cuisineOnly
                 language={language === "en" ? "en" : "sr"}
                 t={t}
@@ -145,18 +147,18 @@ export function ClubDetailPage() {
 
               <div className="mt-auto grid grid-cols-1 gap-6 md:grid-cols-2">
                 <VenueDetailHoursCard
-                  openingHoursText={club.opening_hours}
-                  openingHoursTextEn={club.opening_hours_en}
+                  openingHoursText={restaurant.opening_hours}
+                  openingHoursTextEn={restaurant.opening_hours_en}
                   language={language}
                   t={t}
-                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  accentColor={FOOD_VENUE_THEME.accentColor}
                 />
                 <VenueDetailAddressCard
-                  address={club.address}
-                  city={club.city}
-                  mapUrl={club.map_url}
+                  address={restaurant.address}
+                  city={restaurant.city}
+                  mapUrl={restaurant.map_url}
                   t={t}
-                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  accentColor={FOOD_VENUE_THEME.accentColor}
                 />
               </div>
             </div>
@@ -164,19 +166,19 @@ export function ClubDetailPage() {
 
           <div className="h-full min-h-0 min-w-0">
             <VenueDetailUnifiedInfoCard
-              contactName={club.contact_name}
-              phone={club.phone}
-              contactPhone={club.contact_phone}
-              email={club.contact_email}
-              website={club.website}
-              address={club.address}
-              city={club.city}
-              mapUrl={club.map_url}
+              contactName={restaurant.contact_name}
+              phone={restaurant.phone}
+              contactPhone={restaurant.contact_phone}
+              email={restaurant.contact_email}
+              website={restaurant.website}
+              address={restaurant.address}
+              city={restaurant.city}
+              mapUrl={restaurant.map_url}
               t={t}
-              accentColor={CLUBS_CATEGORY_THEME.accentColor}
-              buttonBg={CLUBS_CATEGORY_THEME.ctaBackground}
-              buttonBorder={CLUBS_CATEGORY_THEME.ctaBorder}
-              callButtonLabel={t("callClub") || "Call Club"}
+              accentColor={FOOD_VENUE_THEME.accentColor}
+              buttonBg={FOOD_VENUE_THEME.ctaBackground}
+              buttonBorder={FOOD_VENUE_THEME.ctaBorder}
+              callButtonLabel={t("callRestaurant") || "Call Restaurant"}
             />
           </div>
         </div>
