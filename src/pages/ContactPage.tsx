@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Send } from 'lucide-react';
 import { useT } from '../hooks/useT';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useSEO } from '../hooks/useSEO';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 import ogImage from '../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
 
 export function ContactPage() {
   const { t } = useT();
+  const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
+  const contactPageName = language === 'sr' ? 'Kontakt' : 'Contact';
+  useDocumentTitle(listingDocumentTitle(contactPageName, selectedCity));
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',

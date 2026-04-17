@@ -1,6 +1,9 @@
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import {
   BRAND,
@@ -13,6 +16,10 @@ import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 export function TermsOfServicePage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
+  const termsPageName =
+    language === "sr" ? "Uslovi korišćenja" : "Terms of Service";
+  useDocumentTitle(listingDocumentTitle(termsPageName, selectedCity));
 
   // SEO optimization
   useSEO({

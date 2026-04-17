@@ -1,9 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { UtensilsCrossed, Calendar, Hotel, Building2, Coffee, Music2, MapPin, Search } from 'lucide-react';
 import { useT } from '../hooks/useT';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 
 export function MapPage() {
   const { t } = useT();
+  const { selectedCity } = useSelectedCity();
+  const mapTitle = useMemo(
+    () => listingDocumentTitle(t('map'), selectedCity),
+    [t, selectedCity],
+  );
+  useDocumentTitle(mapTitle);
   
   const [selectedCategories, setSelectedCategories] = useState({
     'food-and-drink': true,

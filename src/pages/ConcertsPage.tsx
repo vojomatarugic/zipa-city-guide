@@ -6,6 +6,9 @@ import { Music } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { DOC_TITLE_CONCERTS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -16,6 +19,7 @@ import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 export function ConcertsPage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
@@ -40,6 +44,8 @@ export function ConcertsPage() {
     }
     fetchConcerts();
   }, []);
+
+  useDocumentTitle(listingDocumentTitle(DOC_TITLE_CONCERTS, selectedCity));
 
   useSEO({
     title: t("seoConcertsTitle"),

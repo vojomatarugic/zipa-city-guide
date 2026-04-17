@@ -4,17 +4,26 @@ import { BACKGROUNDS, BORDERS, TEXT, BRAND } from '../utils/colors';
 import { Link, useNavigate } from 'react-router';
 import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import * as dataService from '../utils/dataService';
 import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 
 export function MyPanelPage() {
   const { t, language } = useT();
   const { isLoggedIn, isAdmin, user, updateProfile, isLoading, logout, accessToken } = useAuth(); // ✅ ADD isLoading
   const navigate = useNavigate();
+  const { selectedCity } = useSelectedCity();
+  const panelTitle = useMemo(
+    () => listingDocumentTitle(t('myPanel'), selectedCity),
+    [t, selectedCity],
+  );
+  useDocumentTitle(panelTitle);
   
   const [userVenues, setUserVenues] = useState<dataService.Item[]>([]);
   const [userEvents, setUserEvents] = useState<dataService.Item[]>([]);

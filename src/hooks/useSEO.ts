@@ -20,9 +20,8 @@ export function useSEO({
   structuredData
 }: SEOProps) {
   useEffect(() => {
-    // Set page title
-    document.title = title;
-    
+    // document.title is managed centrally via useDocumentTitle + utils/documentTitle
+
     // Set or update meta tags
     const setMetaTag = (property: string, content: string, isProperty = true) => {
       const attribute = isProperty ? 'property' : 'name';

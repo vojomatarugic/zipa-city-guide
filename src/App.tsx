@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { RouterProvider } from 'react-router';
 import { router } from './routes';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -15,9 +15,6 @@ export default function App() {
       const appTitle = 'ZIPA City Guide';
       const appDescription = 'Otkrij najbolje događaje i mjesta u svom gradu';
 
-      // Set page title
-      document.title = appTitle;
-      
       // Set or update meta tags
       const setMetaTag = (property: string, content: string, isProperty = true) => {
         const attribute = isProperty ? 'property' : 'name';
@@ -32,7 +29,7 @@ export default function App() {
 
       // Primary meta tags
       setMetaTag('description', appDescription, false);
-      setMetaTag('keywords', 'Banja Luka, turizam, restorani, noćni život, dešavanja, vodič, Republika Srpska, kultura, magazin', false);
+      setMetaTag('keywords', 'ZIPA City Guide, turizam, restorani, noćni život, dešavanja, vodič, gradski vodič, kultura, magazin', false);
       setMetaTag('author', 'ZIPA Agency', false);
       
       // Open Graph / Facebook
@@ -104,7 +101,9 @@ export default function App() {
               },
             }}
           />
-          <RouterProvider router={router} />
+          <Suspense fallback={<div className="p-4 text-center">Loading...</div>}>
+            <RouterProvider router={router} />
+          </Suspense>
         </AuthProvider>
       </LocationProvider>
     </LanguageProvider>

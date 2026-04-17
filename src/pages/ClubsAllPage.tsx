@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Disc3, MapPin } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { getVenues } from "../utils/dataService";
@@ -14,10 +15,13 @@ import {
   CLUBS_LISTING_HERO_OVERLAY,
 } from "../utils/categoryThemes";
 import { venueTagsFallbackLine } from "../utils/venueTagLabels";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
 
 export function ClubsAllPage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
   const [clubs, setClubs] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,6 +38,12 @@ export function ClubsAllPage() {
     }
     fetchClubs();
   }, []);
+
+  const clubsAllTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_CLUBS, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(clubsAllTitle);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>

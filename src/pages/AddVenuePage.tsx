@@ -2,11 +2,14 @@ import { useT } from '../hooks/useT';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { VenueForm } from '../components/VenueForm';
 import { NotificationDialog } from '../components/NotificationDialog';
 import * as dataService from '../utils/dataService';
 import { parseCuisineSrSelectionsFromDb, serializeCuisineForDb } from '../utils/venueCuisineTaxonomy';
 import { parseVenueTagKeysFromDb, type VenueTagKey } from '../utils/venueTagLabels';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 
 // Mapira venue_type → page_slug (za DB)
 // ⚠️  Record<VenueType, ...> (ne Record<string, ...>) — TypeScript ODBIJA kompajliranje
@@ -43,7 +46,10 @@ export function AddVenuePage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const { selectedCity } = useSelectedCity();
   const { user, isAdmin } = useAuth();
+
+  useDocumentTitle(listingDocumentTitle(t('addVenue'), selectedCity));
   const [show_notification, set_show_notification] = useState(false);
   const [existing_venue, set_existing_venue] = useState<dataService.Item | null>(null);
   const [loading, set_loading] = useState(false);

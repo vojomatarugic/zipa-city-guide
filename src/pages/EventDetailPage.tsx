@@ -12,12 +12,18 @@ import { useParams } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getEventDetailTheme } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { getGoogleMapsHref } from "../components/VenueDetailLayout";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import {
+  detailDocumentTitle,
+  detailLoadingDocumentTitle,
+} from "../utils/documentTitle";
 
 // Heart pulse animation keyframes (injected once)
 const heartAnimStyle = document.createElement('style');
@@ -44,6 +50,7 @@ export function EventDetailPage() {
   const { id } = useParams();
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
   const [event, setEvent] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [interestCount, setInterestCount] = useState(0);
@@ -53,6 +60,15 @@ export function EventDetailPage() {
   const theme = getEventDetailTheme(
     event ? getTopLevelPageCategory(event) : undefined
   );
+
+  const documentTitle = useMemo(() => {
+    if (loading || !event) return detailLoadingDocumentTitle();
+    const entityTitle =
+      language === "sr" ? event.title : event.title_en || event.title;
+    return detailDocumentTitle(entityTitle, selectedCity);
+  }, [loading, event, language, selectedCity]);
+
+  useDocumentTitle(documentTitle);
 
   useEffect(() => {
     async function fetchEvent() {

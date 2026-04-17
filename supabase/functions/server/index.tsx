@@ -807,12 +807,63 @@ app.patch("/make-server-a0e1e9cb/users/:userId/set-role", requireAdmin, async (c
     const userId = c.req.param('userId');
     const body = await c.req.json();
     const { role } = body;
+    const newRole = role;
     
     if (!role || !['admin', 'user'].includes(role)) {
       return c.json({ error: 'Invalid role. Must be "admin" or "user".' }, 400);
     }
     
     const supabase = getSupabaseClient();
+    const currentAuthUser = c.get("user");
+
+    const { data: currentUser, error: currentUserErr } = await supabase
+      .from('profiles')
+      .select('id, email, role')
+      .eq('id', currentAuthUser?.id)
+      .single();
+
+    if (currentUserErr || !currentUser) {
+      console.error('❌ Error fetching current user profile:', currentUserErr);
+      return c.json({ error: 'Failed to fetch current user profile' }, 500);
+    }
+
+    const { data: targetUser, error: targetUserErr } = await supabase
+      .from('profiles')
+      .select('id, email, role')
+      .eq('id', userId)
+      .single();
+
+    if (targetUserErr || !targetUser) {
+      console.error('❌ Error fetching target user profile:', targetUserErr);
+      return c.json({ error: 'Failed to fetch target user profile' }, 500);
+    }
+
+    // Prevent self role change
+    if (currentUser.id === targetUser.id) {
+      return c.json({ error: 'You cannot change your own role' }, 403);
+    }
+
+    // Only master_admin can change roles
+    if (currentUser.role !== 'master_admin') {
+      return c.json({ error: 'Not authorized' }, 403);
+    }
+
+    // Prevent removing last master_admin
+    if (targetUser.role === 'master_admin') {
+      const { count, error: countErr } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'master_admin');
+
+      if (countErr) {
+        console.error('❌ Error counting master admins:', countErr);
+        return c.json({ error: 'Failed to verify master admin count' }, 500);
+      }
+
+      if ((count ?? 0) <= 1) {
+        return c.json({ error: 'At least one master admin must exist' }, 403);
+      }
+    }
     
     // ✅ Master admin protection — cannot demote
     if (role === 'user' && await isMasterAdmin(supabase, userId)) {
@@ -831,6 +882,10 @@ app.patch("/make-server-a0e1e9cb/users/:userId/set-role", requireAdmin, async (c
         console.warn('⚠️ Cannot remove the last admin user');
         return c.json({ error: 'Cannot remove the only admin user', code: 'LAST_ADMIN' }, 400);
       }
+    }
+
+    if (targetUser.role === newRole) {
+      return c.json({ message: "No changes needed" }, 200);
     }
     
     // ✅ Merge metadata to prevent overwriting other fields

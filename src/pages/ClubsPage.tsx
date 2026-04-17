@@ -5,6 +5,8 @@ import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation } from '../contexts/LocationContext';
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
@@ -31,6 +33,8 @@ export function ClubsPage() {
     }
     fetchClubs();
   }, []);
+
+  useDocumentTitle(listingDocumentTitle(DOC_TITLE_CLUBS, selectedCity));
 
   // SEO optimization for clubs page
   useSEO({

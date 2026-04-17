@@ -7,6 +7,8 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -48,6 +50,8 @@ export function EventsPage() {
     }
     fetchEvents();
   }, [selectedCity]);
+
+  useDocumentTitle(listingDocumentTitle(DOC_TITLE_EVENTS, selectedCity));
 
   // SEO
   useSEO({

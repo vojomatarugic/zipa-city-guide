@@ -1,34 +1,34 @@
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import { RootLayout } from "./components/RootLayout";
-import { HomePage } from "./pages/HomePage";
-import { FoodAndDrinkPage } from "./pages/FoodAndDrinkPage";
-import { FoodAndDrinkDetailPage } from "./pages/FoodAndDrinkDetailPage";
-import { EventsPage } from "./pages/EventsPage";
-import { ClubsPage } from "./pages/ClubsPage";
-import { ConcertsPage } from "./pages/ConcertsPage";
-import { TheatrePage } from "./pages/TheatrePage";
-import { CinemaPage } from "./pages/CinemaPage";
-import { AddVenuePage } from "./pages/AddVenuePage";
-import { AdminPage } from "./pages/AdminPage";
-import { MyPanelPage } from "./pages/MyPanelPage";
-import { MapPage } from "./pages/MapPage";
-import { SubmitEventPage } from "./pages/SubmitEventPage";
-import { ContactPage } from "./pages/ContactPage";
-import LoginPage from "./pages/LoginPage";
 
-// View All Pages
-import { EventsAllPage } from "./pages/EventsAllPage";
-import { TheatreAllPage } from "./pages/TheatreAllPage";
-import { CinemaAllPage } from "./pages/CinemaAllPage";
-import { ClubsAllPage } from "./pages/ClubsAllPage";
-import { ConcertsAllPage } from "./pages/ConcertsAllPage";
+const HomePage = lazy(() => import("./pages/HomePage").then((m) => ({ default: m.HomePage })));
+const FoodAndDrinkPage = lazy(() => import("./pages/FoodAndDrinkPage").then((m) => ({ default: m.FoodAndDrinkPage })));
+const FoodAndDrinkDetailPage = lazy(() => import("./pages/FoodAndDrinkDetailPage").then((m) => ({ default: m.FoodAndDrinkDetailPage })));
+const EventsPage = lazy(() => import("./pages/EventsPage").then((m) => ({ default: m.EventsPage })));
+const ClubsPage = lazy(() => import("./pages/ClubsPage").then((m) => ({ default: m.ClubsPage })));
+const ConcertsPage = lazy(() => import("./pages/ConcertsPage").then((m) => ({ default: m.ConcertsPage })));
+const TheatrePage = lazy(() => import("./pages/TheatrePage").then((m) => ({ default: m.TheatrePage })));
+const CinemaPage = lazy(() => import("./pages/CinemaPage").then((m) => ({ default: m.CinemaPage })));
+const AddVenuePage = lazy(() => import("./pages/AddVenuePage").then((m) => ({ default: m.AddVenuePage })));
+const AdminPage = lazy(() => import("./pages/AdminPage").then((m) => ({ default: m.AdminPage })));
+const MyPanelPage = lazy(() => import("./pages/MyPanelPage").then((m) => ({ default: m.MyPanelPage })));
+const MapPage = lazy(() => import("./pages/MapPage").then((m) => ({ default: m.MapPage })));
+const SubmitEventPage = lazy(() => import("./pages/SubmitEventPage").then((m) => ({ default: m.SubmitEventPage })));
+const ContactPage = lazy(() => import("./pages/ContactPage").then((m) => ({ default: m.ContactPage })));
+const LoginPage = lazy(() => import("./pages/LoginPage"));
 
-// Detail Pages
-import { EventDetailPage } from "./pages/EventDetailPage";
-import { ClubDetailPage } from "./pages/ClubDetailPage";
-import { SearchResultsPage } from "./pages/SearchResultsPage";
-import { TermsOfServicePage } from "./pages/TermsOfServicePage";
-import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
+const EventsAllPage = lazy(() => import("./pages/EventsAllPage").then((m) => ({ default: m.EventsAllPage })));
+const TheatreAllPage = lazy(() => import("./pages/TheatreAllPage").then((m) => ({ default: m.TheatreAllPage })));
+const CinemaAllPage = lazy(() => import("./pages/CinemaAllPage").then((m) => ({ default: m.CinemaAllPage })));
+const ClubsAllPage = lazy(() => import("./pages/ClubsAllPage").then((m) => ({ default: m.ClubsAllPage })));
+const ConcertsAllPage = lazy(() => import("./pages/ConcertsAllPage").then((m) => ({ default: m.ConcertsAllPage })));
+
+const EventDetailPage = lazy(() => import("./pages/EventDetailPage").then((m) => ({ default: m.EventDetailPage })));
+const ClubDetailPage = lazy(() => import("./pages/ClubDetailPage").then((m) => ({ default: m.ClubDetailPage })));
+const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage").then((m) => ({ default: m.SearchResultsPage })));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage").then((m) => ({ default: m.TermsOfServicePage })));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage").then((m) => ({ default: m.PrivacyPolicyPage })));
 
 export const router = createBrowserRouter([
   {

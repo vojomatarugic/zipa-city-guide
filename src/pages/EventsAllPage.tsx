@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Calendar,
   MapPin,
@@ -17,6 +17,8 @@ import { Item } from "../utils/dataService";
 import eventsHeroImage from "../assets/55c8d14367570f30de708fa478fd6a7489c658c9.png";
 import { EVENTS_CATEGORY_THEME, EVENTS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
 
 export function EventsAllPage() {
   const { t } = useT();
@@ -66,6 +68,12 @@ export function EventsAllPage() {
     }
     fetchEvents();
   }, [selectedCity]);
+
+  const eventsAllTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_EVENTS, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(eventsAllTitle);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>

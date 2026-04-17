@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar, MapPin, Clock, Drama } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
@@ -11,6 +11,8 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb.png";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_THEATRE, listingDocumentTitle } from "../utils/documentTitle";
 
 export function TheatreAllPage() {
   const { t } = useT();
@@ -36,6 +38,12 @@ export function TheatreAllPage() {
     }
     fetchTheatre();
   }, [selectedCity]);
+
+  const theatreAllTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_THEATRE, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(theatreAllTitle);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { Calendar, MapPin, Phone, Mail, Globe, DollarSign, User, Clock, UserCheck, Search, X, Pencil, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -18,6 +19,8 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 import * as dataService from '../utils/dataService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { scheduleLocalDayKey, getEventScheduleSlots } from '../utils/eventService';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 
 // Custom srpski latinica locale
 const srLatn = {
@@ -179,8 +182,11 @@ export function SubmitEventPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const { selectedCity } = useSelectedCity();
   const { user, isAdmin } = useAuth();
-  
+
+  useDocumentTitle(listingDocumentTitle(t('submitEvent'), selectedCity));
+
   // 🔥 PREVENT MULTIPLE LOADS - only load once when in edit mode
   const hasLoadedRef = useRef(false);
 

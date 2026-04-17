@@ -1,6 +1,9 @@
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 import { getBreadcrumbSchema } from '../utils/structuredData';
 import { BRAND, TEXT, BACKGROUNDS, BORDERS } from '../utils/colors';
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
@@ -8,12 +11,15 @@ import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 export function PrivacyPolicyPage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
 
   // SEO Setup
   const title = language === "sr" ? "Politika privatnosti" : "Privacy Policy";
   const description = language === "sr" 
     ? `Informacije o tome kako ${t("appName")} prikuplja, koristi i štiti vaše lične podatke u skladu sa GDPR propisima.`
     : `Information about how ${t("appName")} collects, uses, and protects your personal data in compliance with GDPR regulations.`;
+
+  useDocumentTitle(listingDocumentTitle(title, selectedCity));
 
   useSEO({
     title,

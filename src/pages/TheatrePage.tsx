@@ -6,6 +6,9 @@ import { Drama } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { DOC_TITLE_THEATRE, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -16,6 +19,7 @@ import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb
 export function TheatrePage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
@@ -40,6 +44,8 @@ export function TheatrePage() {
     }
     fetchTheatre();
   }, []);
+
+  useDocumentTitle(listingDocumentTitle(DOC_TITLE_THEATRE, selectedCity));
 
   useSEO({
     title: t("seoTheatreTitle"),

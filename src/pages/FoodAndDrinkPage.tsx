@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { MapPin, Utensils } from "lucide-react";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_FOOD, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
@@ -177,6 +179,12 @@ export function FoodAndDrinkPage() {
   const nearbyRestaurants = selectedCity
     ? allRestaurants.filter(r => (r.city || '').toLowerCase().includes(selectedCity.toLowerCase())).slice(0, 3)
     : allRestaurants.slice(Math.max(0, allRestaurants.length - 3));
+
+  const foodTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_FOOD, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(foodTitle);
 
   useSEO({
     title: t("seoRestaurantsTitle"),

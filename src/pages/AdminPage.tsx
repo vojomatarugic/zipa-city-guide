@@ -14,6 +14,8 @@ import { toast } from 'sonner@2.0.3';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { adminDocumentTitle } from '../utils/documentTitle';
 
 // Interface for Submission (updated to match dataService.Item)
 interface Submission {
@@ -71,6 +73,8 @@ export function AdminPage() {
   const { t, language } = useT();
   const navigate = useNavigate();
   const { isLoggedIn, isAdmin, isMasterAdmin, user, updateProfile, logout, accessToken, isLoading } = useAuth();
+
+  useDocumentTitle(adminDocumentTitle());
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);

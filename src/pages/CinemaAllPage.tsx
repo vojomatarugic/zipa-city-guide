@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar, MapPin, Clock, Clapperboard } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
@@ -11,6 +11,8 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 
 export function CinemaAllPage() {
   const { t } = useT();
@@ -36,6 +38,12 @@ export function CinemaAllPage() {
     }
     fetchCinema();
   }, [selectedCity]);
+
+  const cinemaAllTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_CINEMA, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(cinemaAllTitle);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>

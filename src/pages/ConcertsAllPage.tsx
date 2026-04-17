@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar, MapPin, Clock, Music } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
@@ -11,6 +11,8 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import concertsHeroImage from "../assets/b2e065a42a0a51bb75c2d1ea6e313313b9eeac02.png";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { DOC_TITLE_CONCERTS, listingDocumentTitle } from "../utils/documentTitle";
 
 export function ConcertsAllPage() {
   const { t } = useT();
@@ -38,6 +40,12 @@ export function ConcertsAllPage() {
     }
     fetchConcerts();
   }, [selectedCity]);
+
+  const concertsAllTitle = useMemo(
+    () => listingDocumentTitle(DOC_TITLE_CONCERTS, selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(concertsAllTitle);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>

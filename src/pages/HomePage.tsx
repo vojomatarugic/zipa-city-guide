@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   MapPin,
   ChevronDown,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { homeDocumentTitle } from "../utils/documentTitle";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
 import * as eventService from "../utils/eventService";
@@ -19,10 +21,7 @@ import {
   getTouristDestinationSchema,
   getBreadcrumbSchema,
 } from "../utils/structuredData";
-import {
-  BannerAd,
-  useBannerExists,
-} from "../components/BannerAd";
+import { BannerAd, useBannerExists } from "../components/BannerAd";
 import { SquareBannersGrid } from "../components/SquareBannersGrid";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import { SocialProofGallery } from "../components/SocialProofGallery";
@@ -44,7 +43,7 @@ import ljubljanaImage from "../assets/88e6138cbdfd83a22058e515ab20d1b1e81b3339.p
 import budvaImage from "../assets/38b2c0160b51bb71bbc5aa949db36fce790aea66.png";
 import zagrebImage from "../assets/c2759ad9780a7a7c464fab48ab3c02fee98aabfb.png";
 import beogradImage from "../assets/2e147443589cb70f6ea595a9e31d0bb9ea9d0b87.png";
-import heroBackgroundImage from "../assets/ea35dec663e9d8817fc96f83b78a7afff6fb1047.png";
+import heroBackgroundImage from "/public/images/hero-home-page.png";
 import eventCardBg from "../assets/89bb26cd8326bce9428238434c0c748f29da8ece.png";
 import newEventCardBg from "../assets/b4eb92f2d8dabb323b7bbcfe325643ecf2317bad.png";
 import latestEventCardBg from "../assets/d3b7ae5072e14ac7566a2b3ff69d9798aefa4aa5.png";
@@ -66,33 +65,25 @@ export function HomePage() {
     setSelectedCity,
   } = useLocation();
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<
-    string | null
-  >(null);
-  const [lightboxTitle, setLightboxTitle] =
-    useState<string>("");
-  const [lightboxAuthor, setLightboxAuthor] =
-    useState<string>("");
-  const [isDatePickerOpen, setIsDatePickerOpen] =
-    useState(false);
-  const [selectedStartDate, setSelectedStartDate] =
-    useState<Date | null>(null);
-  const [selectedEndDate, setSelectedEndDate] =
-    useState<Date | null>(null);
-  const [selectedDateRange, setSelectedDateRange] =
-    useState<string>("");
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [lightboxTitle, setLightboxTitle] = useState<string>("");
+  const [lightboxAuthor, setLightboxAuthor] = useState<string>("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const [selectedDateRange, setSelectedDateRange] = useState<string>("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
-  const [isSearchMenuOpen, setIsSearchMenuOpen] =
-    useState(false);
-  const [selectedCategory, setSelectedCategory] =
-    useState<string>("");
+  const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [searchResults, setSearchResults] = useState<any[]>([]); // ✅ NEW: Search results
   const [searchLoading, setSearchLoading] = useState(false); // ✅ NEW: Search loading state
-  const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
+  const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
+    {},
+  );
 
   // Same bucket as EventsPage: top-level category "events" only
   useEffect(() => {
@@ -100,17 +91,14 @@ export function HomePage() {
       setEventsLoading(true);
       const events = await eventService.getEvents("upcoming", selectedCity);
       const eventsBucket = events.filter(
-        (e) => getTopLevelPageCategory(e) === "events"
+        (e) => getTopLevelPageCategory(e) === "events",
       );
       const top = eventsBucket.slice(0, 4);
       setFeaturedEvents(top);
       setEventsLoading(false);
 
       const freeEventIds = top
-        .filter(
-          (e) =>
-            /^(free|besplatn|gratis)/i.test(e.price || "")
-        )
+        .filter((e) => /^(free|besplatn|gratis)/i.test(e.price || ""))
         .map((e) => e.id);
       if (freeEventIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeEventIds);
@@ -130,24 +118,32 @@ export function HomePage() {
 
       setSearchLoading(true);
       try {
-        const events = await eventService.getEvents('upcoming');
+        const events = await eventService.getEvents("upcoming");
         const lowerQuery = searchQuery.toLowerCase();
-        
-        const filtered = events.filter(event => {
-          const titleMatch = (language === 'sr' ? event.title : (event.title_en || event.title))
+
+        const filtered = events.filter((event) => {
+          const titleMatch = (
+            language === "sr" ? event.title : event.title_en || event.title
+          )
             .toLowerCase()
             .includes(lowerQuery);
-          const descMatch = (language === 'sr' ? event.description : (event.description_en || event.description))
+          const descMatch = (
+            language === "sr"
+              ? event.description
+              : event.description_en || event.description
+          )
             .toLowerCase()
             .includes(lowerQuery);
-          const categoryMatch = (event.event_type || event.page_slug || '').toLowerCase().includes(lowerQuery);
-          
+          const categoryMatch = (event.event_type || event.page_slug || "")
+            .toLowerCase()
+            .includes(lowerQuery);
+
           return titleMatch || descMatch || categoryMatch;
         });
 
         setSearchResults(filtered.slice(0, 5)); // Show max 5 results
       } catch (error) {
-        console.error('Search error:', error);
+        console.error("Search error:", error);
         setSearchResults([]);
       } finally {
         setSearchLoading(false);
@@ -239,11 +235,14 @@ export function HomePage() {
 
   // Get nearby cities for selected city
   const getNearbyCities = () => {
-    return (
-      nearbyCitiesMap[selectedCity] ||
-      nearbyCitiesMap["Banja Luka"]
-    );
+    return nearbyCitiesMap[selectedCity] || nearbyCitiesMap["Banja Luka"];
   };
+
+  const homeTitle = useMemo(
+    () => homeDocumentTitle(selectedCity),
+    [selectedCity],
+  );
+  useDocumentTitle(homeTitle);
 
   // SEO optimization for home page
   useSEO({
@@ -288,9 +287,7 @@ export function HomePage() {
               margin: 0,
             }}
           >
-            <span style={{ color: "#0E3DC5" }}>
-              {t("heroTitleDiscover")}
-            </span>{" "}
+            <span style={{ color: "#0E3DC5" }}>{t("heroTitleDiscover")}</span>{" "}
             <span>{t("heroTitleRest")}</span>
           </h1>
 
@@ -325,8 +322,7 @@ export function HomePage() {
                   // Build search URL with parameters
                   const params = new URLSearchParams();
                   params.set("city", selectedCity);
-                  if (selectedDateRange)
-                    params.set("date", selectedDateRange);
+                  if (selectedDateRange) params.set("date", selectedDateRange);
                   if (selectedCategory)
                     params.set("category", selectedCategory);
                   if (searchQuery) params.set("q", searchQuery);
@@ -339,12 +335,8 @@ export function HomePage() {
                   cursor: "pointer",
                   padding: 0,
                 }}
-                title={
-                  language === "sr" ? "Pretraži" : "Search"
-                }
-                aria-label={
-                  language === "sr" ? "Pretraži" : "Search"
-                }
+                title={language === "sr" ? "Pretraži" : "Search"}
+                aria-label={language === "sr" ? "Pretraži" : "Search"}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -380,8 +372,7 @@ export function HomePage() {
                       params.set("date", selectedDateRange);
                     if (selectedCategory)
                       params.set("category", selectedCategory);
-                    if (searchQuery)
-                      params.set("q", searchQuery);
+                    if (searchQuery) params.set("q", searchQuery);
                     navigate(`/search?${params.toString()}`);
                     setIsSearchMenuOpen(false);
                   }
@@ -391,9 +382,7 @@ export function HomePage() {
                   fontSize: "16px",
                   fontWeight: 500,
                   color:
-                    searchQuery || selectedCategory
-                      ? "#0E3DC5"
-                      : "#9CA3AF",
+                    searchQuery || selectedCategory ? "#0E3DC5" : "#9CA3AF",
                   background: "transparent",
                   cursor: "text",
                 }}
@@ -420,9 +409,7 @@ export function HomePage() {
             {/* Date Picker Icon */}
             <div
               className="px-4 py-2 cursor-pointer flex items-center gap-2"
-              onClick={() =>
-                setIsDatePickerOpen(!isDatePickerOpen)
-              }
+              onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
             >
               {selectedDateRange ? (
                 <span
@@ -435,10 +422,7 @@ export function HomePage() {
                   {selectedDateRange}
                 </span>
               ) : (
-                <Calendar
-                  size={18}
-                  style={{ color: "#0E3DC5" }}
-                />
+                <Calendar size={18} style={{ color: "#0E3DC5" }} />
               )}
             </div>
 
@@ -461,10 +445,7 @@ export function HomePage() {
               >
                 {selectedCity}
               </span>
-              <ChevronDown
-                size={16}
-                style={{ color: "#6B7280" }}
-              />
+              <ChevronDown size={16} style={{ color: "#6B7280" }} />
             </div>
 
             {/* Search Results Dropdown */}
@@ -481,10 +462,13 @@ export function HomePage() {
                       className="text-sm font-semibold"
                       style={{ color: "#6B7280" }}
                     >
-                      {searchQuery 
-                        ? (language === "sr" ? "REZULTATI PRETRAGE" : "SEARCH RESULTS")
-                        : (language === "sr" ? "PRETRAŽI DOGAĐAJE" : "SEARCH EVENTS")
-                      }
+                      {searchQuery
+                        ? language === "sr"
+                          ? "REZULTATI PRETRAGE"
+                          : "SEARCH RESULTS"
+                        : language === "sr"
+                          ? "PRETRAŽI DOGAĐAJE"
+                          : "SEARCH EVENTS"}
                     </h3>
                     <button
                       onClick={() => setIsSearchMenuOpen(false)}
@@ -495,13 +479,10 @@ export function HomePage() {
                         cursor: "pointer",
                       }}
                     >
-                      <X
-                        size={18}
-                        style={{ color: "#6B7280" }}
-                      />
+                      <X size={18} style={{ color: "#6B7280" }} />
                     </button>
                   </div>
-                  
+
                   {/* Search Results */}
                   {searchLoading ? (
                     <div className="text-center py-8">
@@ -511,7 +492,10 @@ export function HomePage() {
                       </p>
                     </div>
                   ) : !searchQuery.trim() ? (
-                    <div className="text-center py-8" style={{ color: "#6B7280" }}>
+                    <div
+                      className="text-center py-8"
+                      style={{ color: "#6B7280" }}
+                    >
                       {language === "sr"
                         ? "Unesite naziv događaja, mjesta ili opis..."
                         : "Enter event name, venue, or description..."}
@@ -532,9 +516,15 @@ export function HomePage() {
                           setIsSearchMenuOpen(false);
                         }}
                         className="mt-2 px-4 py-2 rounded-lg text-white font-medium transition-all hover:opacity-90"
-                        style={{ background: "#0E3DC5", border: "none", cursor: "pointer" }}
+                        style={{
+                          background: "#0E3DC5",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
                       >
-                        {language === "sr" ? "Prikaži sve rezultate" : "Show all results"}
+                        {language === "sr"
+                          ? "Prikaži sve rezultate"
+                          : "Show all results"}
                       </button>
                     </div>
                   ) : (
@@ -545,7 +535,11 @@ export function HomePage() {
                             key={event.id}
                             to={`/events/${event.id}`}
                             className="flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-all hover:bg-blue-50"
-                            style={{ border: "1px solid #E5E9F0", textDecoration: "none", color: "inherit" }}
+                            style={{
+                              border: "1px solid #E5E9F0",
+                              textDecoration: "none",
+                              color: "inherit",
+                            }}
                             onClick={() => {
                               setIsSearchMenuOpen(false);
                               setSearchQuery("");
@@ -553,29 +547,55 @@ export function HomePage() {
                           >
                             {/* Event Image */}
                             <img
-                              src={event.image || 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800'}
-                              alt={language === 'sr' ? event.title : (event.title_en || event.title)}
+                              src={
+                                event.image ||
+                                "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
+                              }
+                              alt={
+                                language === "sr"
+                                  ? event.title
+                                  : event.title_en || event.title
+                              }
                               className="w-16 h-16 object-cover rounded-md flex-shrink-0"
                             />
-                            
+
                             {/* Event Info */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold mb-1 line-clamp-1" style={{ color: "#1a1a1a" }}>
-                                {language === 'sr' ? event.title : (event.title_en || event.title)}
+                              <h4
+                                className="text-sm font-semibold mb-1 line-clamp-1"
+                                style={{ color: "#1a1a1a" }}
+                              >
+                                {language === "sr"
+                                  ? event.title
+                                  : event.title_en || event.title}
                               </h4>
                               <p className="text-xs text-gray-600 mb-1 line-clamp-1">
-                                {language === 'sr' ? event.description : (event.description_en || event.description)}
+                                {language === "sr"
+                                  ? event.description
+                                  : event.description_en || event.description}
                               </p>
                               <div className="flex items-center gap-3 text-xs text-gray-500">
                                 {event.start_at && (
                                   <span className="flex items-center gap-1">
                                     <Calendar size={12} />
-                                    {eventService.getRelativeDateLabel(event.start_at, language)}
+                                    {eventService.getRelativeDateLabel(
+                                      event.start_at,
+                                      language,
+                                    )}
                                   </span>
                                 )}
                                 {event.event_type && (
-                                  <span className="px-2 py-0.5 rounded" style={{ background: "#E8F0FE", color: "#0E3DC5" }}>
-                                    {eventService.translateEventType(event.event_type, language)}
+                                  <span
+                                    className="px-2 py-0.5 rounded"
+                                    style={{
+                                      background: "#E8F0FE",
+                                      color: "#0E3DC5",
+                                    }}
+                                  >
+                                    {eventService.translateEventType(
+                                      event.event_type,
+                                      language,
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -583,7 +603,7 @@ export function HomePage() {
                           </Link>
                         ))}
                       </div>
-                      
+
                       {/* Show All Results Button */}
                       <button
                         onClick={() => {
@@ -595,10 +615,14 @@ export function HomePage() {
                           setSearchQuery("");
                         }}
                         className="mt-3 w-full px-4 py-2 rounded-lg text-white font-medium transition-all hover:opacity-90"
-                        style={{ background: "#0E3DC5", border: "none", cursor: "pointer" }}
+                        style={{
+                          background: "#0E3DC5",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
                       >
-                        {language === "sr" 
-                          ? `Prikaži sve rezultate (${searchResults.length}+)` 
+                        {language === "sr"
+                          ? `Prikaži sve rezultate (${searchResults.length}+)`
                           : `Show all results (${searchResults.length}+)`}
                       </button>
                     </>
@@ -634,22 +658,27 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.events),
             }}
           >
-            <Link to="/events" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/events"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {t("events")}
             </Link>
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 4 FEATURED EVENTA IZ BACKEND-a
             Eventi se povlače iz Supabase submissions tabele (approved status, upcoming events)
             Nova dešavanja koja korisnici prijavljuju se automatski prikazuju kada admin odobri.
           */}
-          
+
           {/* Loading State */}
           {eventsLoading && (
             <div className="text-center py-12">
               <p className="text-lg" style={{ color: "#6B7280" }}>
-                {language === "sr" ? "Učitavanje događaja..." : "Loading events..."}
+                {language === "sr"
+                  ? "Učitavanje događaja..."
+                  : "Loading events..."}
               </p>
             </div>
           )}
@@ -657,10 +686,13 @@ export function HomePage() {
           {/* Empty State */}
           {!eventsLoading && featuredEvents.length === 0 && (
             <div className="text-center py-12">
-              <Calendar size={48} style={{ color: "#E5E9F0", margin: "0 auto 16px" }} />
+              <Calendar
+                size={48}
+                style={{ color: "#E5E9F0", margin: "0 auto 16px" }}
+              />
               <p className="text-lg" style={{ color: "#6B7280" }}>
-                {language === "sr" 
-                  ? "U pripremi — uskoro će biti dostupno!" 
+                {language === "sr"
+                  ? "U pripremi — uskoro će biti dostupno!"
                   : "Under construction — coming soon!"}
               </p>
             </div>
@@ -680,115 +712,133 @@ export function HomePage() {
                   sport: "Sport",
                   event: "Event",
                 };
-                const eventTypeKey = typeToKey[(event.event_type || event.page_slug || "event").toLowerCase()] || "Event";
+                const eventTypeKey =
+                  typeToKey[
+                    (
+                      event.event_type ||
+                      event.page_slug ||
+                      "event"
+                    ).toLowerCase()
+                  ] || "Event";
 
                 return (
-                <Link
-                  key={event.id}
-                  to={`/events/${event.id}`}
-                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
-                  style={{ textDecoration: 'none', color: 'inherit' }}
-                >
-                  {/* Image */}
-                  <img
-                    src={event.image || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"}
-                    alt={event.title}
-                    className="w-full h-[200px] object-cover rounded-md"
-                  />
+                  <Link
+                    key={event.id}
+                    to={`/events/${event.id}`}
+                    className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
+                    style={{ textDecoration: "none", color: "inherit" }}
+                  >
+                    {/* Image */}
+                    <img
+                      src={
+                        event.image ||
+                        "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
+                      }
+                      alt={event.title}
+                      className="w-full h-[200px] object-cover rounded-md"
+                    />
 
-                  {/* Content ISPOD SLIKE */}
-                  <div className="p-4">
-                    {/* Category and Badge */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{
-                          background: BACKGROUNDS.lightGray,
-                          color: CATEGORY_COLORS.events,
-                        }}
-                      >
-                        {t(`category${eventTypeKey}` as keyof typeof translations)}
-                      </span>
-                      {event.price === "Free" && (
+                    {/* Content ISPOD SLIKE */}
+                    <div className="p-4">
+                      {/* Category and Badge */}
+                      <div className="flex items-center gap-2 mb-2">
                         <span
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
                             background: BACKGROUNDS.lightGray,
-                            color: TEXT.tertiary,
+                            color: CATEGORY_COLORS.events,
                           }}
                         >
-                          {language === "sr"
-                            ? "Besplatan ulaz"
-                            : "Free Entry"}
+                          {t(
+                            `category${eventTypeKey}` as keyof typeof translations,
+                          )}
                         </span>
+                        {event.price === "Free" && (
+                          <span
+                            className="text-xs font-medium px-2 py-1 rounded"
+                            style={{
+                              background: BACKGROUNDS.lightGray,
+                              color: TEXT.tertiary,
+                            }}
+                          >
+                            {language === "sr"
+                              ? "Besplatan ulaz"
+                              : "Free Entry"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <h3
+                        className="text-base font-semibold mb-2 line-clamp-2"
+                        style={{ color: "#1a1a1a" }}
+                      >
+                        {language === "sr"
+                          ? event.title
+                          : event.title_en || event.title}
+                      </h3>
+
+                      {/* Date & Time */}
+                      {event.start_at && (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar size={14} style={{ color: "#6B7280" }} />
+                            <span
+                              className="text-sm"
+                              style={{ color: "#6B7280" }}
+                            >
+                              {eventService.getRelativeDateLabel(
+                                event.start_at,
+                                language,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock size={14} style={{ color: "#6B7280" }} />
+                            <span
+                              className="text-sm"
+                              style={{ color: "#6B7280" }}
+                            >
+                              {eventService.formatEventTime(
+                                event.start_at,
+                                event.end_at,
+                                language === "en" ? "en" : "sr",
+                              )}
+                            </span>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Venue */}
+                      {(event.venue_name || event.address) && (
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          <span
+                            className="text-sm"
+                            style={{ color: "#6B7280" }}
+                          >
+                            {event.venue_name || event.address}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Interest count for free events */}
+                      {interestCounts[event.id] > 0 && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <Heart size={12} style={{ color: "#FB8C00" }} />
+                          <span
+                            className="text-xs"
+                            style={{ color: "#9CA3AF" }}
+                          >
+                            {interestCounts[event.id]}{" "}
+                            {language === "sr"
+                              ? "zainteresovano"
+                              : "interested"}
+                          </span>
+                        </div>
                       )}
                     </div>
-
-                    {/* Title */}
-                    <h3
-                      className="text-base font-semibold mb-2 line-clamp-2"
-                      style={{ color: "#1a1a1a" }}
-                    >
-                      {language === "sr" ? event.title : (event.title_en || event.title)}
-                    </h3>
-
-                    {/* Date & Time */}
-                    {event.start_at && (
-                      <>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Calendar
-                            size={14}
-                            style={{ color: "#6B7280" }}
-                          />
-                          <span
-                            className="text-sm"
-                            style={{ color: "#6B7280" }}
-                          >
-                            {eventService.getRelativeDateLabel(event.start_at, language)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Clock
-                            size={14}
-                            style={{ color: "#6B7280" }}
-                          />
-                          <span
-                            className="text-sm"
-                            style={{ color: "#6B7280" }}
-                          >
-                            {eventService.formatEventTime(event.start_at, event.end_at, language === "en" ? "en" : "sr")}
-                          </span>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Venue */}
-                    {(event.venue_name || event.address) && (
-                      <div className="flex items-center gap-2">
-                        <MapPin
-                          size={14}
-                          style={{ color: "#6B7280" }}
-                        />
-                        <span
-                          className="text-sm"
-                          style={{ color: "#6B7280" }}
-                        >
-                          {event.venue_name || event.address}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Interest count for free events */}
-                    {interestCounts[event.id] > 0 && (
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Heart size={12} style={{ color: "#FB8C00" }} />
-                        <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                          {interestCounts[event.id]} {language === "sr" ? "zainteresovano" : "interested"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </Link>
+                  </Link>
                 );
               })}
             </div>
@@ -816,10 +866,10 @@ export function HomePage() {
             {t("exploreCities")}
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 3 FEATURED GRADA
             NE DODAVATI NOVE GRADOVE OVDJE!
-            Nova dešavanja koja korisnici prijavljuju kroz Submit Event formu 
+            Nova dešavanja koja korisnici prijavljuju kroz Submit Event formu
             treba da se prikazuju samo na /events/all stranici.
           */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -916,15 +966,18 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.theatre),
             }}
           >
-            <Link to="/theatre" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/theatre"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {language === "sr" ? "Pozorište" : "Theatre"}
             </Link>
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 3 FEATURED THEATRE PREDSTAVE
             NE DODAVATI NOVE PREDSTAVE OVDJE!
-            Nova dešavanja koja korisnici prijavljuju kroz Submit Event formu 
+            Nova dešavanja koja korisnici prijavljuju kroz Submit Event formu
             treba da se prikazuju samo na /events/all stranici.
           */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -940,46 +993,33 @@ export function HomePage() {
                     ? "Utorak, 4. feb • 19:00"
                     : "Tuesday, Feb 4 • 19:00",
                 venue:
-                  language === "sr"
-                    ? "Narodno pozorište"
-                    : "National Theatre",
+                  language === "sr" ? "Narodno pozorište" : "National Theatre",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1579625676445-469eed0fa554?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvcGVyYSUyMHRoZWF0cmUlMjBjdXJ0YWluJTIwc3RhZ2V8ZW58MXx8fHwxNzY5NTE0MzM5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
                 category: language === "sr" ? "Opera" : "Opera",
                 freeEntry: false,
-                title:
-                  language === "sr"
-                    ? "La Traviata"
-                    : "La Traviata",
+                title: language === "sr" ? "La Traviata" : "La Traviata",
                 date:
                   language === "sr"
                     ? "Petak, 7. feb • 20:00"
                     : "Friday, Feb 7 • 20:00",
                 venue:
-                  language === "sr"
-                    ? "Narodno pozorište"
-                    : "National Theatre",
+                  language === "sr" ? "Narodno pozorište" : "National Theatre",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1758670331763-b0f3cd7c1a8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxiYWxsZXQlMjBkYW5jZSUyMHBlcmZvcm1hbmNlJTIwc3RhZ2V8ZW58MXx8fHwxNzY5NTE0MzM5fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr" ? "Balet" : "Ballet",
+                category: language === "sr" ? "Balet" : "Ballet",
                 freeEntry: false,
-                title:
-                  language === "sr"
-                    ? "Labuđe jezero"
-                    : "Swan Lake",
+                title: language === "sr" ? "Labuđe jezero" : "Swan Lake",
                 date:
                   language === "sr"
                     ? "Subota, 8. feb • 19:30"
                     : "Saturday, Feb 8 • 19:30",
                 venue:
-                  language === "sr"
-                    ? "Kulturni centar"
-                    : "Cultural Center",
+                  language === "sr" ? "Kulturni centar" : "Cultural Center",
               },
             ]
               .slice(0, 3)
@@ -988,78 +1028,73 @@ export function HomePage() {
                   key={i}
                   className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
                 >
-                  <Link to="/theatre" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  {/* Image */}
-                  <img
-                    src={show.image}
-                    alt={show.title}
-                    className="w-full h-[400px] object-cover rounded-md"
-                  />
+                  <Link
+                    to="/theatre"
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "block",
+                    }}
+                  >
+                    {/* Image */}
+                    <img
+                      src={show.image}
+                      alt={show.title}
+                      className="w-full h-[400px] object-cover rounded-md"
+                    />
 
-                  {/* Content ISPOD SLIKE */}
-                  <div className="p-4">
-                    {/* Category and Badge */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{
-                          background: BACKGROUNDS.gray,
-                          color: CATEGORY_COLORS.theatre,
-                        }}
-                      >
-                        {show.category}
-                      </span>
-                      {show.freeEntry && (
+                    {/* Content ISPOD SLIKE */}
+                    <div className="p-4">
+                      {/* Category and Badge */}
+                      <div className="flex items-center gap-2 mb-2">
                         <span
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
-                            background: BACKGROUNDS.lightGray,
-                            color: TEXT.tertiary,
+                            background: BACKGROUNDS.gray,
+                            color: CATEGORY_COLORS.theatre,
                           }}
                         >
-                          {language === "sr"
-                            ? "Besplatan ulaz"
-                            : "Free Entry"}
+                          {show.category}
                         </span>
-                      )}
-                    </div>
+                        {show.freeEntry && (
+                          <span
+                            className="text-xs font-medium px-2 py-1 rounded"
+                            style={{
+                              background: BACKGROUNDS.lightGray,
+                              color: TEXT.tertiary,
+                            }}
+                          >
+                            {language === "sr"
+                              ? "Besplatan ulaz"
+                              : "Free Entry"}
+                          </span>
+                        )}
+                      </div>
 
-                    {/* Title */}
-                    <h3
-                      className="text-base font-semibold mb-2"
-                      style={{ color: "#1a1a1a" }}
-                    >
-                      {show.title}
-                    </h3>
-
-                    {/* Date */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar
-                        size={14}
-                        style={{ color: "#6B7280" }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: "#6B7280" }}
+                      {/* Title */}
+                      <h3
+                        className="text-base font-semibold mb-2"
+                        style={{ color: "#1a1a1a" }}
                       >
-                        {show.date}
-                      </span>
-                    </div>
+                        {show.title}
+                      </h3>
 
-                    {/* Venue */}
-                    <div className="flex items-center gap-2">
-                      <MapPin
-                        size={14}
-                        style={{ color: "#6B7280" }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: "#6B7280" }}
-                      >
-                        {show.venue}
-                      </span>
+                      {/* Date */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {show.date}
+                        </span>
+                      </div>
+
+                      {/* Venue */}
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {show.venue}
+                        </span>
+                      </div>
                     </div>
-                  </div>
                   </Link>
                 </div>
               ))}
@@ -1084,12 +1119,15 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.cinema),
             }}
           >
-            <Link to="/cinema" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/cinema"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {language === "sr" ? "Bioskop" : "Cinema"}
             </Link>
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 5 FEATURED FILMOVA
             NE DODAVATI NOVE FILMOVE OVDJE!
             Novi filmovi treba da se prikazuju samo na /cinema/all stranici.
@@ -1099,8 +1137,7 @@ export function HomePage() {
               {
                 image:
                   "https://images.unsplash.com/photo-1688678004647-945d5aaf91c1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaW5lbWElMjBtb3ZpZSUyMHRoZWF0cmUlMjBzY3JlZW58ZW58MXx8fHwxNzY5NTE0MzQyfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr" ? "Akcija" : "Action",
+                category: language === "sr" ? "Akcija" : "Action",
                 title:
                   language === "sr"
                     ? "Mission: Impossible 8"
@@ -1115,17 +1152,10 @@ export function HomePage() {
               {
                 image:
                   "https://images.unsplash.com/photo-1760170437237-a3654545ab4c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3ZpZSUyMHRoZWF0ZXIlMjBzZWF0cyUyMGF1ZGllbmNlfGVufDF8fHx8MTc2OTUxNDM0Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr" ? "Triler" : "Thriller",
-                title:
-                  language === "sr"
-                    ? "Oppenheimer"
-                    : "Oppenheimer",
+                category: language === "sr" ? "Triler" : "Thriller",
+                title: language === "sr" ? "Oppenheimer" : "Oppenheimer",
                 rating: "9.2/10",
-                date:
-                  language === "sr"
-                    ? "Svaki dan • 19:30"
-                    : "Daily • 19:30",
+                date: language === "sr" ? "Svaki dan • 19:30" : "Daily • 19:30",
                 venue: "Palas Mall",
               },
               {
@@ -1137,39 +1167,25 @@ export function HomePage() {
                     ? "Killers of the Flower Moon"
                     : "Killers of the Flower Moon",
                 rating: "8.8/10",
-                date:
-                  language === "sr"
-                    ? "Svaki dan • 20:15"
-                    : "Daily • 20:15",
+                date: language === "sr" ? "Svaki dan • 20:15" : "Daily • 20:15",
                 venue: "Cineplexx",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1768582870566-d1ea815a7545?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjaW5lbWElMjBwb3Bjb3JuJTIwbW92aWUlMjBuaWdodHxlbnwxfHx8fDE3Njk1MTQzNDN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr" ? "Komedija" : "Comedy",
+                category: language === "sr" ? "Komedija" : "Comedy",
                 title: language === "sr" ? "Barbie" : "Barbie",
                 rating: "7.9/10",
-                date:
-                  language === "sr"
-                    ? "Svaki dan • 17:00"
-                    : "Daily • 17:00",
+                date: language === "sr" ? "Svaki dan • 17:00" : "Daily • 17:00",
                 venue: "Palas Mall",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1762417420551-2fec32ed3595?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb3ZpZSUyMHByZW1pZXJlJTIwY2luZW1hfGVufDF8fHx8MTc2OTUxNDM0NHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr" ? "Sci-Fi" : "Sci-Fi",
-                title:
-                  language === "sr"
-                    ? "Dune: Part Two"
-                    : "Dune: Part Two",
+                category: language === "sr" ? "Sci-Fi" : "Sci-Fi",
+                title: language === "sr" ? "Dune: Part Two" : "Dune: Part Two",
                 rating: "9.0/10",
-                date:
-                  language === "sr"
-                    ? "Svaki dan • 19:00"
-                    : "Daily • 19:00",
+                date: language === "sr" ? "Svaki dan • 19:00" : "Daily • 19:00",
                 venue: "Cineplexx",
               },
             ]
@@ -1179,75 +1195,70 @@ export function HomePage() {
                   key={i}
                   className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
                 >
-                  <Link to="/cinema" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  {/* Image */}
-                  <img
-                    src={movie.image}
-                    alt={movie.title}
-                    className="w-full h-[250px] object-cover rounded-md"
-                  />
+                  <Link
+                    to="/cinema"
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "block",
+                    }}
+                  >
+                    {/* Image */}
+                    <img
+                      src={movie.image}
+                      alt={movie.title}
+                      className="w-full h-[250px] object-cover rounded-md"
+                    />
 
-                  {/* Content ISPOD SLIKE */}
-                  <div className="p-4">
-                    {/* Category and Rating */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{
-                          background: BACKGROUNDS.lightGray,
-                          color: CATEGORY_COLORS.cinema,
-                        }}
+                    {/* Content ISPOD SLIKE */}
+                    <div className="p-4">
+                      {/* Category and Rating */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded"
+                          style={{
+                            background: BACKGROUNDS.lightGray,
+                            color: CATEGORY_COLORS.cinema,
+                          }}
+                        >
+                          {movie.category}
+                        </span>
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded flex items-center gap-1"
+                          style={{
+                            background: BACKGROUNDS.lightYellow,
+                            color: UTILITY.yellow,
+                          }}
+                        >
+                          <Star size={12} fill={UTILITY.yellow} />
+                          {movie.rating}
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3
+                        className="text-base font-semibold mb-2"
+                        style={{ color: "#1a1a1a" }}
                       >
-                        {movie.category}
-                      </span>
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded flex items-center gap-1"
-                        style={{
-                          background: BACKGROUNDS.lightYellow,
-                          color: UTILITY.yellow,
-                        }}
-                      >
-                        <Star size={12} fill={UTILITY.yellow} />
-                        {movie.rating}
-                      </span>
+                        {movie.title}
+                      </h3>
+
+                      {/* Date */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {movie.date}
+                        </span>
+                      </div>
+
+                      {/* Venue */}
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {movie.venue}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Title */}
-                    <h3
-                      className="text-base font-semibold mb-2"
-                      style={{ color: "#1a1a1a" }}
-                    >
-                      {movie.title}
-                    </h3>
-
-                    {/* Date */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar
-                        size={14}
-                        style={{ color: "#6B7280" }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: "#6B7280" }}
-                      >
-                        {movie.date}
-                      </span>
-                    </div>
-
-                    {/* Venue */}
-                    <div className="flex items-center gap-2">
-                      <MapPin
-                        size={14}
-                        style={{ color: "#6B7280" }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: "#6B7280" }}
-                      >
-                        {movie.venue}
-                      </span>
-                    </div>
-                  </div>
                   </Link>
                 </div>
               ))}
@@ -1256,10 +1267,7 @@ export function HomePage() {
       </section>
 
       {/* FEATURED RESTAURANTS - FULL WIDTH BACKGROUND */}
-      <section
-        className="py-12"
-        style={{ background: BACKGROUNDS.white }}
-      >
+      <section className="py-12" style={{ background: BACKGROUNDS.white }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
@@ -1270,12 +1278,15 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.restaurants),
             }}
           >
-            <Link to="/food-and-drink" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/food-and-drink"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {t("foodAndDrink")}
             </Link>
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 3 FEATURED RESTORANA
             NE DODAVATI NOVE RESTORANE OVDJE!
             Novi restorani treba da se prikazuju samo na /restaurants/all stranici.
@@ -1286,18 +1297,10 @@ export function HomePage() {
                 image:
                   "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBkaW5pbmd8ZW58MXx8fHwxNzM4MTU4NDAwfDA&ixlib=rb-4.1.0&q=80&w=1080",
                 category:
-                  language === "sr"
-                    ? "Lokalna kuhinja"
-                    : "Local Cuisine",
+                  language === "sr" ? "Lokalna kuhinja" : "Local Cuisine",
                 priceRange: "€€€",
-                title:
-                  language === "sr"
-                    ? "Lunch Bar Ara"
-                    : "Lunch Bar Ara",
-                location:
-                  language === "sr"
-                    ? "Centar grada"
-                    : "City Center",
+                title: language === "sr" ? "Lunch Bar Ara" : "Lunch Bar Ara",
+                location: language === "sr" ? "Centar grada" : "City Center",
                 hours:
                   language === "sr"
                     ? "Pon-Sub: 08:00 - 23:00"
@@ -1306,17 +1309,10 @@ export function HomePage() {
               {
                 image:
                   "https://images.unsplash.com/photo-1552566626-52f8b828add9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwZ3JpbGwlMjBtZWF0fGVufDF8fHx8MTczODE1ODQwMHww&ixlib=rb-4.1.0&q=80&w=1080",
-                category:
-                  language === "sr" ? "Roštilj" : "Grill",
+                category: language === "sr" ? "Roštilj" : "Grill",
                 priceRange: "€€",
-                title:
-                  language === "sr"
-                    ? "Staro Bure"
-                    : "Staro Bure",
-                location:
-                  language === "sr"
-                    ? "Nova Varoš"
-                    : "Nova Varos",
+                title: language === "sr" ? "Staro Bure" : "Staro Bure",
+                location: language === "sr" ? "Nova Varoš" : "Nova Varos",
                 hours:
                   language === "sr"
                     ? "Svakog dana: 12:00 - 00:00"
@@ -1325,17 +1321,11 @@ export function HomePage() {
               {
                 image:
                   "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxyZXN0YXVyYW50JTIwaXRhbGljJTIwZm9vZHxlbnwxfHx8fDE3MzgxNTg0MDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-                category:
-                  language === "sr" ? "Italijanska" : "Italian",
+                category: language === "sr" ? "Italijanska" : "Italian",
                 priceRange: "€€€",
                 title:
-                  language === "sr"
-                    ? "Gatto Trattoria"
-                    : "Gatto Trattoria",
-                location:
-                  language === "sr"
-                    ? "Centar grada"
-                    : "City Center",
+                  language === "sr" ? "Gatto Trattoria" : "Gatto Trattoria",
+                location: language === "sr" ? "Centar grada" : "City Center",
                 hours:
                   language === "sr"
                     ? "Uto-Ned: 11:00 - 23:00"
@@ -1348,44 +1338,45 @@ export function HomePage() {
                   key={i}
                   className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
                 >
-                  <Link to="/food-and-drink" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                  <img
-                    src={restaurant.image}
-                    alt={restaurant.title}
-                    className="w-full h-[350px] object-cover rounded-md"
-                  />
-                  <div className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{
-                          background: BACKGROUNDS.lightGray,
-                          color: CATEGORY_COLORS.restaurants,
-                        }}
+                  <Link
+                    to="/food-and-drink"
+                    style={{
+                      textDecoration: "none",
+                      color: "inherit",
+                      display: "block",
+                    }}
+                  >
+                    <img
+                      src={restaurant.image}
+                      alt={restaurant.title}
+                      className="w-full h-[350px] object-cover rounded-md"
+                    />
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded"
+                          style={{
+                            background: BACKGROUNDS.lightGray,
+                            color: CATEGORY_COLORS.restaurants,
+                          }}
+                        >
+                          {restaurant.category}
+                        </span>
+                      </div>
+                      <h3
+                        className="text-base font-semibold mb-2"
+                        style={{ color: "#1a1a1a" }}
                       >
-                        {restaurant.category}
-                      </span>
+                        {restaurant.title}
+                      </h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <MapPin size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {restaurant.location}
+                        </span>
+                      </div>
+                      <VenueOpeningHoursRow hoursText={restaurant.hours} />
                     </div>
-                    <h3
-                      className="text-base font-semibold mb-2"
-                      style={{ color: "#1a1a1a" }}
-                    >
-                      {restaurant.title}
-                    </h3>
-                    <div className="flex items-center gap-2 mb-1">
-                      <MapPin
-                        size={14}
-                        style={{ color: "#6B7280" }}
-                      />
-                      <span
-                        className="text-sm"
-                        style={{ color: "#6B7280" }}
-                      >
-                        {restaurant.location}
-                      </span>
-                    </div>
-                    <VenueOpeningHoursRow hoursText={restaurant.hours} />
-                  </div>
                   </Link>
                 </div>
               ))}
@@ -1394,10 +1385,7 @@ export function HomePage() {
       </section>
 
       {/* CLUBS SECTION */}
-      <section
-        className="py-12"
-        style={{ background: BACKGROUNDS.lightBlue }}
-      >
+      <section className="py-12" style={{ background: BACKGROUNDS.lightBlue }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
@@ -1408,7 +1396,10 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.clubs),
             }}
           >
-            <Link to="/nightlife" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/nightlife"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {language === "sr" ? "Klubovi" : "Clubs"}
             </Link>
           </h2>
@@ -1418,141 +1409,104 @@ export function HomePage() {
               {
                 image:
                   "https://images.unsplash.com/photo-1625612446042-afd3fe024131?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuaWdodGNsdWIlMjBwYXJ0eSUyMERKJTIwbGlnaHRzfGVufDF8fHx8MTc2OTUxNDM1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr"
-                    ? "Noćni klub"
-                    : "Night Club",
-                title:
-                  language === "sr"
-                    ? "Club Speakers"
-                    : "Club Speakers",
+                category: language === "sr" ? "Noćni klub" : "Night Club",
+                title: language === "sr" ? "Club Speakers" : "Club Speakers",
                 type:
                   language === "sr"
                     ? "Electronic & House"
                     : "Electronic & House",
-                opens:
-                  language === "sr"
-                    ? "Petak • 23:00"
-                    : "Friday • 23:00",
+                opens: language === "sr" ? "Petak • 23:00" : "Friday • 23:00",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1768054186905-cee1f184abcc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbHViJTIwZGFuY2UlMjBmbG9vciUyMGNyb3dkfGVufDF8fHx8MTc2OTUxNDM1MXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr"
-                    ? "Dance Club"
-                    : "Dance Club",
-                title:
-                  language === "sr" ? "Factory" : "Factory",
-                type:
-                  language === "sr"
-                    ? "Techno & EDM"
-                    : "Techno & EDM",
+                category: language === "sr" ? "Dance Club" : "Dance Club",
+                title: language === "sr" ? "Factory" : "Factory",
+                type: language === "sr" ? "Techno & EDM" : "Techno & EDM",
                 opens:
-                  language === "sr"
-                    ? "Subota • 22:00"
-                    : "Saturday • 22:00",
+                  language === "sr" ? "Subota • 22:00" : "Saturday • 22:00",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1558011554-b0dd73a08568?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuaWdodGNsdWIlMjBuZW9uJTIwbGlnaHRzJTIwYmFyfGVufDF8fHx8MTc2OTUxNDM1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr"
-                    ? "Cocktail Bar"
-                    : "Cocktail Bar",
-                title:
-                  language === "sr"
-                    ? "Bar Central"
-                    : "Bar Central",
+                category: language === "sr" ? "Cocktail Bar" : "Cocktail Bar",
+                title: language === "sr" ? "Bar Central" : "Bar Central",
                 type:
                   language === "sr"
                     ? "Lounge & Cocktails"
                     : "Lounge & Cocktails",
                 opens:
-                  language === "sr"
-                    ? "Četvrtak • 20:00"
-                    : "Thursday • 20:00",
+                  language === "sr" ? "Četvrtak • 20:00" : "Thursday • 20:00",
               },
               {
                 image:
                   "https://images.unsplash.com/photo-1689200049785-abed9d7da79d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbHViJTIwcGFydHklMjBwZW9wbGUlMjBkYW5jaW5nfGVufDF8fHx8MTc2OTUxNDM1Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
-                category:
-                  language === "sr"
-                    ? "Live Music"
-                    : "Live Music",
+                category: language === "sr" ? "Live Music" : "Live Music",
                 title:
-                  language === "sr"
-                    ? "Jazz Club Kastel"
-                    : "Jazz Club Kastel",
+                  language === "sr" ? "Jazz Club Kastel" : "Jazz Club Kastel",
                 type:
-                  language === "sr"
-                    ? "Jazz & Live Bands"
-                    : "Jazz & Live Bands",
+                  language === "sr" ? "Jazz & Live Bands" : "Jazz & Live Bands",
                 opens:
-                  language === "sr"
-                    ? "Srijeda • 21:00"
-                    : "Wednesday • 21:00",
+                  language === "sr" ? "Srijeda • 21:00" : "Wednesday • 21:00",
               },
             ].map((club, i) => (
               <div
                 key={i}
                 className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
               >
-                <Link to="/nightlife" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                {/* Image */}
-                <img
-                  src={club.image}
-                  alt={club.title}
-                  className="w-full h-[200px] object-cover rounded-md"
-                />
+                <Link
+                  to="/nightlife"
+                  style={{
+                    textDecoration: "none",
+                    color: "inherit",
+                    display: "block",
+                  }}
+                >
+                  {/* Image */}
+                  <img
+                    src={club.image}
+                    alt={club.title}
+                    className="w-full h-[200px] object-cover rounded-md"
+                  />
 
-                {/* Content ISPOD SLIKE */}
-                <div className="p-4">
-                  {/* Category */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="text-xs font-medium px-2 py-1 rounded"
-                      style={{
-                        background: BACKGROUNDS.lightGray,
-                        color: CATEGORY_COLORS.clubs,
-                      }}
+                  {/* Content ISPOD SLIKE */}
+                  <div className="p-4">
+                    {/* Category */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="text-xs font-medium px-2 py-1 rounded"
+                        style={{
+                          background: BACKGROUNDS.lightGray,
+                          color: CATEGORY_COLORS.clubs,
+                        }}
+                      >
+                        {club.category}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3
+                      className="text-base font-semibold mb-1"
+                      style={{ color: "#1a1a1a" }}
                     >
-                      {club.category}
-                    </span>
-                  </div>
+                      {club.title}
+                    </h3>
 
-                  {/* Title */}
-                  <h3
-                    className="text-base font-semibold mb-1"
-                    style={{ color: "#1a1a1a" }}
-                  >
-                    {club.title}
-                  </h3>
+                    {/* Type */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm" style={{ color: "#6B7280" }}>
+                        {club.type}
+                      </span>
+                    </div>
 
-                  {/* Type */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className="text-sm"
-                      style={{ color: "#6B7280" }}
-                    >
-                      {club.type}
-                    </span>
+                    {/* Opens */}
+                    <div className="flex items-center gap-2">
+                      <Calendar size={14} style={{ color: "#6B7280" }} />
+                      <span className="text-sm" style={{ color: "#6B7280" }}>
+                        {club.opens}
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Opens */}
-                  <div className="flex items-center gap-2">
-                    <Calendar
-                      size={14}
-                      style={{ color: "#6B7280" }}
-                    />
-                    <span
-                      className="text-sm"
-                      style={{ color: "#6B7280" }}
-                    >
-                      {club.opens}
-                    </span>
-                  </div>
-                </div>
                 </Link>
               </div>
             ))}
@@ -1561,10 +1515,7 @@ export function HomePage() {
       </section>
 
       {/* CONCERTS SECTION */}
-      <section
-        className="py-12"
-        style={{ background: BACKGROUNDS.lightBlue }}
-      >
+      <section className="py-12" style={{ background: BACKGROUNDS.lightBlue }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
@@ -1575,7 +1526,10 @@ export function HomePage() {
               ...getGradientTextStyle(GRADIENTS.concerts),
             }}
           >
-            <Link to="/concerts" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link
+              to="/concerts"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
               {language === "sr" ? "Koncerti" : "Concerts"}
             </Link>
           </h2>
@@ -1595,10 +1549,7 @@ export function HomePage() {
                   language === "sr"
                     ? "Subota, 21. dec • 21:00"
                     : "Saturday, Dec 21 • 21:00",
-                venue:
-                  language === "sr"
-                    ? "Borik Arena"
-                    : "Borik Arena",
+                venue: language === "sr" ? "Borik Arena" : "Borik Arena",
               },
               {
                 image:
@@ -1613,10 +1564,7 @@ export function HomePage() {
                   language === "sr"
                     ? "Petak, 10. jan • 20:00"
                     : "Friday, Jan 10 • 20:00",
-                venue:
-                  language === "sr"
-                    ? "Paraf Hall"
-                    : "Paraf Hall",
+                venue: language === "sr" ? "Paraf Hall" : "Paraf Hall",
               },
               {
                 image:
@@ -1631,88 +1579,78 @@ export function HomePage() {
                   language === "sr"
                     ? "Četvrtak, 16. jan • 19:30"
                     : "Thursday, Jan 16 • 19:30",
-                venue:
-                  language === "sr"
-                    ? "Tvrđava Kastel"
-                    : "Kastel Fortress",
+                venue: language === "sr" ? "Tvrđava Kastel" : "Kastel Fortress",
               },
             ].map((concert, i) => (
               <div
                 key={i}
                 className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
               >
-                <Link to="/concerts" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-                {/* Image */}
-                <img
-                  src={concert.image}
-                  alt={concert.title}
-                  className="w-full h-[250px] object-cover rounded-md"
-                />
+                <Link
+                  to="/concerts"
+                  style={{
+                    textDecoration: "none",
+                    color: "inherit",
+                    display: "block",
+                  }}
+                >
+                  {/* Image */}
+                  <img
+                    src={concert.image}
+                    alt={concert.title}
+                    className="w-full h-[250px] object-cover rounded-md"
+                  />
 
-                {/* Content ISPOD SLIKE */}
-                <div className="p-4">
-                  {/* Category and Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="text-xs font-medium px-2 py-1 rounded"
-                      style={{
-                        background: BACKGROUNDS.lightGray,
-                        color: CATEGORY_COLORS.concerts,
-                      }}
-                    >
-                      {concert.category}
-                    </span>
-                    {concert.freeEntry && (
+                  {/* Content ISPOD SLIKE */}
+                  <div className="p-4">
+                    {/* Category and Badge */}
+                    <div className="flex items-center gap-2 mb-2">
                       <span
                         className="text-xs font-medium px-2 py-1 rounded"
                         style={{
                           background: BACKGROUNDS.lightGray,
-                          color: TEXT.tertiary,
+                          color: CATEGORY_COLORS.concerts,
                         }}
                       >
-                        {language === "sr"
-                          ? "Besplatan ulaz"
-                          : "Free Entry"}
+                        {concert.category}
                       </span>
-                    )}
-                  </div>
+                      {concert.freeEntry && (
+                        <span
+                          className="text-xs font-medium px-2 py-1 rounded"
+                          style={{
+                            background: BACKGROUNDS.lightGray,
+                            color: TEXT.tertiary,
+                          }}
+                        >
+                          {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
+                        </span>
+                      )}
+                    </div>
 
-                  {/* Title */}
-                  <h3
-                    className="text-base font-semibold mb-2"
-                    style={{ color: "#1a1a1a" }}
-                  >
-                    {concert.title}
-                  </h3>
-
-                  {/* Date */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar
-                      size={14}
-                      style={{ color: "#6B7280" }}
-                    />
-                    <span
-                      className="text-sm"
-                      style={{ color: "#6B7280" }}
+                    {/* Title */}
+                    <h3
+                      className="text-base font-semibold mb-2"
+                      style={{ color: "#1a1a1a" }}
                     >
-                      {concert.date}
-                    </span>
-                  </div>
+                      {concert.title}
+                    </h3>
 
-                  {/* Venue */}
-                  <div className="flex items-center gap-2">
-                    <MapPin
-                      size={14}
-                      style={{ color: "#6B7280" }}
-                    />
-                    <span
-                      className="text-sm"
-                      style={{ color: "#6B7280" }}
-                    >
-                      {concert.venue}
-                    </span>
+                    {/* Date */}
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar size={14} style={{ color: "#6B7280" }} />
+                      <span className="text-sm" style={{ color: "#6B7280" }}>
+                        {concert.date}
+                      </span>
+                    </div>
+
+                    {/* Venue */}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} style={{ color: "#6B7280" }} />
+                      <span className="text-sm" style={{ color: "#6B7280" }}>
+                        {concert.venue}
+                      </span>
+                    </div>
                   </div>
-                </div>
                 </Link>
               </div>
             ))}
@@ -1724,10 +1662,7 @@ export function HomePage() {
       <SocialProofGallery language={language} />
 
       {/* EXPLORE REGIONAL CITIES - FULL WIDTH BACKGROUND */}
-      <section
-        className="py-12"
-        style={{ backgroundColor: "#FFFFFF" }}
-      >
+      <section className="py-12" style={{ backgroundColor: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left mb-4"
@@ -1740,7 +1675,7 @@ export function HomePage() {
             {t("exploreRegionalCities")}
           </h2>
 
-          {/* 
+          {/*
             VAŽNO: Ova sekcija prikazuje SVE 4 FEATURED GRADA
             NE DODAVATI NOVE GRADOVE OVDJE!
             Novi gradovi treba da se prikazuju na odgovarajućim stranicama.
@@ -1767,43 +1702,42 @@ export function HomePage() {
                 events: "10+",
                 image: budvaImage,
               },
-            ]
-              .map((item, i) => (
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="relative rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                style={{ height: "160px" }}
+              >
+                <img
+                  src={item.image}
+                  alt={item.city}
+                  className="w-full h-full object-cover"
+                />
                 <div
-                  key={i}
-                  className="relative rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                  style={{ height: "160px" }}
-                >
-                  <img
-                    src={item.image}
-                    alt={item.city}
-                    className="w-full h-full object-cover"
-                  />
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 60%)",
+                  }}
+                />
+                <div className="absolute bottom-3 left-3">
                   <div
-                    className="absolute inset-0"
+                    className="text-white font-semibold mb-1"
+                    style={{ fontSize: "16px" }}
+                  >
+                    {item.city}
+                  </div>
+                  <div
+                    className="text-sm"
                     style={{
-                      background:
-                        "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 60%)",
+                      color: "rgba(255, 255, 255, 0.9)",
                     }}
-                  />
-                  <div className="absolute bottom-3 left-3">
-                    <div
-                      className="text-white font-semibold mb-1"
-                      style={{ fontSize: "16px" }}
-                    >
-                      {item.city}
-                    </div>
-                    <div
-                      className="text-sm"
-                      style={{
-                        color: "rgba(255, 255, 255, 0.9)",
-                      }}
-                    >
-                      {item.events} {t("events")}
-                    </div>
+                  >
+                    {item.events} {t("events")}
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1829,14 +1763,9 @@ export function HomePage() {
             return day === 0 ? 6 : day - 1; // Convert to Monday = 0
           };
 
-          const isSameDay = (
-            date1: Date | null,
-            date2: Date | null,
-          ) => {
+          const isSameDay = (date1: Date | null, date2: Date | null) => {
             if (!date1 || !date2) return false;
-            return (
-              date1.toDateString() === date2.toDateString()
-            );
+            return date1.toDateString() === date2.toDateString();
           };
 
           const isInRange = (date: Date) => {
@@ -1845,13 +1774,9 @@ export function HomePage() {
             if (!compareDate) return false;
 
             const start =
-              selectedStartDate < compareDate
-                ? selectedStartDate
-                : compareDate;
+              selectedStartDate < compareDate ? selectedStartDate : compareDate;
             const end =
-              selectedStartDate < compareDate
-                ? compareDate
-                : selectedStartDate;
+              selectedStartDate < compareDate ? compareDate : selectedStartDate;
 
             return date > start && date < end;
           };
@@ -1864,10 +1789,7 @@ export function HomePage() {
           };
 
           const handleDateClick = (date: Date) => {
-            if (
-              !selectedStartDate ||
-              (selectedStartDate && selectedEndDate)
-            ) {
+            if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
               // First click or reset
               setSelectedStartDate(date);
               setSelectedEndDate(null);
@@ -1896,9 +1818,7 @@ export function HomePage() {
                 );
               } else {
                 // Single date
-                setSelectedDateRange(
-                  formatAppDate(selectedStartDate, locale),
-                );
+                setSelectedDateRange(formatAppDate(selectedStartDate, locale));
               }
               setIsDatePickerOpen(false);
             }
@@ -1919,19 +1839,13 @@ export function HomePage() {
 
           const previousMonth = () => {
             setCurrentMonth(
-              new Date(
-                currentMonth.getFullYear(),
-                currentMonth.getMonth() - 1,
-              ),
+              new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1),
             );
           };
 
           const nextMonth = () => {
             setCurrentMonth(
-              new Date(
-                currentMonth.getFullYear(),
-                currentMonth.getMonth() + 1,
-              ),
+              new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1),
             );
           };
 
@@ -1970,10 +1884,7 @@ export function HomePage() {
                       : "transparent",
                   color: isSelected ? "white" : "#1a1a1a",
                   fontWeight: isSelected || isToday ? 600 : 400,
-                  border:
-                    isToday && !isSelected
-                      ? "2px solid #0E3DC5"
-                      : "none",
+                  border: isToday && !isSelected ? "2px solid #0E3DC5" : "none",
                   cursor: "pointer",
                 }}
               >
@@ -1992,24 +1903,8 @@ export function HomePage() {
 
           const weekDays =
             language === "sr"
-              ? [
-                  "Pon",
-                  "Uto",
-                  "Sri",
-                  "Čet",
-                  "Pet",
-                  "Sub",
-                  "Ned",
-                ]
-              : [
-                  "Mon",
-                  "Tue",
-                  "Wed",
-                  "Thu",
-                  "Fri",
-                  "Sat",
-                  "Sun",
-                ];
+              ? ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"]
+              : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
           return (
             <div
@@ -2044,13 +1939,10 @@ export function HomePage() {
                     className="text-center text-xl font-bold mb-6"
                     style={{
                       color: "#1a1a1a",
-                      textShadow:
-                        "0 2px 4px rgba(0, 0, 0, 0.1)",
+                      textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                     }}
                   >
-                    {language === "sr"
-                      ? "Izaberi datum"
-                      : "Pick Date"}
+                    {language === "sr" ? "Izaberi datum" : "Pick Date"}
                   </h2>
 
                   {/* Month Navigation */}
@@ -2115,9 +2007,7 @@ export function HomePage() {
                       ))}
                     </div>
                     {/* Days grid */}
-                    <div className="grid grid-cols-7 gap-2">
-                      {days}
-                    </div>
+                    <div className="grid grid-cols-7 gap-2">{days}</div>
                   </div>
 
                   {/* Action Buttons */}
@@ -2140,13 +2030,9 @@ export function HomePage() {
                         fontSize: "15px",
                         fontWeight: 500,
                         color: "white",
-                        background: selectedStartDate
-                          ? "#0E3DC5"
-                          : "#9CA3AF",
+                        background: selectedStartDate ? "#0E3DC5" : "#9CA3AF",
                         border: "none",
-                        cursor: selectedStartDate
-                          ? "pointer"
-                          : "not-allowed",
+                        cursor: selectedStartDate ? "pointer" : "not-allowed",
                       }}
                       disabled={!selectedStartDate}
                     >

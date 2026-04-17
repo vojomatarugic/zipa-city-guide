@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
 import { useT } from '../hooks/useT';
 import { MapPin, Calendar, Tag, ArrowLeft, Clock } from 'lucide-react';
 import * as eventService from '../utils/eventService';
 import { Item } from '../utils/dataService';
+import { useLocation as useSelectedCity } from '../contexts/LocationContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { listingDocumentTitle } from '../utils/documentTitle';
 
 export function SearchResultsPage() {
   const { t, language } = useT();
+  const { selectedCity } = useSelectedCity();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [results, setResults] = useState<Item[]>([]);
@@ -16,6 +20,13 @@ export function SearchResultsPage() {
   const date = searchParams.get('date') || '';
   const category = searchParams.get('category') || '';
   const query = searchParams.get('q') || ''; // Search query text
+
+  const searchPageName = language === 'sr' ? 'Pretraga' : 'Search';
+  const searchTitle = useMemo(
+    () => listingDocumentTitle(searchPageName, selectedCity),
+    [searchPageName, selectedCity],
+  );
+  useDocumentTitle(searchTitle);
 
   useEffect(() => {
     async function fetchSearchResults() {

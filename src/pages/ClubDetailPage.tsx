@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useT } from "../hooks/useT";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { getVenueById } from "../utils/dataService";
@@ -11,12 +11,28 @@ import {
   VenueDetailAddressCard,
 } from "../components/VenueDetailLayout";
 import { CLUBS_CATEGORY_THEME } from "../utils/categoryThemes";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import {
+  detailDocumentTitle,
+  detailLoadingDocumentTitle,
+} from "../utils/documentTitle";
 
 export function ClubDetailPage() {
   const { id } = useParams();
   const { t, language } = useT();
+  const { selectedCity } = useSelectedCity();
   const [club, setClub] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const documentTitle = useMemo(() => {
+    if (isLoading || !club) return detailLoadingDocumentTitle();
+    const entityTitle =
+      language === "en" && club.title_en ? club.title_en : club.title;
+    return detailDocumentTitle(entityTitle, selectedCity);
+  }, [isLoading, club, language, selectedCity]);
+
+  useDocumentTitle(documentTitle);
 
   useEffect(() => {
     async function fetchClub() {

@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useT } from "../hooks/useT";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { getVenueById } from "../utils/dataService";
@@ -11,12 +11,30 @@ import {
   VenueDetailAddressCard,
 } from "../components/VenueDetailLayout";
 import { FOOD_VENUE_THEME } from "../utils/categoryThemes";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import {
+  detailDocumentTitle,
+  detailLoadingDocumentTitle,
+} from "../utils/documentTitle";
 
 export function FoodAndDrinkDetailPage() {
   const { id } = useParams();
   const { t, language } = useT();
+  const { selectedCity } = useSelectedCity();
   const [restaurant, setRestaurant] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const documentTitle = useMemo(() => {
+    if (isLoading || !restaurant) return detailLoadingDocumentTitle();
+    const entityTitle =
+      language === "en" && restaurant.title_en
+        ? restaurant.title_en
+        : restaurant.title;
+    return detailDocumentTitle(entityTitle, selectedCity);
+  }, [isLoading, restaurant, language, selectedCity]);
+
+  useDocumentTitle(documentTitle);
 
   useEffect(() => {
     async function fetchRestaurant() {

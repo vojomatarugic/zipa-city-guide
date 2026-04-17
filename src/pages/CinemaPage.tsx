@@ -7,6 +7,9 @@ import { Clapperboard } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -82,6 +85,7 @@ function CinemaCard({ event, language, imageHeight = "300px" }: { event: Item; l
 export function CinemaPage() {
   const { t } = useT();
   const { language } = useLanguage();
+  const { selectedCity } = useSelectedCity();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -96,6 +100,8 @@ export function CinemaPage() {
     }
     fetchCinema();
   }, []);
+
+  useDocumentTitle(listingDocumentTitle(DOC_TITLE_CINEMA, selectedCity));
 
   useSEO({
     title: t("seoCinemaTitle"),

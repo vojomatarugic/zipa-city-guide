@@ -56,7 +56,7 @@ type UsersAdminSectionProps = {
 
 export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersAdminSectionProps) {
   const { t, language } = useT();
-  const { isLoading: authLoading, accessToken } = useAuth();
+  const { isLoading: authLoading, accessToken, user: currentUser, isMasterAdmin } = useAuth();
   const navigate = useNavigate();
   
   const [users, setUsers] = useState<User[]>([]);
@@ -420,11 +420,19 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     });
   };
 
-  const setUserRole = async (userId: string, newRole: 'admin' | 'user') => {
+  const setUserRole = async (userId: string, currentRole: string, newRole: 'admin' | 'user') => {
+    if (currentRole === newRole) return;
+
+    const isMasterAdminTarget = currentRole === 'master_admin';
+
     showConfirm({
-      title: newRole === 'admin' ? t('makeAdmin') : t('removeAdmin'),
-      message: newRole === 'admin' ? t('confirmMakeAdmin') : t('confirmRemoveAdmin'),
-      variant: 'info',
+      title: isMasterAdminTarget
+        ? (language === 'sr' ? 'Potvrda promjene prava' : 'Confirm role change')
+        : (newRole === 'admin' ? t('makeAdmin') : t('removeAdmin')),
+      message: isMasterAdminTarget
+        ? 'Da li si siguran da želiš promijeniti prava master admin korisniku?'
+        : (newRole === 'admin' ? t('confirmMakeAdmin') : t('confirmRemoveAdmin')),
+      variant: isMasterAdminTarget ? 'warning' : 'info',
       confirmText: newRole === 'admin' ? t('makeAdmin') : t('removeAdmin'),
       onConfirm: async () => {
         closeConfirm();
@@ -693,29 +701,46 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
                   <ShieldCheck className="w-4 h-4" />
                   Master Admin
                 </span>
-              ) : user.role === 'admin' ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUserRole(user.id, 'user');
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium"
-                >
-                  <Shield className="w-4 h-4" />
-                  {t('removeAdmin')}
-                </button>
               ) : (
                 <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setUserRole(user.id, 'admin');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    <Shield className="w-4 h-4" />
-                    {t('makeAdmin')}
-                  </button>
+                  {isMasterAdmin && currentUser?.id !== user.id && (
+                    <>
+                      {(() => {
+                        const isSameRoleAsAdmin = user.role === 'admin';
+                        const isSameRoleAsUser = user.role === 'user';
+                        const sameRoleMessage = 'Already has this role';
+
+                        return (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUserRole(user.id, user.role, 'admin');
+                              }}
+                              disabled={isSameRoleAsAdmin}
+                              title={isSameRoleAsAdmin ? sameRoleMessage : undefined}
+                              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              <Shield className="w-4 h-4" />
+                              {t('makeAdmin')}
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUserRole(user.id, user.role, 'user');
+                              }}
+                              disabled={isSameRoleAsUser}
+                              title={isSameRoleAsUser ? sameRoleMessage : undefined}
+                              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              <Shield className="w-4 h-4" />
+                              {t('removeAdmin')}
+                            </button>
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
                   {user.blocked ? (
                     <button
                       onClick={(e) => {
