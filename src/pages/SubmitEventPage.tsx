@@ -15,7 +15,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const DatePicker = DatePickerImport as React.ComponentType<DatePickerProps>;
 import { enUS } from 'date-fns/locale';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 import * as dataService from '../utils/dataService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { scheduleLocalDayKey, getEventScheduleSlots } from '../utils/eventService';
@@ -269,7 +270,7 @@ export function SubmitEventPage() {
           };
           if (accessToken) headers['x-auth-token'] = accessToken;
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/search?q=${encodeURIComponent(formData.submittedByEmail)}`,
+            `${apiUrl('/users/search')}?q=${encodeURIComponent(formData.submittedByEmail)}`,
             { headers }
           );
           if (response.ok) {
@@ -306,7 +307,7 @@ export function SubmitEventPage() {
         };
         if (accessToken) headers['x-auth-token'] = accessToken;
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/search?q=${encodeURIComponent(emailSearchQuery)}`,
+          `${apiUrl('/users/search')}?q=${encodeURIComponent(emailSearchQuery)}`,
           { headers }
         );
         if (response.ok) {

@@ -50,38 +50,11 @@ export default function App() {
       
       // Theme color
       setMetaTag('theme-color', '#0E3DC5', false);
-      
-      // ===== COMPREHENSIVE FAVICON SETUP - ZIPA Logo =====
-      
-      // Helper function to create/update link tags
-      const setLinkTag = (rel: string, href: string, type?: string, sizes?: string) => {
-        let link = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement;
-        if (!link) {
-          link = document.createElement('link');
-          link.rel = rel;
-          document.head.appendChild(link);
-        }
-        link.href = href;
-        if (type) link.type = type;
-        if (sizes) link.setAttribute('sizes', sizes);
-      };
-      
-      // Main favicon (SVG for modern browsers)
-      setLinkTag('icon', `/favicon.svg?v=${Date.now()}`, 'image/svg+xml');
-      
-      // Alternate favicon (96x96 for better compatibility)
-      setLinkTag('alternate icon', `/favicon-96x96.svg?v=${Date.now()}`, 'image/svg+xml');
-      
-      // Apple Touch Icon (iOS devices - home screen)
-      setLinkTag('apple-touch-icon', `/apple-touch-icon.svg?v=${Date.now()}`, 'image/svg+xml', '180x180');
-      
-      // Additional iOS meta tags
+
+      // Additional iOS meta tags (favicon links live in index.html)
       setMetaTag('apple-mobile-web-app-capable', 'yes', false);
       setMetaTag('apple-mobile-web-app-status-bar-style', 'default', false);
       setMetaTag('apple-mobile-web-app-title', 'City Guide', false);
-      
-      // Web App Manifest
-      setLinkTag('manifest', `/manifest.json?v=${Date.now()}`);
     } catch (error) {
       console.error('Error setting meta tags:', error);
     }

@@ -11,12 +11,10 @@
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "paths": {
-      "npm:hono": ["../../../../node_modules/hono"],
-      "npm:hono/cors": ["../../../../node_modules/hono/dist/types/middleware/cors"],
-      "npm:hono/logger": ["../../../../node_modules/hono/dist/types/middleware/logger"],
-      "jsr:@supabase/supabase-js@2.49.8": [
-        "../../../../node_modules/@jsr/supabase__supabase-js/_dist/src/index.d.ts"
-      ]
+      "hono": ["../../../../node_modules/hono/dist/types/index.d.ts"],
+      "hono/cors": ["../../../../node_modules/hono/dist/types/middleware/cors/index.d.ts"],
+      "hono/logger": ["../../../../node_modules/hono/dist/types/middleware/logger/index.d.ts"],
+      "@supabase/supabase-js": ["../../../../node_modules/@supabase/supabase-js/dist/index.d.mts"]
     }
   },
   "include": ["./**/*.ts", "./**/*.tsx", "./deno-ambient.d.ts"]

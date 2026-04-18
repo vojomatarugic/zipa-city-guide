@@ -1,14 +1,14 @@
 // @refresh reset
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as authService from '../utils/authService';
-import { clearLastLoginInfo } from '../utils/authService';
+import { clearLastLoginInfo, normalizeAppRole, type AppRole } from '../utils/authService';
 
 interface User {
   id: string;
   email: string;
   name?: string;
-  isAdmin: boolean;
-  isMasterAdmin: boolean;
+  /** From `profiles.role` */
+  role: AppRole;
   phone?: string;
   profileImage?: string;
 }
@@ -24,10 +24,10 @@ interface AuthContextType {
   signInOrSignUp: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   sendVerificationCode: (email: string) => Promise<void>;
-  verifyAndRegister: (email: string, code: string, name: string) => Promise<void>;
+  verifyAndRegister: (email: string, code: string, name: string, phone?: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'facebook' | 'apple') => Promise<void>;
   logout: () => void;
-  updateProfile: (name: string, email: string, phone?: string, profileImage?: string) => Promise<void>;
+  updateProfile: (name: string, email: string, phone?: string | null, profileImage?: string) => Promise<void>;
   showAuthModal: boolean;
   openAuthModal: (tab?: 'login' | 'signup') => void;
   closeAuthModal: () => void;
@@ -72,12 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const cached = localStorage.getItem(STORAGE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
+        let role: AppRole = normalizeAppRole(parsed.role);
+        if (parsed.role === undefined || parsed.role === null || parsed.role === '') {
+          if (parsed.isMasterAdmin === true || parsed.is_master_admin === true) role = 'master_admin';
+          else if (parsed.isAdmin === true) role = 'admin';
+        }
         return {
           id: parsed.id,
           email: parsed.email,
           name: parsed.name,
-          isAdmin: parsed.role === 'admin',
-          isMasterAdmin: parsed.isMasterAdmin === true || parsed.is_master_admin === true,
+          role,
           phone: parsed.phone,
           profileImage: parsed.profileImage,
         };
@@ -105,18 +109,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const session = await authService.getSession();
         if (session) {
+          const { data: rawSessionData } = await authService.supabase.auth.getSession();
+          const rawUser = rawSessionData.session?.user;
+          const userBeforeMerge = rawUser
+            ? {
+                id: rawUser.id,
+                email: rawUser.email ?? '',
+                name: rawUser.user_metadata?.name,
+                role: 'user' as AppRole,
+                profileImage: rawUser.user_metadata?.profileImage,
+              }
+            : null;
+          console.log('[AUTH-HYDRATION] validateSession merge', { userBeforeMerge, userAfterMerge: session.user });
           if (isMounted) {
-            setUser({
+            const u: User = {
               id: session.user.id,
               email: session.user.email,
               name: session.user.name,
-              isAdmin: session.user.role === 'admin',
-              isMasterAdmin: session.user.isMasterAdmin === true,
+              role: normalizeAppRole(session.user.role),
               phone: session.user.phone,
               profileImage: session.user.profileImage,
+            };
+            const isAdminComputed = u.role === 'admin' || u.role === 'master_admin';
+            console.log('[AUTH-HYDRATION] validateSession → setUser + localStorage', {
+              role: u.role,
+              isAdmin: isAdminComputed,
+              phone: u.phone,
+              userId: u.id,
             });
+            setUser(u);
             setAccessToken(session.accessToken);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(session.user));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
             localStorage.setItem(TOKEN_KEY, session.accessToken);
             console.log('[Auth] Session validated from Supabase:', session.user.email);
           }
@@ -133,10 +156,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('[Auth] Failed to validate session:', error);
         if (isMounted) {
-          setUser(null);
-          setAccessToken(null);
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem(TOKEN_KEY);
+          try {
+            const { data: rescue } = await authService.supabase.auth.getSession();
+            const s = rescue.session;
+            if (s?.user?.id && s.access_token) {
+              const ru = s.user;
+              const fallback: User = {
+                id: ru.id,
+                email: ru.email ?? '',
+                name: ru.user_metadata?.name,
+                role: 'user',
+                phone: undefined,
+                profileImage: ru.user_metadata?.profileImage,
+              };
+              console.warn(
+                '[Auth] validateSession threw but Supabase session exists; keeping tokens (profile hydrate may retry on next navigation)',
+              );
+              setUser(fallback);
+              setAccessToken(s.access_token);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+              localStorage.setItem(TOKEN_KEY, s.access_token);
+            } else {
+              setUser(null);
+              setAccessToken(null);
+              localStorage.removeItem(STORAGE_KEY);
+              localStorage.removeItem(TOKEN_KEY);
+            }
+          } catch {
+            setUser(null);
+            setAccessToken(null);
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(TOKEN_KEY);
+          }
         }
       } finally {
         if (isMounted) {
@@ -160,25 +211,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') && session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email!,
-          name: session.user.user_metadata?.name,
-          isAdmin: session.user.user_metadata?.role === 'admin',
-          isMasterAdmin: session.user.user_metadata?.is_master_admin === true,
-          phone: session.user.user_metadata?.phone,
-          profileImage: session.user.user_metadata?.profileImage,
-        });
-        setAccessToken(session.access_token);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.name,
-          role: session.user.user_metadata?.role,
-          phone: session.user.user_metadata?.phone,
-          profileImage: session.user.user_metadata?.profileImage,
-        }));
-        localStorage.setItem(TOKEN_KEY, session.access_token);
+        void (async () => {
+          const token = session.access_token;
+          if (!token) {
+            console.error('[PROFILE API] onAuthStateChange: session missing access_token', { event });
+            return;
+          }
+          console.log('[AUTH-HYDRATION] onAuthStateChange', {
+            event,
+            email: session.user.email,
+            provider: (session.user as { app_metadata?: { provider?: string } }).app_metadata?.provider,
+          });
+          const base: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.name,
+            role: 'user',
+            profileImage: session.user.user_metadata?.profileImage,
+          };
+          try {
+            const withProfile = await authService.mergeProfileIntoUser(base, token);
+            console.log('[AUTH-HYDRATION] onAuthStateChange merged → setUser', {
+              event,
+              role: withProfile.role,
+              phone: withProfile.phone,
+              isAdmin: withProfile.role === 'admin' || withProfile.role === 'master_admin',
+            });
+            setUser(withProfile);
+            setAccessToken(token);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(withProfile));
+            localStorage.setItem(TOKEN_KEY, token);
+          } catch (e) {
+            console.error(
+              '[PROFILE API] onAuthStateChange: profile hydrate failed; keeping Supabase session (role/phone from profiles when refetch succeeds)',
+              e,
+            );
+            setUser(base);
+            setAccessToken(token);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(base));
+            localStorage.setItem(TOKEN_KEY, token);
+          }
+        })();
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setAccessToken(null);
@@ -201,8 +274,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        isAdmin: response.user.role === 'admin',
-        isMasterAdmin: response.user.isMasterAdmin === true,
+        role: normalizeAppRole(response.user.role),
         phone: response.user.phone,
         profileImage: response.user.profileImage,
       };
@@ -233,8 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        isAdmin: response.user.role === 'admin',
-        isMasterAdmin: response.user.isMasterAdmin === true,
+        role: normalizeAppRole(response.user.role),
         phone: response.user.phone,
         profileImage: response.user.profileImage,
       };
@@ -262,8 +333,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        isAdmin: response.user.role === 'admin',
-        isMasterAdmin: response.user.isMasterAdmin === true,
+        role: normalizeAppRole(response.user.role),
         phone: response.user.phone,
         profileImage: response.user.profileImage,
       };
@@ -307,16 +377,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const verifyAndRegister = async (email: string, code: string, name: string) => {
+  const verifyAndRegister = async (email: string, code: string, name: string, phone?: string) => {
     try {
-      const response = await authService.verifyAndRegister(email, code, name);
+      const response = await authService.verifyAndRegister(email, code, name, phone);
       
       const newUser: User = {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        isAdmin: response.user.role === 'admin',
-        isMasterAdmin: response.user.isMasterAdmin === true,
+        role: normalizeAppRole(response.user.role),
         phone: response.user.phone,
         profileImage: response.user.profileImage,
       };
@@ -367,7 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateProfile = async (name: string, email: string, phone?: string, profileImage?: string) => {
+  const updateProfile = async (name: string, email: string, phone?: string | null, profileImage?: string) => {
     try {
       const response = await authService.updateProfile(name, email, phone, profileImage);
       
@@ -375,8 +444,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: response.user.id,
         email: response.user.email,
         name: response.user.name,
-        isAdmin: response.user.role === 'admin',
-        isMasterAdmin: response.user.isMasterAdmin === true,
+        role: normalizeAppRole(response.user.role),
         phone: response.user.phone,
         profileImage: response.user.profileImage,
       };
@@ -409,8 +477,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isLoggedIn: !!user,
-        isAdmin: user?.isAdmin || false,
-        isMasterAdmin: user?.isMasterAdmin || false,
+        isAdmin: user ? (user.role === 'admin' || user.role === 'master_admin') : false,
+        isMasterAdmin: user?.role === 'master_admin',
         accessToken,
         login,
         signup,

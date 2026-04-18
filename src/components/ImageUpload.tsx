@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useT } from '../hooks/useT';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 
 interface ImageUploadProps {
   value: string; // current image URL
@@ -48,7 +49,7 @@ export function ImageUpload({ value, onChange, required }: ImageUploadProps) {
       formData.append('file', file);
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/upload/venue-image`,
+        apiUrl('/upload/venue-image'),
         {
           method: 'POST',
           headers: {

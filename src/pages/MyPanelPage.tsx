@@ -7,7 +7,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useEffect, useState, useMemo } from 'react';
 import * as dataService from '../utils/dataService';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
@@ -131,16 +132,20 @@ export function MyPanelPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  // 🔄 SYNC EDIT STATE WITH USER
+  // 🔄 SYNC EDIT STATE WITH USER (never overwrite while actively editing)
   useEffect(() => {
-    if (user) {
+    if (user && !isEditingProfile) {
+      console.log('[AUTH-HYDRATION] MyPanel edit fields sync from context user', {
+        phone: user.phone,
+        role: user.role,
+      });
       setEditName(user.name || '');
       setEditEmail(user.email || '');
       setEditPhone(user.phone || '');
       setEditProfileImage(user.profileImage || '');
       setImagePreview(user.profileImage || '');
     }
-  }, [user]);
+  }, [user, isEditingProfile]);
 
   // Redirect if not logged in OR if admin (admin uses Admin Panel only!)
   useEffect(() => {
@@ -410,7 +415,6 @@ export function MyPanelPage() {
                           border: `1px solid ${phoneError ? '#DC2626' : '#D1D5DB'}`,
                         }}
                         placeholder={t('profilePhone')}
-                        required
                       />
                       {phoneError && (
                         <p className="text-[12px] mt-1" style={{ color: '#DC2626' }}>{phoneError}</p>
@@ -430,27 +434,27 @@ export function MyPanelPage() {
                             toast.error(t('profileEmailRequired'));
                             return;
                           }
-                          // Validate phone number - REQUIRED
-                          if (!editPhone.trim()) {
-                            toast.error(t('profilePhoneRequired'));
-                            return;
-                          }
-                          const digitsOnly = editPhone.replace(/\D/g, '');
-                          if (!editPhone.trim() || digitsOnly.length < 9) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
-                                : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
-                            );
-                            return;
-                          }
-                          if (digitsOnly.length > 15) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona ne može imati više od 15 cifara'
-                                : 'Phone number cannot have more than 15 digits'
-                            );
-                            return;
+                          const phoneTrim = editPhone.trim();
+                          if (phoneTrim) {
+                            const digitsOnly = phoneTrim.replace(/\D/g, '');
+                            if (digitsOnly.length < 9) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
+                                  : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
+                              );
+                              return;
+                            }
+                            if (digitsOnly.length > 15) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona ne može imati više od 15 cifara'
+                                  : 'Phone number cannot have more than 15 digits'
+                              );
+                              return;
+                            }
+                          } else {
+                            setPhoneError('');
                           }
 
                           setUploadingImage(true);
@@ -463,7 +467,7 @@ export function MyPanelPage() {
                             formData.append('file', selectedFile);
                             formData.append('userId', user.id);
                             
-                            const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/upload/profile-image`, {
+                            const response = await fetch(apiUrl('/upload/profile-image'), {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${publicAnonKey}`,
@@ -483,7 +487,7 @@ export function MyPanelPage() {
                           
                           // Now save profile with the uploaded image URL
                           console.log('💾 Saving profile:', { name: editName, email: editEmail, phone: editPhone, profileImage: finalProfileImageUrl });
-                          await updateProfile(editName, editEmail, editPhone, finalProfileImageUrl);
+                          await updateProfile(editName, editEmail, phoneTrim === '' ? null : phoneTrim, finalProfileImageUrl);
                           
                           // Reset state
                           setSelectedFile(null);
@@ -623,7 +627,7 @@ export function MyPanelPage() {
                             }
                             setChangingPassword(true);
                             try {
-                              const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/auth/change-password`, {
+                              const response = await fetch(apiUrl('/auth/change-password'), {
                                 method: 'POST',
                                 headers: {
                                   'Authorization': `Bearer ${publicAnonKey}`,
@@ -695,7 +699,7 @@ export function MyPanelPage() {
                             if (deleteConfirmText !== confirmWord) return;
                             setDeletingAccount(true);
                             try {
-                              const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/auth/delete-account`, {
+                              const response = await fetch(apiUrl('/auth/delete-account'), {
                                 method: 'DELETE',
                                 headers: {
                                   'Authorization': `Bearer ${publicAnonKey}`,

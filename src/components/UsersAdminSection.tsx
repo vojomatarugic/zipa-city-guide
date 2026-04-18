@@ -5,23 +5,27 @@ import { useAuth } from '../contexts/AuthContext';
 import { Users, ChevronDown, ChevronUp, Calendar, MapPin, Ban, Trash2, ShieldCheck, Shield, Crown, ArrowUpDown, Building2, User, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { ConfirmDialog } from './ConfirmDialog';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 import { supabase } from '../utils/authService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
 import { formatDate as formatAppDate, formatDateTime as formatAppDateTime } from '../utils/dateFormat';
+type ProfileRole = 'user' | 'admin' | 'master_admin';
+
 interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
+  /** When API includes profile full name (e.g. from DB), prefer this in `getUserDisplayName`. */
+  full_name?: string | null;
+  role: ProfileRole;
   created_at: string;
   last_sign_in_at?: string | null;
   venues_count: number;
   events_count: number;
   total_submissions: number;
   blocked?: boolean;
-  is_master_admin?: boolean;
 }
 
 interface UserSubmission {
@@ -48,6 +52,21 @@ interface UserSubmission {
   _kind?: 'venue' | 'event';
 }
 
+function normalizeListRole(r: unknown): ProfileRole {
+  const s = String(r ?? '').trim().toLowerCase();
+  if (s === 'master_admin' || s === 'admin' || s === 'user') return s;
+  return 'user';
+}
+
+/** Display name from profile/API fields only — never role. Backend may send `name`, `full_name`, or placeholder "N/A". */
+function getUserDisplayName(user: { name?: string | null; full_name?: string | null; email: string }) {
+  const full = (user.full_name ?? '').trim();
+  if (full) return full;
+  const rawName = (user.name ?? '').trim();
+  if (rawName && rawName !== 'N/A') return rawName;
+  return (user.email ?? '').trim() || '';
+}
+
 type UsersAdminSectionProps = {
   /** Same kv_store-backed source as Admin main list (updates when admin toggles active/inactive). */
   inactiveVenueIds: Set<string>;
@@ -56,7 +75,8 @@ type UsersAdminSectionProps = {
 
 export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersAdminSectionProps) {
   const { t, language } = useT();
-  const { isLoading: authLoading, accessToken, user: currentUser, isMasterAdmin } = useAuth();
+  const { isLoading: authLoading, accessToken, user: currentUser } = useAuth();
+  const canManageRoles = currentUser?.role === 'master_admin';
   const navigate = useNavigate();
   
   const [users, setUsers] = useState<User[]>([]);
@@ -143,7 +163,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     }
     
     try {
-      const url = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users`;
+      const url = apiUrl('/users');
       console.log('📡 [UsersAdminSection] Fetching:', url);
       
       // ✅ CRITICAL FIX: Gateway intercepts Authorization header, so send user JWT via x-auth-token
@@ -174,7 +194,8 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
 
       const data = await response.json();
       console.log('✅ [UsersAdminSection] Users loaded:', data.users?.length || 0);
-      setUsers(data.users || []);
+      const raw = (data.users || []) as User[];
+      setUsers(raw.map((u) => ({ ...u, role: normalizeListRole(u.role) })));
       setCurrentToken(freshToken); // ✅ Store fresh token
     } catch (err) {
       console.error('❌ [UsersAdminSection] Error loading users:', err);
@@ -196,7 +217,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/${encodeURIComponent(email)}/submissions`,
+        apiUrl(`/users/${encodeURIComponent(email)}/submissions`),
         {
           method: 'GET',
           headers: {
@@ -330,7 +351,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
         if (!token) { toast.error('No access token available'); return; }
         try {
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/${userId}/block`,
+            apiUrl(`/users/${userId}/block`),
             {
               method: 'PATCH',
               headers: {
@@ -364,7 +385,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
         if (!token) { toast.error('No access token available'); return; }
         try {
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/${userId}/unblock`,
+            apiUrl(`/users/${userId}/unblock`),
             {
               method: 'PATCH',
               headers: {
@@ -398,7 +419,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
         if (!token) { toast.error('No access token available'); return; }
         try {
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/${userId}`,
+            apiUrl(`/users/${userId}`),
             {
               method: 'DELETE',
               headers: {
@@ -420,7 +441,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     });
   };
 
-  const setUserRole = async (userId: string, currentRole: string, newRole: 'admin' | 'user') => {
+  const setUserRole = async (userId: string, targetEmail: string, currentRole: ProfileRole, newRole: 'admin' | 'user') => {
     if (currentRole === newRole) return;
 
     const isMasterAdminTarget = currentRole === 'master_admin';
@@ -439,8 +460,14 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
         const token = currentToken || accessToken;
         if (!token) { toast.error('No access token available'); return; }
         try {
+          console.log('[UsersAdminSection] set-role PATCH →', {
+            targetUserId: userId,
+            targetEmail,
+            currentRole,
+            requestedRole: newRole,
+          });
           const response = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/${userId}/set-role`,
+            apiUrl(`/users/${encodeURIComponent(userId)}/set-role`),
             {
               method: 'PATCH',
               headers: {
@@ -472,18 +499,14 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
 
   // ✅ Sort users: master admin first, then admins, then regular users
   const sortedUsers = [...users].sort((a, b) => {
-    // Master admin always first
-    if (a.is_master_admin && !b.is_master_admin) return -1;
-    if (!a.is_master_admin && b.is_master_admin) return 1;
-    // Then other admins
-    if (a.role === 'admin' && b.role !== 'admin') return -1;
-    if (a.role !== 'admin' && b.role === 'admin') return 1;
-    // Then sort by name
-    return (a.name || '').localeCompare(b.name || '');
+    const rank = (r: ProfileRole) => (r === 'master_admin' ? 0 : r === 'admin' ? 1 : 2);
+    const d = rank(a.role) - rank(b.role);
+    if (d !== 0) return d;
+    return getUserDisplayName(a).localeCompare(getUserDisplayName(b));
   });
 
-  const adminUsers = sortedUsers.filter(u => u.role === 'admin');
-  const regularUsersUnsorted = sortedUsers.filter(u => u.role !== 'admin');
+  const adminUsers = sortedUsers.filter((u) => u.role === 'admin' || u.role === 'master_admin');
+  const regularUsersUnsorted = sortedUsers.filter((u) => u.role === 'user');
 
   // ✅ Sort regular users based on selected sort option
   const regularUsers = [...regularUsersUnsorted].sort((a, b) => {
@@ -497,9 +520,9 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
       case 'active_asc':
         return new Date(a.last_sign_in_at || '1970-01-01').getTime() - new Date(b.last_sign_in_at || '1970-01-01').getTime();
       case 'name_asc':
-        return (a.name || '').localeCompare(b.name || '');
+        return getUserDisplayName(a).localeCompare(getUserDisplayName(b));
       case 'name_desc':
-        return (b.name || '').localeCompare(a.name || '');
+        return getUserDisplayName(b).localeCompare(getUserDisplayName(a));
       default:
         return 0;
     }
@@ -631,6 +654,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
   );
 
   function renderUserCard(user: User) {
+    const isSelf = currentUser?.id === user.id;
     return (
       <div key={user.id} className="border border-gray-200 rounded-xl bg-white">
         {/* User Header */}
@@ -641,12 +665,16 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-semibold text-lg">{user.name}</h3>
-                {user.role === 'admin' && (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
-                    {t('admin')}
+                <h3 className="font-semibold text-lg">{getUserDisplayName(user)}</h3>
+                {user.role === 'master_admin' ? (
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                    Master Admin
                   </span>
-                )}
+                ) : user.role === 'admin' ? (
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">
+                    Admin
+                  </span>
+                ) : null}
               </div>
               <p className="text-sm text-gray-600 mb-2">{user.email}</p>
               <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -695,87 +723,87 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
           <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-200">
-              {/* Master admin is fully protected — no actions allowed */}
-              {user.is_master_admin ? (
-                <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium">
-                  <ShieldCheck className="w-4 h-4" />
-                  Master Admin
-                </span>
-              ) : (
-                <>
-                  {isMasterAdmin && currentUser?.id !== user.id && (
-                    <>
-                      {(() => {
-                        const isSameRoleAsAdmin = user.role === 'admin';
-                        const isSameRoleAsUser = user.role === 'user';
-                        const sameRoleMessage = 'Already has this role';
+              {!isSelf &&
+                (user.role === 'master_admin' ? (
+                  <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium">
+                    <ShieldCheck className="w-4 h-4" />
+                    Master Admin
+                  </span>
+                ) : (
+                  <>
+                    {canManageRoles && (
+                      <>
+                        {(() => {
+                          const isSameRoleAsAdmin = user.role === 'admin';
+                          const isSameRoleAsUser = user.role === 'user';
+                          const sameRoleMessage = 'Already has this role';
 
-                        return (
-                          <>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUserRole(user.id, user.role, 'admin');
-                              }}
-                              disabled={isSameRoleAsAdmin}
-                              title={isSameRoleAsAdmin ? sameRoleMessage : undefined}
-                              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              <Shield className="w-4 h-4" />
-                              {t('makeAdmin')}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setUserRole(user.id, user.role, 'user');
-                              }}
-                              disabled={isSameRoleAsUser}
-                              title={isSameRoleAsUser ? sameRoleMessage : undefined}
-                              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              <Shield className="w-4 h-4" />
-                              {t('removeAdmin')}
-                            </button>
-                          </>
-                        );
-                      })()}
-                    </>
-                  )}
-                  {user.blocked ? (
+                          return (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserRole(user.id, user.email, user.role, 'admin');
+                                }}
+                                disabled={isSameRoleAsAdmin}
+                                title={isSameRoleAsAdmin ? sameRoleMessage : undefined}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                <Shield className="w-4 h-4" />
+                                {t('makeAdmin')}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setUserRole(user.id, user.email, user.role, 'user');
+                                }}
+                                disabled={isSameRoleAsUser}
+                                title={isSameRoleAsUser ? sameRoleMessage : undefined}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                <Shield className="w-4 h-4" />
+                                {t('removeAdmin')}
+                              </button>
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                    {user.blocked ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          unblockUser(user.id);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        {t('unblockUser')}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          blockUser(user.id);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
+                      >
+                        <Ban className="w-4 h-4" />
+                        {t('blockUser')}
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        unblockUser(user.id);
+                        deleteUser(user.id);
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors text-sm font-medium"
+                      className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors text-sm font-medium"
                     >
-                      <ShieldCheck className="w-4 h-4" />
-                      {t('unblockUser')}
+                      <Trash2 className="w-4 h-4" />
+                      {t('deleteUser')}
                     </button>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        blockUser(user.id);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
-                    >
-                      <Ban className="w-4 h-4" />
-                      {t('blockUser')}
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteUser(user.id);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {t('deleteUser')}
-                  </button>
-                </>
-              )}
+                  </>
+                ))}
             </div>
             
             {loadingSubmissions[user.id] ? (

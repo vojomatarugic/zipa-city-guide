@@ -4,7 +4,8 @@ import { useT } from '../hooks/useT';
 import { CustomDropdown } from './CustomDropdown';
 import { WorkingHoursSelector } from './WorkingHoursSelector';
 import { ImageUpload } from './ImageUpload';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 import type { VenueType } from '../utils/dataService';
 import { VENUE_CUISINE_ROWS } from '../utils/venueCuisineTaxonomy';
 import { venueTagOptionsForLang, type VenueTagKey } from '../utils/venueTagLabels';
@@ -132,7 +133,7 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
               headers['x-auth-token'] = access_token;
             }
             const response = await fetch(
-              `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/search?q=${encodeURIComponent(initial_data.submitted_by_email)}`,
+              `${apiUrl('/users/search')}?q=${encodeURIComponent(initial_data.submitted_by_email)}`,
               { headers }
             );
             if (response.ok) {
@@ -206,7 +207,7 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
         }
 
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/users/search?q=${encodeURIComponent(email_search_query)}`,
+          `${apiUrl('/users/search')}?q=${encodeURIComponent(email_search_query)}`,
           { headers }
         );
 

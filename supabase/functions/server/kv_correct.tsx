@@ -4,7 +4,7 @@
  * The auto-generated kv_store.tsx references kv_store_c09d6e90 which does NOT exist.
  * This module provides the same API but targets the actual table in the database.
  */
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { createClient } from "@supabase/supabase-js";
 
 const TABLE_NAME = "kv_store_a0e1e9cb";
 

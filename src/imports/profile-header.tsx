@@ -1,3 +1,6 @@
+import { apiUrl } from '../config/apiBase';
+import { publicAnonKey } from '../utils/supabase/info';
+
 <div className="flex items-start gap-4">
             {/* PROFILE IMAGE AVATAR WITH +/X (ONLY IN EDIT MODE) */}
             <div className="relative w-16 h-16 flex-shrink-0">
@@ -175,23 +178,27 @@
                     <button
                       onClick={async () => {
                         try {
-                          // Validate phone number - REQUIRED
-                          const digitsOnly = editPhone.replace(/\D/g, '');
-                          if (!editPhone.trim() || digitsOnly.length < 9) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
-                                : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
-                            );
-                            return;
-                          }
-                          if (digitsOnly.length > 15) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona ne može imati više od 15 cifara'
-                                : 'Phone number cannot have more than 15 digits'
-                            );
-                            return;
+                          const phoneTrim = editPhone.trim();
+                          if (phoneTrim) {
+                            const digitsOnly = phoneTrim.replace(/\D/g, '');
+                            if (digitsOnly.length < 9) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
+                                  : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
+                              );
+                              return;
+                            }
+                            if (digitsOnly.length > 15) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona ne može imati više od 15 cifara'
+                                  : 'Phone number cannot have more than 15 digits'
+                              );
+                              return;
+                            }
+                          } else {
+                            setPhoneError('');
                           }
 
                           setUploadingImage(true);
@@ -204,7 +211,7 @@
                             formData.append('file', selectedFile);
                             formData.append('userId', user.id);
                             
-                            const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-ee0c365c/upload/profile-image`, {
+                            const response = await fetch(apiUrl('/upload/profile-image'), {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${publicAnonKey}`,
@@ -224,7 +231,7 @@
                           
                           // Now save profile with the uploaded image URL
                           console.log('💾 Saving profile:', { name: editName, email: editEmail, phone: editPhone, profileImage: finalProfileImageUrl });
-                          await updateProfile(editName, editEmail, editPhone, finalProfileImageUrl);
+                          await updateProfile(editName, editEmail, phoneTrim === '' ? null : phoneTrim, finalProfileImageUrl);
                           
                           // Reset state
                           setSelectedFile(null);

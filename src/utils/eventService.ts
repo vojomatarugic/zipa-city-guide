@@ -2,12 +2,11 @@
  * Event Service - Events with datetime filtering
  */
 
-import { projectId, publicAnonKey } from './supabase/info';
+import { publicAnonKey } from './supabase/info';
 import { Item } from './dataService';
 import { supabase } from './supabaseClient';
 import { formatDate } from './dateFormat';
-
-const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
+import { getApiBase } from '../config/apiBase';
 
 export type EventFilter = 'upcoming' | 'today' | 'tomorrow' | 'weekend' | 'past' | 'all';
 
@@ -46,7 +45,7 @@ export async function getEvents(filter?: EventFilter, city?: string, type?: stri
     if (type) params.append('type', type);
     if (page_slug) params.append('page_slug', page_slug);
     
-    const url = `${API_BASE_URL}/events${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `${getApiBase()}/events${params.toString() ? '?' + params.toString() : ''}`;
     
     console.log('🎉 Fetching events from:', url);
     
@@ -89,7 +88,7 @@ export async function getEvents(filter?: EventFilter, city?: string, type?: stri
  */
 export async function getEventById(id: string): Promise<Item | null> {
   try {
-    const url = `${API_BASE_URL}/events/${id}`;
+    const url = `${getApiBase()}/events/${id}`;
     
     console.log('🎯 Fetching event by ID:', id);
     
@@ -448,7 +447,7 @@ export function translateEventType(eventType: string, language: 'sr' | 'en' = 's
  */
 export async function getAllEvents(): Promise<Item[]> {
   const fetchByStatus = async (status: 'pending' | 'approved' | 'rejected' | 'all'): Promise<Item[]> => {
-    const url = `${API_BASE_URL}/events?status=${status}`;
+    const url = `${getApiBase()}/events?status=${status}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -483,7 +482,7 @@ export async function getAllEvents(): Promise<Item[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const primaryUrl = `${API_BASE_URL}/events?status=all`;
+    const primaryUrl = `${getApiBase()}/events?status=all`;
     const response = await fetch(primaryUrl, {
       method: 'GET',
       headers: {
@@ -545,7 +544,7 @@ export async function getAllEvents(): Promise<Item[]> {
  */
 export async function approveEvent(id: string): Promise<boolean> {
   try {
-    const url = `${API_BASE_URL}/submissions/${id}/approve`;
+    const url = `${getApiBase()}/submissions/${id}/approve`;
     
     console.log('✅ Approving event:', id);
     let accessToken: string | null = null;
@@ -603,7 +602,7 @@ export async function approveEvent(id: string): Promise<boolean> {
  */
 export async function rejectEvent(id: string): Promise<boolean> {
   try {
-    const url = `${API_BASE_URL}/submissions/${id}/reject`;
+    const url = `${getApiBase()}/submissions/${id}/reject`;
     
     console.log('❌ Rejecting event:', id);
     let accessToken: string | null = null;
@@ -661,7 +660,7 @@ export async function rejectEvent(id: string): Promise<boolean> {
  */
 export async function deleteEvent(id: string): Promise<boolean> {
   try {
-    const url = `${API_BASE_URL}/events/${id}`;
+    const url = `${getApiBase()}/events/${id}`;
     let accessToken: string | null = null;
     try {
       const { data } = await supabase.auth.getSession();
@@ -711,7 +710,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
  */
 export async function getInterestCount(eventId: string): Promise<number> {
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${eventId}/interest`, {
+    const response = await fetch(`${getApiBase()}/events/${eventId}/interest`, {
       headers: { 'Authorization': `Bearer ${publicAnonKey}` },
     });
     const data = await response.json();
@@ -727,7 +726,7 @@ export async function getInterestCount(eventId: string): Promise<number> {
  */
 export async function incrementInterest(eventId: string): Promise<number> {
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${eventId}/interest`, {
+    const response = await fetch(`${getApiBase()}/events/${eventId}/interest`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
@@ -747,7 +746,7 @@ export async function incrementInterest(eventId: string): Promise<number> {
  */
 export async function decrementInterest(eventId: string): Promise<number> {
   try {
-    const response = await fetch(`${API_BASE_URL}/events/${eventId}/interest`, {
+    const response = await fetch(`${getApiBase()}/events/${eventId}/interest`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
@@ -768,7 +767,7 @@ export async function decrementInterest(eventId: string): Promise<number> {
 export async function batchGetInterestCounts(eventIds: string[]): Promise<Record<string, number>> {
   try {
     if (eventIds.length === 0) return {};
-    const response = await fetch(`${API_BASE_URL}/events/interest/batch`, {
+    const response = await fetch(`${getApiBase()}/events/interest/batch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,

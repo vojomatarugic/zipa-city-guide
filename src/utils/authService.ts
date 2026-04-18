@@ -4,8 +4,12 @@
 
 import { supabase } from './supabaseClient';
 import { projectId, publicAnonKey } from './supabase/info';
+import { getApiBase } from '../config/apiBase';
 
-const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
+const SUPABASE_URL = `https://${projectId}.supabase.co`;
+
+/** Profile hydration — Edge Function only (no browser `supabase.from('profiles')`). */
+const PROFILE_ME_URL = `${SUPABASE_URL}/functions/v1/make-server-a0e1e9cb/users/me/profile`;
 
 // ✅ Export supabase for auth listeners
 export { supabase };
@@ -62,14 +66,163 @@ export function clearLastLoginInfo(): void {
   }
 }
 
+export type AppRole = 'user' | 'admin' | 'master_admin';
+
+export function normalizeAppRole(value: unknown): AppRole {
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (v === 'master_admin') return 'master_admin';
+    if (v === 'admin') return 'admin';
+    if (v === 'user') return 'user';
+  }
+  if (value === 'master_admin' || value === 'admin' || value === 'user') return value;
+  return 'user';
+}
+
 export interface User {
   id: string;
   email: string;
   name?: string;
-  role?: 'admin' | 'user';
+  /** From `profiles.role` — single source of truth */
+  role: AppRole;
   phone?: string;
   profileImage?: string;
-  isMasterAdmin?: boolean;
+}
+
+type ProfileRow = {
+  id: string;
+  email?: string | null;
+  role?: unknown;
+  name?: string | null;
+  full_name?: string | null;
+  phone?: string | null;
+  avatar_url?: string | null;
+};
+
+/**
+ * GET profile row from Edge (`public.profiles` via service role on server).
+ * @throws On missing token, network error, non-OK HTTP, invalid JSON, or id mismatch.
+ */
+async function fetchProfileRowFromEdgeApi(userId: string, access_token: string): Promise<ProfileRow | null> {
+  let res: Response;
+  try {
+    res = await fetch(PROFILE_ME_URL, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+        /** Required by Supabase Functions gateway for browser invocations (anon key, not the user JWT). */
+        apikey: publicAnonKey,
+        /** Gateway may replace Authorization with the anon JWT; Edge reads user JWT from here first. */
+        'x-auth-token': access_token,
+      },
+    });
+  } catch (err) {
+    console.error('[PROFILE API] Network error calling users/me/profile', err);
+    throw new Error(
+      `[PROFILE API] Network error: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
+  const text = await res.text();
+  let json: { profile?: ProfileRow | null; error?: string; code?: number; details?: string } = {};
+  try {
+    json = text ? (JSON.parse(text) as typeof json) : {};
+  } catch (err) {
+    console.error('[PROFILE API] Non-JSON response', { status: res.status, snippet: text?.slice(0, 400) });
+    throw new Error(`[PROFILE API] Invalid JSON (${res.status})`);
+  }
+
+  const profile = (json.profile ?? null) as ProfileRow | null;
+  console.log('[PROFILE API RESULT]', profile);
+
+  if (!res.ok) {
+    const detail = json.error || json.details || res.statusText;
+    console.error('[PROFILE API] users/me/profile failed (session is unchanged in caller)', {
+      status: res.status,
+      error: json.error,
+      code: json.code,
+      details: json.details,
+    });
+    throw new Error(`[PROFILE API] HTTP ${res.status}: ${detail}`);
+  }
+
+  if (profile && profile.id !== userId) {
+    console.error('[PROFILE API] profile.id does not match session', { expected: userId, got: profile.id });
+    throw new Error('[PROFILE API] profile id mismatch');
+  }
+
+  return profile;
+}
+
+function displayNameFromProfileRow(row: ProfileRow, fallback?: string): string | undefined {
+  const fromName = String(row.name ?? '').trim();
+  if (fromName) return fromName;
+  const fromFull = String(row.full_name ?? '').trim();
+  if (fromFull) return fromFull;
+  const fb = String(fallback ?? '').trim();
+  return fb || undefined;
+}
+
+async function ensureProfileRowExists(base: User): Promise<void> {
+  try {
+    await fetch(`${getApiBase()}/users/profile`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`,
+      },
+      body: JSON.stringify({
+        userId: base.id,
+        email: base.email,
+        oldEmail: base.email,
+        name: base.name || base.email.split('@')[0] || 'User',
+      }),
+    });
+  } catch (err) {
+    console.warn('[authService] ensure profile row failed:', err);
+  }
+}
+
+/**
+ * Merge Edge-loaded `public.profiles` row into the app user.
+ * Uses ONLY GET users/me/profile — never `supabase.from('profiles')`.
+ * @throws If `access_token` is missing, profile API fails, or profile row missing after ensure.
+ */
+export async function mergeProfileIntoUser(base: User, accessToken?: string | null): Promise<User> {
+  if (!accessToken) {
+    const msg = '[PROFILE API] mergeProfileIntoUser requires session access_token';
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  let row: ProfileRow | null = await fetchProfileRowFromEdgeApi(base.id, accessToken);
+
+  if (!row) {
+    console.log('[PROFILE API] No row yet; ensuring profile row via PATCH then refetch');
+    await ensureProfileRowExists(base);
+    row = await fetchProfileRowFromEdgeApi(base.id, accessToken);
+  }
+
+  if (!row) {
+    const msg = `[PROFILE API] No profile row for user ${base.id} after ensure — cannot hydrate`;
+    console.error(msg);
+    throw new Error(msg);
+  }
+
+  const mergedName = displayNameFromProfileRow(row, base.name);
+  const phoneFromProfile = String(row.phone ?? '').trim();
+  const phoneMerged = phoneFromProfile || undefined;
+  const imageMerged = String(row.avatar_url ?? '').trim() || base.profileImage;
+  const finalRole = normalizeAppRole(row.role);
+
+  return {
+    ...base,
+    email: String(row.email ?? '').trim() || base.email,
+    role: finalRole,
+    name: mergedName ?? base.name,
+    phone: phoneMerged,
+    profileImage: imageMerged,
+  };
 }
 
 export interface AuthResponse {
@@ -83,7 +236,7 @@ export interface AuthResponse {
 export async function signUp(email: string, password: string, name?: string, phone?: string, role?: 'user' | 'admin'): Promise<AuthResponse> {
   try {
     // Call backend signup endpoint
-    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    const response = await fetch(`${getApiBase()}/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,15 +263,21 @@ export async function signUp(email: string, password: string, name?: string, pho
       throw new Error(signInError?.message || 'Failed to sign in after signup');
     }
 
+    const baseUser: User = {
+      id: signInData.user.id,
+      email: signInData.user.email!,
+      name: signInData.user.user_metadata?.name,
+      role: 'user',
+      profileImage: signInData.user.user_metadata?.profileImage,
+    };
+    let user: User = baseUser;
+    try {
+      user = await mergeProfileIntoUser(baseUser, signInData.session.access_token);
+    } catch (e) {
+      console.error('[PROFILE API] signUp: profile hydrate failed; session is still valid', e);
+    }
     return {
-      user: {
-        id: signInData.user.id,
-        email: signInData.user.email!,
-        name: signInData.user.user_metadata?.name,
-        role: signInData.user.user_metadata?.role || 'user',
-        phone: signInData.user.user_metadata?.phone,
-        isMasterAdmin: signInData.user.user_metadata?.is_master_admin === true,
-      },
+      user,
       accessToken: signInData.session.access_token,
     };
   } catch (error) {
@@ -176,7 +335,7 @@ export async function resetPassword(email: string): Promise<void> {
  * Sign up new admin user
  */
 export async function signUpAdmin(email: string, password: string, name: string): Promise<AuthResponse> {
-  return signUp(email, password, name, 'admin');
+  return signUp(email, password, name, undefined, 'admin');
 }
 
 /**
@@ -193,16 +352,21 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       throw new Error(error?.message || 'Failed to sign in');
     }
 
+    const baseUser: User = {
+      id: data.user.id,
+      email: data.user.email!,
+      name: data.user.user_metadata?.name,
+      role: 'user',
+      profileImage: data.user.user_metadata?.profileImage,
+    };
+    let user: User = baseUser;
+    try {
+      user = await mergeProfileIntoUser(baseUser, data.session.access_token);
+    } catch (e) {
+      console.error('[PROFILE API] signIn: profile hydrate failed; session is still valid', e);
+    }
     return {
-      user: {
-        id: data.user.id,
-        email: data.user.email!,
-        name: data.user.user_metadata?.name,
-        role: data.user.user_metadata?.role || 'user',
-        phone: data.user.user_metadata?.phone,
-        profileImage: data.user.user_metadata?.profileImage,
-        isMasterAdmin: data.user.user_metadata?.is_master_admin === true,
-      },
+      user,
       accessToken: data.session.access_token,
     };
   } catch (error) {
@@ -246,7 +410,7 @@ export async function sendVerificationCode(email: string): Promise<void> {
 /**
  * Verify OTP code and complete registration with name metadata
  */
-export async function verifyAndRegister(email: string, code: string, name: string): Promise<AuthResponse> {
+export async function verifyAndRegister(email: string, code: string, name: string, phone?: string): Promise<AuthResponse> {
   try {
     const { data, error } = await supabase.auth.verifyOtp({
       email,
@@ -258,44 +422,55 @@ export async function verifyAndRegister(email: string, code: string, name: strin
       throw new Error(error?.message || 'Failed to verify code');
     }
 
-    // Update user metadata with name
+    // Update user metadata with name only — role lives in `profiles`, not user-controlled metadata
     const { error: updateError } = await supabase.auth.updateUser({
-      data: { name, role: 'user' },
+      data: { name },
     });
 
     if (updateError) {
       console.warn('⚠️ Failed to update user metadata:', updateError.message);
     }
 
+    const phoneTrimmed = String(phone ?? '').trim();
+
     // Also update via backend to ensure consistency
     try {
-      await fetch(`${API_BASE_URL}/users/profile`, {
+      const patchBody: Record<string, unknown> = {
+        userId: data.user.id,
+        name,
+        email,
+        oldEmail: email,
+      };
+      if (phoneTrimmed) {
+        patchBody.phone = phoneTrimmed;
+      }
+      await fetch(`${getApiBase()}/users/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${publicAnonKey}`,
         },
-        body: JSON.stringify({
-          userId: data.user.id,
-          name,
-          email,
-          oldEmail: email,
-        }),
+        body: JSON.stringify(patchBody),
       });
     } catch (backendErr) {
       console.warn('⚠️ Backend profile update failed (non-critical):', backendErr);
     }
 
+    const baseUser: User = {
+      id: data.user.id,
+      email: data.user.email!,
+      name,
+      role: 'user',
+      profileImage: data.user.user_metadata?.profileImage,
+    };
+    let user: User = baseUser;
+    try {
+      user = await mergeProfileIntoUser(baseUser, data.session.access_token);
+    } catch (e) {
+      console.error('[PROFILE API] verifyAndRegister: profile hydrate failed; session is still valid', e);
+    }
     return {
-      user: {
-        id: data.user.id,
-        email: data.user.email!,
-        name: name,
-        role: data.user.user_metadata?.role || 'user',
-        phone: data.user.user_metadata?.phone,
-        profileImage: data.user.user_metadata?.profileImage,
-        isMasterAdmin: data.user.user_metadata?.is_master_admin === true,
-      },
+      user,
       accessToken: data.session.access_token,
     };
   } catch (error) {
@@ -333,13 +508,46 @@ export async function signInWithSocial(provider: 'google' | 'facebook' | 'apple'
  * Uses local JWT validation only — no expensive getUser() network call.
  * Stale sessions are caught when actual API calls fail (dataService handles 401).
  */
+/** Wait briefly after OAuth redirect so `getSession()` sees the exchanged session (avoids clearing cache too early). */
+export async function waitForOAuthSessionHydration(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const h = window.location.hash;
+  const s = window.location.search;
+  const looksOAuth =
+    h.includes('access_token') ||
+    h.includes('refresh_token') ||
+    s.includes('code=');
+  if (!looksOAuth) return;
+  console.log('[AUTH-HYDRATION] OAuth return URL detected, waiting for session…');
+  const deadline = Date.now() + 4000;
+  while (Date.now() < deadline) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user?.id) {
+      console.log('[AUTH-HYDRATION] session ready after OAuth wait', {
+        userId: data.session.user.id,
+        email: data.session.user.email,
+      });
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 80));
+  }
+  console.warn('[AUTH-HYDRATION] OAuth wait timed out (session still null)');
+}
+
 export async function getSession(): Promise<AuthResponse | null> {
   try {
+    await waitForOAuthSessionHydration();
     const { data, error } = await supabase.auth.getSession();
 
     if (error || !data.session) {
+      console.log('[AUTH-HYDRATION] getSession: no session', { message: error?.message });
       return null;
     }
+    console.log('[AUTH-HYDRATION] getSession: has session', {
+      userId: data.session.user.id,
+      email: data.session.user.email,
+      provider: (data.session.user as { app_metadata?: { provider?: string } }).app_metadata?.provider,
+    });
 
     // ✅ Quick local JWT exp check
     try {
@@ -354,7 +562,7 @@ export async function getSession(): Promise<AuthResponse | null> {
             await supabase.auth.signOut();
             return null;
           }
-          return buildAuthResponse(refreshData.session);
+          return await buildAuthResponseAsync(refreshData.session);
         } catch (refreshErr) {
           console.error('[getSession] Refresh threw error, clearing:', refreshErr);
           await supabase.auth.signOut().catch(() => {});
@@ -366,32 +574,52 @@ export async function getSession(): Promise<AuthResponse | null> {
     }
 
     // ✅ Trust the local session without getUser() network call
-    return buildAuthResponse(data.session);
+    return await buildAuthResponseAsync(data.session);
   } catch (error) {
-    console.error('❌ Error getting session:', error);
+    console.error('❌ [PROFILE API] getSession failed (session or profile hydration):', error);
     return null;
   }
 }
 
-function buildAuthResponse(session: { user: any; access_token: string }): AuthResponse {
-  return {
-    user: {
-      id: session.user.id,
-      email: session.user.email!,
-      name: session.user.user_metadata?.name,
-      role: session.user.user_metadata?.role || 'user',
-      phone: session.user.user_metadata?.phone,
-      profileImage: session.user.user_metadata?.profileImage,
-      isMasterAdmin: session.user.user_metadata?.is_master_admin === true,
-    },
-    accessToken: session.access_token,
+async function buildAuthResponseAsync(session: { user: any; access_token: string }): Promise<AuthResponse> {
+  const baseUser: User = {
+    id: session.user.id,
+    email: session.user.email!,
+    name: session.user.user_metadata?.name,
+    role: 'user',
+    profileImage: session.user.user_metadata?.profileImage,
   };
+  try {
+    const merged = await mergeProfileIntoUser(baseUser, session.access_token);
+    console.log('[AUTH-HYDRATION] buildAuthResponseAsync merged user', {
+      role: merged.role,
+      phone: merged.phone,
+    });
+    return {
+      user: merged,
+      accessToken: session.access_token,
+    };
+  } catch (e) {
+    console.error(
+      '[PROFILE API] Profile hydration failed; keeping Supabase session and returning session user until profiles load',
+      e,
+    );
+    return {
+      user: baseUser,
+      accessToken: session.access_token,
+    };
+  }
 }
 
 /**
  * Update user profile (name and email)
  */
-export async function updateProfile(name: string, email: string, phone?: string, profileImage?: string): Promise<AuthResponse> {
+export async function updateProfile(
+  name: string,
+  email: string,
+  phone?: string | null,
+  profileImage?: string,
+): Promise<AuthResponse> {
   try {
     // Get current session to get userId and accessToken
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -406,18 +634,24 @@ export async function updateProfile(name: string, email: string, phone?: string,
     
     console.log('📤 [updateProfile] Sending to backend:', { userId, name, email, oldEmail, phone, profileImage });
     
+    const payload: Record<string, unknown> = { userId, name, email, oldEmail, profileImage };
+    if (phone !== undefined) {
+      const t = typeof phone === 'string' ? phone.trim() : '';
+      payload.phone = phone === null || t === '' ? null : t;
+    }
+
     // Call backend to update profile
-    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+    const response = await fetch(`${getApiBase()}/users/profile`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${publicAnonKey}`,
       },
-      body: JSON.stringify({ userId, name, email, oldEmail, phone, profileImage }), // ✅ SEND OLD EMAIL + PHONE + PROFILE IMAGE
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
       console.error('❌ [updateProfile] Backend error:', errorData);
       throw new Error(errorData.error || 'Failed to update profile');
     }
@@ -434,16 +668,21 @@ export async function updateProfile(name: string, email: string, phone?: string,
 
     console.log('✅ [updateProfile] Session refreshed successfully');
 
+    const baseUser: User = {
+      id: refreshData.user.id,
+      email: refreshData.user.email!,
+      name: refreshData.user.user_metadata?.name,
+      role: 'user',
+      profileImage: refreshData.user.user_metadata?.profileImage,
+    };
+    let user: User = baseUser;
+    try {
+      user = await mergeProfileIntoUser(baseUser, refreshData.session.access_token);
+    } catch (e) {
+      console.error('[PROFILE API] updateProfile: profile refetch failed; session was updated', e);
+    }
     return {
-      user: {
-        id: refreshData.user.id,
-        email: refreshData.user.email!,
-        name: refreshData.user.user_metadata?.name,
-        role: refreshData.user.user_metadata?.role || 'user',
-        phone: refreshData.user.user_metadata?.phone,
-        profileImage: refreshData.user.user_metadata?.profileImage,
-        isMasterAdmin: refreshData.user.user_metadata?.is_master_admin === true,
-      },
+      user,
       accessToken: refreshData.session.access_token,
     };
   } catch (error) {

@@ -1,7 +1,7 @@
-import { Hono } from "npm:hono";
-import { cors } from "npm:hono/cors";
-import { logger } from "npm:hono/logger";
-import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
+import { createClient } from "@supabase/supabase-js";
 import * as kv from "./kv_correct.tsx";
 
 console.log('🚀 Make Server starting... (ylztclwqmfhczklsswrt) - v9.1 CATEGORY_KILLED_v9.1 — ping endpoint live check');
@@ -16,71 +16,61 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Master admin email — fully protected, cannot be deleted/blocked/demoted
-const MASTER_ADMIN_EMAIL = 'vojo23@yahoo.com';
-
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error("❌ Missing Supabase env vars");
 }
 
 /**
- * Extract token from Authorization header OR x-auth-token (fallback for Figma env)
+ * End-user session JWT: prefer `x-auth-token` (gateway-safe). Fallback: `Authorization: Bearer`.
  */
-/**
- * Check if a token looks like a valid JWT (3 dot-separated base64 segments)
- */
+/** Check if a token looks like a valid JWT (3 dot-separated base64 segments). */
 function isJwtFormat(token: string): boolean {
   if (!token || token.length < 20) return false;
   const parts = token.split('.');
   return parts.length === 3 && parts.every(p => p.length > 0);
 }
 
-function getTokenFromRequest(c: any): string | null {
-  console.log('🔍 [getTokenFromRequest] Extracting token...');
-  
-  // ✅ CRITICAL FIX: Check x-auth-token FIRST because Supabase gateway
-  // intercepts/replaces the Authorization header in Edge Functions.
-  // The user's real JWT must be sent via x-auth-token.
-  const xToken = c.req.header("x-auth-token");
-  console.log('🔍 [getTokenFromRequest] x-auth-token:', xToken ? `len=${xToken.length}` : 'NONE');
-  
-  if (xToken && isJwtFormat(xToken)) {
-    console.log('🔍 [getTokenFromRequest] ✅ Using x-auth-token (preferred, valid JWT format)');
-    return xToken;
-  } else if (xToken) {
-    console.warn('🔍 [getTokenFromRequest] ⚠️ x-auth-token present but NOT a valid JWT format, ignoring');
-  }
-  
-  // Fallback: try Authorization header (may contain anon key from gateway, not user JWT)
-  const auth = c.req.header("Authorization") || c.req.header("authorization") || "";
-  console.log('🔍 [getTokenFromRequest] Authorization header:', auth ? `${auth.slice(0, 30)}...` : 'NONE');
-  
-  if (auth.startsWith("Bearer ")) {
-    const token = auth.slice(7);
-    // ✅ Only use Authorization Bearer if it looks like a JWT (not the anon key)
-    if (isJwtFormat(token)) {
-      console.log('🔍 [getTokenFromRequest] Using Bearer token (fallback, valid JWT format)');
-      return token;
-    } else {
-      console.log('🔍 [getTokenFromRequest] ⚠️ Bearer token is NOT a JWT (likely anon key), ignoring');
-    }
-  }
-  
-  return null;
+/** Anon and service-role keys are JWT-shaped; never treat them as the end-user access token. */
+function isProjectApiJwt(token: string): boolean {
+  return token === SUPABASE_ANON_KEY || token === SUPABASE_SERVICE_ROLE_KEY;
 }
 
-/**
- * Supabase client acting as the user (uses anon key + user JWT)
- */
-function sbUser(token: string) {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { 
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
+function getTokenFromRequest(c: any): string | null {
+  const h = c.req.raw.headers;
+  console.log('[AUTH DEBUG]', {
+    hasXAuthToken: !!h.get('x-auth-token'),
+    hasAuthorization: !!h.get('authorization'),
   });
+
+  const xRaw =
+    (c.req.header('x-auth-token') || h.get('x-auth-token') || '').trim();
+  if (xRaw) {
+    if (isProjectApiJwt(xRaw)) {
+      console.warn('[getTokenFromRequest] x-auth-token equals project anon/service key, ignoring; trying Authorization');
+    } else {
+      return xRaw;
+    }
+  }
+
+  const auth = (
+    c.req.header('Authorization') ||
+    c.req.header('authorization') ||
+    h.get('Authorization') ||
+    h.get('authorization') ||
+    ''
+  ).trim();
+  if (!auth.startsWith('Bearer ')) return null;
+  const bearer = auth.slice(7).trim();
+  if (!bearer) return null;
+  if (isProjectApiJwt(bearer)) {
+    console.log('[getTokenFromRequest] Bearer is project anon/service JWT (gateway), ignoring');
+    return null;
+  }
+  if (!isJwtFormat(bearer)) {
+    console.log('[getTokenFromRequest] Bearer token is not a JWT shape, ignoring');
+    return null;
+  }
+  return bearer;
 }
 
 /**
@@ -204,26 +194,21 @@ function normalizeVenueTagsInput(raw: unknown): string[] | null {
 }
 
 /**
- * Safe wrapper that calls GoTrue /auth/v1/user directly via fetch.
- * Bypasses supabaseClient.auth.getUser() which throws AuthSessionMissingError
- * in this Edge Runtime version even when a valid JWT is passed.
- *
- * Signature kept as safeGetUser(supabaseClient, token) for backward compat,
- * but supabaseClient is now ignored — we use a raw fetch instead.
+ * Resolves the current user by asking GoTrue only — no local JWT verify/decode.
+ * First argument is ignored (backward compat); do not pass a user-scoped client to avoid
+ * supabase-js parsing the access token (e.g. ES256) on the Edge runtime.
  */
-async function safeGetUser(_supabaseClient: any, token: string) {
-  if (!token || !isJwtFormat(token)) {
-    console.warn('🔐 [safeGetUser] Token is missing or not in JWT format, skipping getUser call');
-    return {
-      data: { user: null },
-      error: new Error('Invalid token format - not a JWT')
-    };
+async function safeGetUser(_supabaseClient: any, userToken: string) {
+  const t = typeof userToken === "string" ? userToken.trim() : "";
+  if (!t) {
+    console.warn("🔐 [safeGetUser] Missing token, skipping /auth/v1/user");
+    return { data: { user: null }, error: new Error("Missing token") };
   }
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'apikey': SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${t}`,
+        apikey: SUPABASE_ANON_KEY,
       },
     });
     if (!response.ok) {
@@ -258,8 +243,71 @@ async function mergeUserMetadata(supabase: any, userId: string, patch: Record<st
   return { ...current, ...patch };
 }
 
+type AppProfileRole = "user" | "admin" | "master_admin";
+
+function normalizeAppProfileRole(value: unknown): AppProfileRole {
+  const s = String(value ?? "").trim().toLowerCase();
+  if (s === "admin" || s === "master_admin" || s === "user") return s;
+  return "user";
+}
+
+async function getProfileRoleById(supabase: any, userId: string): Promise<AppProfileRole> {
+  const { data, error } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (error || !data) return "user";
+  return normalizeAppProfileRole((data as { role?: unknown }).role);
+}
+
+async function profileHasAdminAccess(supabase: any, userId: string): Promise<boolean> {
+  const r = await getProfileRoleById(supabase, userId);
+  return r === "admin" || r === "master_admin";
+}
+
+/** Log profiles.role vs auth user_metadata when investigating master-admin protection (remove after debugging). */
+async function logProfileVsAuthMetadata(
+  supabase: any,
+  userId: string,
+  label: string,
+  profilesRoleRaw: unknown
+) {
+  try {
+    const { data: authRow, error } = await supabase.auth.admin.getUserById(userId);
+    const um = authRow?.user?.user_metadata ?? {};
+    console.log(`[ROLE_AUDIT:${label}]`, {
+      userId,
+      email: authRow?.user?.email ?? null,
+      profiles_role_raw: profilesRoleRaw,
+      profiles_role_norm: normalizeAppProfileRole(profilesRoleRaw),
+      user_metadata_role: um.role,
+      user_metadata_is_master_admin: um.is_master_admin,
+      auth_read_error: error?.message,
+    });
+  } catch (e) {
+    console.warn(`[ROLE_AUDIT:${label}] failed`, e);
+  }
+}
+
+async function fetchProfilesRoleMapByUserId(supabase: any): Promise<Map<string, AppProfileRole>> {
+  const { data, error } = await supabase.from("profiles").select("id, role");
+  const m = new Map<string, AppProfileRole>();
+  if (error || !data) return m;
+  for (const row of data as { id: string; role?: unknown }[]) {
+    m.set(row.id, normalizeAppProfileRole(row.role));
+  }
+  return m;
+}
+
+/** Display label for admin user list — name lives in GoTrue `user_metadata`, not `public.profiles`. */
+function displayNameFromAuthUser(user: { email?: string | null; user_metadata?: Record<string, unknown> | null }): string {
+  const um = user.user_metadata ?? {};
+  const fromName = String(um.name ?? "").trim();
+  if (fromName) return fromName;
+  const fromFull = String(um.full_name ?? "").trim();
+  if (fromFull) return fromFull;
+  return String(user.email ?? "").trim() || "";
+}
+
 /**
- * Admin-only middleware - validates JWT and checks role
+ * Admin-only middleware — session via GoTrue /auth/v1/user (safeGetUser), then profiles.role.
  * 🚨 CRITICAL: Protects admin endpoints from unauthorized access
  * ✅ Uses x-auth-token fallback for Figma environment compatibility
  */
@@ -287,13 +335,9 @@ const requireAdmin = async (c: any, next: any) => {
   console.log("🔧 [AUTH] token prefix:", token.slice(0, 20));
   
   try {
-    // ✅ CRITICAL FIX: Use user client with JWT token for auth validation
-    const sb = sbUser(token);
-    console.log('🔐 [AUTH] Using sbUser(token) client to validate JWT...');
-    
-    const { data: { user }, error } = await safeGetUser(sb, token);
+    const { data: { user }, error } = await safeGetUser(null, token);
 
-    console.log('🔐 [AUTH] getUser result:');
+    console.log('🔐 [AUTH] safeGetUser (/auth/v1/user) result:');
     console.log('  - user exists:', !!user);
     console.log('  - user email:', user?.email);
     console.log('  - user id:', user?.id);
@@ -305,12 +349,11 @@ const requireAdmin = async (c: any, next: any) => {
       return c.json({ code: 401, message: error?.message || "Invalid JWT" }, 401);
     }
 
-    // Check admin role
-    const isAdmin = user.user_metadata?.role === "admin" || user.email === MASTER_ADMIN_EMAIL;
+    const supabase = getSupabaseClient();
+    const isAdmin = await profileHasAdminAccess(supabase, user.id);
     
-    console.log('🔐 [AUTH] User metadata:', JSON.stringify(user.user_metadata, null, 2));
-    console.log('🔐 [AUTH] User role:', user.user_metadata?.role);
-    console.log('🔐 [AUTH] Is admin:', isAdmin);
+    console.log('🔐 [AUTH] User id:', user.id);
+    console.log('🔐 [AUTH] Is admin (profiles):', isAdmin);
     
     if (!isAdmin) {
       console.warn(`⚠️  [AUTH] Non-admin user attempted admin action: ${user.email}`);
@@ -562,6 +605,24 @@ app.post("/make-server-a0e1e9cb/auth/signup", async (c) => {
       console.error('❌ Error creating user:', error);
       return c.json({ error: 'Failed to create user', details: error.message }, 400);
     }
+
+    const createdId = data.user.id;
+    const createdEmail = (data.user.email ?? email).trim();
+    const phoneNorm =
+      phone != null && String(phone).trim() !== "" ? String(phone).trim() : null;
+    const { error: profileUpsertErr } = await supabase.from("profiles").upsert(
+      {
+        id: createdId,
+        email: createdEmail,
+        role: userRole,
+        phone: phoneNorm,
+      },
+      { onConflict: "id" },
+    );
+    if (profileUpsertErr) {
+      console.error("❌ Error upserting profiles on signup:", profileUpsertErr);
+      return c.json({ error: "Failed to create profile row", details: profileUpsertErr.message }, 500);
+    }
     
     console.log(`✅ User created: ${data.user.id} (${email}) - Role: ${userRole}`);
     
@@ -594,6 +655,8 @@ app.get("/make-server-a0e1e9cb/users", requireAdmin, async (c) => {
       return c.json({ error: 'Failed to fetch users', details: usersError.message }, 500);
     }
     
+    const profileRoleById = await fetchProfilesRoleMapByUserId(supabase);
+    
     // For each user, count their submissions (venues + events)
     const usersWithStats = await Promise.all(
       users.map(async (user: any) => {
@@ -611,13 +674,15 @@ app.get("/make-server-a0e1e9cb/users", requireAdmin, async (c) => {
           .select('*', { count: 'exact', head: true })
           .eq('submitted_by', userEmail);
         
+        const role = profileRoleById.get(user.id) ?? 'user';
+        const displayName = displayNameFromAuthUser(user);
+        
         return {
           id: user.id,
           email: user.email,
-          name: user.user_metadata?.name || 'N/A',
-          role: user.user_metadata?.role || 'user',
+          name: displayName,
+          role,
           blocked: user.user_metadata?.blocked || false,
-          is_master_admin: user.user_metadata?.is_master_admin === true || user.email === MASTER_ADMIN_EMAIL,
           created_at: user.created_at,
           last_sign_in_at: user.last_sign_in_at || null,
           venues_count: venuesCount || 0,
@@ -658,26 +723,84 @@ app.get("/make-server-a0e1e9cb/users/search", requireAdmin, async (c) => {
     
     // Filter users by email match (case-insensitive)
     const queryLower = query.toLowerCase();
-    const matchedUsers = users
+    const filtered = users
       .filter(user => {
         const email = (user.email || '').toLowerCase();
         const name = (user.user_metadata?.name || '').toLowerCase();
         return email.includes(queryLower) || name.includes(queryLower);
       })
-      .slice(0, 10)
-      .map(user => ({
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.name || '',
-        phone: user.user_metadata?.phone || '',
-        role: user.user_metadata?.role || 'user',
-      }));
+      .slice(0, 10);
+    
+    if (filtered.length === 0) {
+      return c.json({ users: [] });
+    }
+    
+    const ids = filtered.map((u: any) => u.id);
+    const { data: profRows } = await supabase.from('profiles').select('id, role').in('id', ids);
+    const roleById = new Map<string, AppProfileRole>();
+    for (const row of (profRows || []) as { id: string; role?: unknown }[]) {
+      roleById.set(row.id, normalizeAppProfileRole(row.role));
+    }
+    
+    const matchedUsers = filtered.map((user: any) => ({
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || '',
+      phone: user.user_metadata?.phone || '',
+      role: roleById.get(user.id) ?? 'user',
+    }));
     
     console.log(`🔍 User search for "${query}": found ${matchedUsers.length} matches`);
     return c.json({ users: matchedUsers });
   } catch (error) {
     console.error('❌ Error searching users:', error);
     return c.json({ error: 'Failed to search users', details: String(error) }, 500);
+  }
+});
+
+/**
+ * Authenticated read of the caller's `public.profiles` row (service role).
+ * Browser PostgREST + user JWT is often blocked by RLS; the app must hydrate role/phone from here.
+ * Must be registered before `/users/:email/...` so `me` is not captured as a param.
+ */
+app.get("/make-server-a0e1e9cb/users/me/profile", async (c) => {
+  try {
+    const token = getTokenFromRequest(c);
+    if (!token) {
+      return c.json({ error: "Missing token", code: 401 }, 401);
+    }
+    const { data: userData, error: userError } = await safeGetUser(null, token);
+    if (userError || !userData?.user?.id) {
+      return c.json({ error: userError?.message || "Invalid token", code: 401 }, 401);
+    }
+    const uid = userData.user.id;
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, role, phone, avatar_url")
+      .eq("id", uid)
+      .maybeSingle();
+    if (error) {
+      console.error("[users/me/profile] profiles select:", error.message);
+      return c.json({ error: error.message, code: 500 }, 500);
+    }
+    const um = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
+    const nameFromAuth = String(um.name ?? "").trim();
+    const fullFromAuth = String(um.full_name ?? "").trim();
+    /** Display name is not stored on `profiles` in this schema; hydrate from GoTrue metadata when present. */
+    const profile =
+      data === null
+        ? null
+        : {
+            ...(data as Record<string, unknown>),
+            name: nameFromAuth || null,
+            full_name: fullFromAuth || nameFromAuth || null,
+          };
+    console.log("[users/me/profile] ok", { userId: uid, hasRow: !!data, role: (data as { role?: unknown } | null)?.role });
+    return c.json({ profile });
+  } catch (e) {
+    console.error("[users/me/profile] exception:", e);
+    return c.json({ error: "Failed to load profile", details: String(e) }, 500);
   }
 });
 
@@ -727,33 +850,16 @@ app.get("/make-server-a0e1e9cb/users/:email/submissions", requireAdmin, async (c
   }
 });
 
-// Helper: Check if userId belongs to master admin (by metadata flag OR fallback email)
-async function isMasterAdmin(supabase: any, userId: string): Promise<boolean> {
-  try {
-    const { data: { user } } = await supabase.auth.admin.getUserById(userId);
-    if (!user) return false;
-    // Primary: check metadata flag (survives email change)
-    if (user.user_metadata?.is_master_admin === true) return true;
-    // Fallback: check original email (for initial setup before flag is set)
-    if (user.email === MASTER_ADMIN_EMAIL) {
-      // Auto-set the flag so it persists after email change
-      console.log('🔒 Auto-setting is_master_admin flag for', user.email);
-      const merged = { ...(user.user_metadata || {}), is_master_admin: true };
-      await supabase.auth.admin.updateUserById(userId, { user_metadata: merged });
-      return true;
-    }
-    return false;
-  } catch { return false; }
-}
-
 // Block user (admin only)
 app.patch("/make-server-a0e1e9cb/users/:userId/block", requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId');
     const supabase = getSupabaseClient();
     
-    // ✅ Master admin protection
-    if (await isMasterAdmin(supabase, userId)) {
+    // ✅ Master admin protection (`profiles.role` only)
+    const blockTargetRole = await getProfileRoleById(supabase, userId);
+    if (blockTargetRole === 'master_admin') {
+      await logProfileVsAuthMetadata(supabase, userId, 'block:MASTER_ADMIN_PROTECTED', blockTargetRole);
       return c.json({ error: 'Cannot block master admin', code: 'MASTER_ADMIN_PROTECTED' }, 403);
     }
     
@@ -804,7 +910,16 @@ app.patch("/make-server-a0e1e9cb/users/:userId/unblock", requireAdmin, async (c)
 // Set user role (admin only) - promote/demote admin
 app.patch("/make-server-a0e1e9cb/users/:userId/set-role", requireAdmin, async (c) => {
   try {
-    const userId = c.req.param('userId');
+    const rawUserId = c.req.param("userId");
+    const userId = decodeURIComponent(String(rawUserId ?? "").trim());
+    console.log('[DEBUG:set-role] targetUserId:', userId);
+    const debugProfile = await getSupabaseClient()
+      .from('profiles')
+      .select('id, email, role')
+      .eq('id', userId)
+      .single();
+
+    console.log('[DEBUG:set-role] profile_from_db:', debugProfile);
     const body = await c.req.json();
     const { role } = body;
     const newRole = role;
@@ -838,18 +953,30 @@ app.patch("/make-server-a0e1e9cb/users/:userId/set-role", requireAdmin, async (c
       return c.json({ error: 'Failed to fetch target user profile' }, 500);
     }
 
+    const currentRole = normalizeAppProfileRole(currentUser.role);
+    const targetRole = normalizeAppProfileRole(targetUser.role);
+
+    console.log("[set-role] route param (raw):", rawUserId, "resolved userId:", userId);
+    console.log("[set-role] target profile (profiles table):", {
+      id: targetUser.id,
+      email: targetUser.email,
+      role_raw: targetUser.role,
+      role_normalized: targetRole,
+    });
+    await logProfileVsAuthMetadata(supabase, userId, "set-role:target-auth-metadata", targetUser.role);
+
     // Prevent self role change
     if (currentUser.id === targetUser.id) {
       return c.json({ error: 'You cannot change your own role' }, 403);
     }
 
     // Only master_admin can change roles
-    if (currentUser.role !== 'master_admin') {
+    if (currentRole !== 'master_admin') {
       return c.json({ error: 'Not authorized' }, 403);
     }
 
     // Prevent removing last master_admin
-    if (targetUser.role === 'master_admin') {
+    if (targetRole === 'master_admin') {
       const { count, error: countErr } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
@@ -865,31 +992,55 @@ app.patch("/make-server-a0e1e9cb/users/:userId/set-role", requireAdmin, async (c
       }
     }
     
-    // ✅ Master admin protection — cannot demote
-    if (role === 'user' && await isMasterAdmin(supabase, userId)) {
-      return c.json({ error: 'Cannot remove admin rights from master admin', code: 'MASTER_ADMIN_PROTECTED' }, 403);
+    // Cannot demote master_admin to regular user — decision uses profiles.role only (targetRole), never auth metadata
+    if (role === "user" && targetRole === "master_admin") {
+      console.warn("[set-role] MASTER_ADMIN_PROTECTED (profiles.role === master_admin)", {
+        userId,
+        profileEmail: targetUser.email,
+      });
+      await logProfileVsAuthMetadata(supabase, userId, "set-role:MASTER_ADMIN_PROTECTED", targetUser.role);
+      return c.json({ error: "Cannot remove admin rights from master admin", code: "MASTER_ADMIN_PROTECTED" }, 403);
     }
     
-    // If removing admin, check that this is not the last admin
+    // If removing admin privileges, ensure at least one admin or master_admin remains
     if (role === 'user') {
-      const { data: { users: allUsers }, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-      if (listErr) {
-        console.error('❌ Error listing users for admin count:', listErr);
-        return c.json({ error: 'Failed to verify admin count', details: listErr.message }, 500);
+      const { count, error: privCountErr } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .in('role', ['admin', 'master_admin']);
+      if (privCountErr) {
+        console.error('❌ Error counting privileged profiles:', privCountErr);
+        return c.json({ error: 'Failed to verify admin count', details: privCountErr.message }, 500);
       }
-      const adminCount = (allUsers || []).filter((u: any) => u.user_metadata?.role === 'admin').length;
-      if (adminCount <= 1) {
-        console.warn('⚠️ Cannot remove the last admin user');
+      const privileged = count ?? 0;
+      const targetPrivileged = targetRole === 'admin' || targetRole === 'master_admin';
+      if (targetPrivileged && privileged <= 1) {
+        console.warn('⚠️ Cannot remove the last admin-capable user');
         return c.json({ error: 'Cannot remove the only admin user', code: 'LAST_ADMIN' }, 400);
       }
     }
 
-    if (targetUser.role === newRole) {
+    if (targetRole === newRole) {
       return c.json({ message: "No changes needed" }, 200);
     }
     
-    // ✅ Merge metadata to prevent overwriting other fields
-    const newMetadata = await mergeUserMetadata(supabase, userId, { role });
+    const { error: profileRoleErr } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+    if (profileRoleErr) {
+      console.error('❌ Error updating profiles.role:', profileRoleErr);
+      return c.json({ error: 'Failed to update role in profiles', details: profileRoleErr.message }, 500);
+    }
+    
+    // ✅ Merge metadata for legacy clients — never use these fields for server authorization
+    const metaPatch: Record<string, any> = { role: newRole };
+    if (newRole !== 'master_admin') {
+      metaPatch.is_master_admin = false;
+    } else {
+      metaPatch.is_master_admin = true;
+    }
+    const newMetadata = await mergeUserMetadata(supabase, userId, metaPatch);
     const { data, error } = await supabase.auth.admin.updateUserById(userId, {
       user_metadata: newMetadata
     });
@@ -913,8 +1064,10 @@ app.delete("/make-server-a0e1e9cb/users/:userId", requireAdmin, async (c) => {
     const userId = c.req.param('userId');
     const supabase = getSupabaseClient();
     
-    // ✅ Master admin protection — cannot delete
-    if (await isMasterAdmin(supabase, userId)) {
+    // ✅ Master admin protection (`profiles.role` only)
+    const deleteTargetRole = await getProfileRoleById(supabase, userId);
+    if (deleteTargetRole === 'master_admin') {
+      await logProfileVsAuthMetadata(supabase, userId, 'delete-user:MASTER_ADMIN_PROTECTED', deleteTargetRole);
       return c.json({ error: 'Cannot delete master admin account', code: 'MASTER_ADMIN_PROTECTED' }, 403);
     }
     
@@ -946,26 +1099,24 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
     
     const supabase = getSupabaseClient();
     
-    // ✅ Master admin: ensure is_master_admin flag is always preserved
-    const isMaster = await isMasterAdmin(supabase, userId);
+    // Source of truth for role is `profiles` — sync into auth metadata only for legacy clients
+    const profileRole = await getProfileRoleById(supabase, userId);
+    const isMaster = profileRole === 'master_admin';
     
     // Prepare update data
     const updateData: any = {};
     
-    // ✅ FIXED: Merge user metadata to preserve role/blocked/etc
-    const metadataPatch: Record<string, any> = {};
+    // ✅ FIXED: Merge user metadata to preserve blocked/etc — never take role from the request body
+    const metadataPatch: Record<string, any> = {
+      role: profileRole,
+      is_master_admin: isMaster,
+    };
     if (name !== undefined) {
       metadataPatch.name = name;
     }
-    if (phone !== undefined) {
-      metadataPatch.phone = phone;
-    }
+    // Phone lives only in `public.profiles.phone` — do not sync to auth user_metadata
     if (profileImage !== undefined) {
       metadataPatch.profileImage = profileImage;
-    }
-    // ✅ Ensure master admin flag persists through all profile updates
-    if (isMaster) {
-      metadataPatch.is_master_admin = true;
     }
     
     // Only merge if there are metadata updates
@@ -990,6 +1141,45 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
       console.error('❌ Error updating user profile:', error);
       return c.json({ error: 'Failed to update profile', details: error.message }, 500);
     }
+
+    const authEmail = String(data.user?.email ?? "").trim();
+    const fallbackEmail = typeof email === "string" ? email.trim() : "";
+    const resolvedEmail = authEmail || fallbackEmail;
+    const profilePayload: Record<string, unknown> = {
+      id: userId,
+      role: profileRole,
+    };
+    if (resolvedEmail) {
+      profilePayload.email = resolvedEmail;
+    }
+    if (phone !== undefined) {
+      profilePayload.phone =
+        phone === null || phone === "" ? null : String(phone).trim();
+    }
+    if (profileImage !== undefined) {
+      profilePayload.avatar_url =
+        profileImage === null || profileImage === ""
+          ? null
+          : String(profileImage).trim();
+    }
+
+    const { error: profilesSyncErr } = await supabase
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "id" });
+    if (profilesSyncErr) {
+      console.error("❌ Error syncing profiles after profile PATCH:", profilesSyncErr);
+      return c.json(
+        { error: "Failed to sync profile table", details: profilesSyncErr.message },
+        500,
+      );
+    }
+
+    const { data: syncedProfile } = await supabase
+      .from("profiles")
+      .select("phone, avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
+    const synced = (syncedProfile ?? {}) as { phone?: string | null; avatar_url?: string | null };
     
     // ✅ IF EMAIL CHANGED - Update all venues and events submitted_by field
     if (updateData.email && oldEmail && updateData.email !== oldEmail) {
@@ -1032,9 +1222,9 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata?.name,
-        role: data.user.user_metadata?.role,
-        phone: data.user.user_metadata?.phone,
-        profileImage: data.user.user_metadata?.profileImage,
+        role: profileRole,
+        phone: synced.phone ?? null,
+        profileImage: synced.avatar_url ?? data.user.user_metadata?.profileImage ?? null,
       }
     });
   } catch (error) {
@@ -1361,7 +1551,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     if (!authEmail) {
       return c.json({ error: 'Authenticated session has no email address.' }, 401);
     }
-    const isAdminSubmitter = authUser.user_metadata?.role === 'admin';
+    const isAdminSubmitter = await profileHasAdminAccess(supabase, authUser.id);
 
     let finalSubmittedBy: string;
     if (!isAdminSubmitter) {
@@ -1391,16 +1581,10 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       }
     }
     
-    // ✅ Check if submitter is admin → auto-approve
-    let isSubmitterAdmin = false;
-    if (token) {
-      try {
-        const { data: { user: submitterUser } } = await safeGetUser(null, token);
-        if (submitterUser?.user_metadata?.role === 'admin') {
-          isSubmitterAdmin = true;
-          console.log('👑 Admin user detected — event will be auto-approved');
-        }
-      } catch (e) { /* ignore */ }
+    // ✅ Check if submitter is admin/master_admin (profiles.role) → auto-approve
+    const isSubmitterAdmin = await profileHasAdminAccess(supabase, authUser.id);
+    if (isSubmitterAdmin) {
+      console.log('👑 Privileged user (profiles.role) — submission will be auto-approved where applicable');
     }
     
     // Determine which table to use
@@ -1636,7 +1820,7 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
 
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(token), token);
+    const { data: { user }, error: authError } = await safeGetUser(null, token);
     if (authError || !user || !user.email) {
       console.error('🗑️ [DELETE /submissions/:id] Auth failed', { id, authError: authError?.message });
       return c.json({ error: 'Unauthorized - invalid token' }, 401);
@@ -1644,11 +1828,10 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
 
     const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
     const userEmail = normalize(user.email);
-    const userRole = normalize(user.user_metadata?.role);
-    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
-    console.log('🗑️ [DELETE /submissions/:id] Resolved user', { id, userEmail, userRole, isAdmin });
-
     const supabase = sbService();
+    const isAdmin = await profileHasAdminAccess(supabase, user.id);
+    console.log('🗑️ [DELETE /submissions/:id] Resolved user', { id, userEmail, isAdmin });
+
     
     // Try deleting from events table first
     const { data: eventToDelete, error: eventFetchError } = await supabase
@@ -1749,8 +1932,8 @@ app.get("/make-server-a0e1e9cb/my-events", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
     
-    // Use user client with JWT token for auth validation
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    // Session via safeGetUser → GoTrue /auth/v1/user
+    const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
     
     if (authError || !user || !user.email) {
       return c.json({ error: 'Unauthorized - invalid token' }, 401);
@@ -1799,8 +1982,8 @@ app.delete("/make-server-a0e1e9cb/my-submissions/all", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
     
-    // Use user client with JWT token for auth validation
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    // Session via safeGetUser → GoTrue /auth/v1/user
+    const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
     
     if (authError || !user || !user.email) {
       return c.json({ error: 'Unauthorized - invalid token' }, 401);
@@ -2089,8 +2272,8 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
     // Only try to validate if we have a token
     if (accessToken) {
       try {
-        // ✅ Use user client with JWT token for auth validation
-        const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+        // Session via safeGetUser → GoTrue /auth/v1/user
+        const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
         
         console.log('🔍 Auth check result:');
         console.log('🔍 User email:', user?.email);
@@ -2099,7 +2282,7 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
         
         if (!authError && user) {
           const userEmail = user.email;
-          const userRole = user.user_metadata?.role;
+          const isPrivileged = await profileHasAdminAccess(supabase, user.id);
           
           console.log('🔍 Ownership check:');
           console.log('🔍 User email:', `"${userEmail}"`);
@@ -2107,12 +2290,11 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
           console.log('🔍 Event organizer_email:', `"${event.organizer_email}"`);
           console.log('🔍 Email match (submitted_by):', event.submitted_by === userEmail);
           console.log('🔍 Email match (organizer):', event.organizer_email === userEmail);
-          console.log('🔍 User role:', `"${userRole}"`);
-          console.log('🔍 Is admin:', userRole === 'admin');
+          console.log('🔍 Is admin/master (profiles.role):', isPrivileged);
           
-          // 🔥 ADMIN can access ALL events
-          if (userRole === 'admin') {
-            console.log('✅ ADMIN user - granting access to all events');
+          // 🔥 ADMIN / MASTER_ADMIN can access ALL events
+          if (isPrivileged) {
+            console.log('✅ Privileged user (profiles.role) - granting access to all events');
             return c.json({ event });
           }
           
@@ -2332,7 +2514,7 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
 
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
     if (authError || !user || !user.email) {
       console.error('🗑️ [DELETE /events/:id] Auth failed', { id, authError: authError?.message });
       return c.json({ error: 'Unauthorized - invalid token' }, 401);
@@ -2340,10 +2522,9 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
 
     const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
     const userEmail = normalize(user.email);
-    const userRole = normalize(user.user_metadata?.role);
-    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
-    console.log('🗑️ [DELETE /events/:id] Resolved user', { id, userEmail, userRole, isAdmin });
     const supabase = sbService();
+    const isAdmin = await profileHasAdminAccess(supabase, user.id);
+    console.log('🗑️ [DELETE /events/:id] Resolved user', { id, userEmail, isAdmin });
 
     // Primary source: events table
     const { data: event, error: eventFetchError } = await supabase
@@ -2461,8 +2642,8 @@ app.get("/make-server-a0e1e9cb/my-venues", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
     
-    // Use user client with JWT token for auth validation
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    // Session via safeGetUser → GoTrue /auth/v1/user
+    const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
     
     console.log('🔍 [MY-VENUES] Auth result:', { user: user?.email, error: authError?.message });
     
@@ -2614,16 +2795,16 @@ app.get("/make-server-a0e1e9cb/venues/:id", async (c) => {
     // Only try to validate if we have a token
     if (accessToken) {
       try {
-        // Use user client with JWT token for auth validation
-        const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+        // Session via safeGetUser → GoTrue /auth/v1/user
+        const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
         
         if (!authError && user) {
           const userEmail = user.email;
-          const userRole = user.user_metadata?.role;
+          const isPrivileged = await profileHasAdminAccess(supabase, user.id);
           
-          // 🔥 ADMIN can access ALL venues
-          if (userRole === 'admin') {
-            console.log('✅ ADMIN user - granting access to all venues');
+          // 🔥 ADMIN / MASTER_ADMIN can access ALL venues
+          if (isPrivileged) {
+            console.log('✅ Privileged user (profiles.role) - granting access to all venues');
             return c.json({ venue });
           }
           
@@ -2759,7 +2940,7 @@ app.delete("/make-server-a0e1e9cb/venues/:id", async (c) => {
       return c.json({ error: 'Unauthorized - please log in' }, 401);
     }
 
-    const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+    const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
     if (authError || !user || !user.email) {
       console.error('🗑️ [DELETE /venues/:id] Auth failed', { id, authError: authError?.message });
       return c.json({ error: 'Unauthorized - invalid token' }, 401);
@@ -2767,10 +2948,9 @@ app.delete("/make-server-a0e1e9cb/venues/:id", async (c) => {
 
     const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
     const userEmail = normalize(user.email);
-    const userRole = normalize(user.user_metadata?.role);
-    const isAdmin = userRole === 'admin' || userEmail === normalize(MASTER_ADMIN_EMAIL);
-    console.log('🗑️ [DELETE /venues/:id] Resolved user', { id, userEmail, userRole, isAdmin });
     const supabase = sbService();
+    const isAdmin = await profileHasAdminAccess(supabase, user.id);
+    console.log('🗑️ [DELETE /venues/:id] Resolved user', { id, userEmail, isAdmin });
 
     const { data: venue, error: fetchError } = await supabase
       .from('venues_ee0c365c')
@@ -3075,12 +3255,12 @@ async function handleToggleVenueActiveRequest(c: any): Promise<Response> {
   const accessToken = getTokenFromRequest(c);
   if (!accessToken) return c.json({ error: 'Unauthorized - please log in' }, 401);
 
-  const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+  const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
   if (authError || !user?.email) return c.json({ error: 'Unauthorized - invalid token' }, 401);
 
   const supabase = sbService();
   const userEmail = user.email;
-  const isAdmin = user.user_metadata?.role === 'admin' || user.email === MASTER_ADMIN_EMAIL;
+  const isAdmin = await profileHasAdminAccess(supabase, user.id);
 
   const { data: venue, error: venueError } = await supabase
     .from('venues_ee0c365c')
@@ -3121,12 +3301,12 @@ async function handleToggleEventActiveRequest(c: any): Promise<Response> {
   const accessToken = getTokenFromRequest(c);
   if (!accessToken) return c.json({ error: 'Unauthorized - please log in' }, 401);
 
-  const { data: { user }, error: authError } = await safeGetUser(sbUser(accessToken), accessToken);
+  const { data: { user }, error: authError } = await safeGetUser(null, accessToken);
   if (authError || !user?.email) return c.json({ error: 'Unauthorized - invalid token' }, 401);
 
   const supabase = sbService();
   const userEmail = user.email;
-  const isAdmin = user.user_metadata?.role === 'admin' || user.email === MASTER_ADMIN_EMAIL;
+  const isAdmin = await profileHasAdminAccess(supabase, user.id);
 
   const { data: eventRow, error: eventError } = await supabase
     .from('events_ee0c365c')
@@ -3270,12 +3450,12 @@ app.post('/make-server-a0e1e9cb/auth/change-password', async (c) => {
   console.log('🔐 POST /auth/change-password');
   try {
     const token = getTokenFromRequest(c);
-    console.log('🔐 [change-password] Token:', token ? `len=${token.length}, jwt=${isJwtFormat(token)}` : 'NULL');
+    console.log('🔐 [change-password] Token:', token ? `len=${token.length}` : 'NULL');
     if (!token) {
       return c.json({ error: 'Unauthorized - no token provided' }, 401);
     }
 
-    const { data: userData, error: userError } = await safeGetUser(sbUser(token), token);
+    const { data: userData, error: userError } = await safeGetUser(null, token);
     console.log('🔐 [change-password] User:', userData?.user?.id || 'NONE', userError?.message || 'ok');
     if (userError || !userData?.user?.id) {
       return c.json({ error: 'Unauthorized - invalid session', details: userError?.message || 'no user' }, 401);
@@ -3342,27 +3522,29 @@ app.get('/make-server-a0e1e9cb/auth/admin-count', async (c) => {
       return c.json({ error: 'Unauthorized - no token provided' }, 401);
     }
 
-    const { data: userData, error: userError } = await safeGetUser(sbUser(token), token);
+    const { data: userData, error: userError } = await safeGetUser(null, token);
     if (userError || !userData?.user?.id) {
       return c.json({ error: 'Unauthorized - invalid session' }, 401);
     }
 
-    if (userData.user.user_metadata?.role !== 'admin') {
+    const supabase = sbService();
+    if (!(await profileHasAdminAccess(supabase, userData.user.id))) {
       return c.json({ error: 'Forbidden - admin only' }, 403);
     }
 
-    const supabase = sbService();
-    const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    if (listError) {
-      console.error('❌ [admin-count] Error listing users:', listError);
+    const { count, error: countErr } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .in('role', ['admin', 'master_admin']);
+
+    if (countErr) {
+      console.error('❌ [admin-count] Error counting profiles:', countErr);
       return c.json({ error: 'Failed to count admins' }, 500);
     }
 
-    const adminCount = (allUsers?.users || []).filter(
-      (u: any) => u.user_metadata?.role === 'admin'
-    ).length;
+    const adminCount = count ?? 0;
 
-    console.log(`🛡️ [admin-count] Admin count: ${adminCount}`);
+    console.log(`🛡️ [admin-count] Privileged profile count (admin+master_admin): ${adminCount}`);
     return c.json({ adminCount });
   } catch (error) {
     console.error('❌ Error in admin-count:', error);
@@ -3381,7 +3563,7 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
       return c.json({ error: 'Unauthorized - no token provided' }, 401);
     }
 
-    const { data: userData, error: userError } = await safeGetUser(sbUser(token), token);
+    const { data: userData, error: userError } = await safeGetUser(null, token);
     if (userError || !userData?.user?.id) {
       return c.json({ error: 'Unauthorized - invalid session' }, 401);
     }
@@ -3389,21 +3571,22 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
     const userId = userData.user.id;
     const supabase = sbService();
 
-    // 🛡️ ADMIN GUARD: If user is admin, check there's at least one other admin
-    const userRole = userData.user.user_metadata?.role;
-    if (userRole === 'admin') {
-      console.log('🛡️ [delete-account] User is admin, checking for other admins...');
-      const { data: allUsers, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    // 🛡️ ADMIN GUARD: privileged users cannot delete the last admin-capable account (profiles.role)
+    const selfRole = await getProfileRoleById(supabase, userId);
+    if (selfRole === 'admin' || selfRole === 'master_admin') {
+      console.log('🛡️ [delete-account] User has privileged profile role, checking counts...');
+      const { count, error: listError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .in('role', ['admin', 'master_admin']);
       if (listError) {
-        console.error('❌ [delete-account] Error listing users:', listError);
+        console.error('❌ [delete-account] Error counting privileged profiles:', listError);
         return c.json({ error: 'Failed to verify admin count', code: 'ADMIN_CHECK_FAILED' }, 500);
       }
-      const adminCount = (allUsers?.users || []).filter(
-        (u: any) => u.user_metadata?.role === 'admin'
-      ).length;
-      console.log(`🛡️ [delete-account] Admin count: ${adminCount}`);
-      if (adminCount <= 1) {
-        console.log('🛡️ [delete-account] ❌ BLOCKED: Cannot delete last admin account');
+      const privilegedCount = count ?? 0;
+      console.log(`🛡️ [delete-account] Privileged profile count: ${privilegedCount}`);
+      if (privilegedCount <= 1) {
+        console.log('🛡️ [delete-account] ❌ BLOCKED: Cannot delete last admin-capable account');
         return c.json({ 
           error: 'Cannot delete the last admin account. Promote another user to admin first.',
           code: 'LAST_ADMIN' 

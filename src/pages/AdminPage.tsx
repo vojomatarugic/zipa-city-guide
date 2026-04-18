@@ -11,7 +11,8 @@ import * as eventService from '../utils/eventService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
 import { toast } from 'sonner@2.0.3';
-import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { publicAnonKey } from '../utils/supabase/info';
+import { apiUrl } from '../config/apiBase';
 import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -165,16 +166,16 @@ export function AdminPage() {
     console.log('✅ Admin access granted:', user?.email);
   }, [isLoading, isLoggedIn, isAdmin, navigate, user]); // ✅ ADD isLoading to dependencies
 
-  // Initialize edit fields when entering edit mode
+  // Sync edit fields from user when not editing (avoid overwriting in-progress edits on user refresh)
   useEffect(() => {
-    if (isEditingProfile && user) {
+    if (user && !isEditingProfile) {
       setEditName(user.name || '');
       setEditEmail(user.email || '');
       setEditPhone(user.phone || '');
       setEditProfileImage(user.profileImage || '');
       setImagePreview(user.profileImage || '');
     }
-  }, [isEditingProfile, user]);
+  }, [user, isEditingProfile]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -761,7 +762,6 @@ export function AdminPage() {
                           border: `1px solid ${phoneError ? '#DC2626' : '#D1D5DB'}`,
                         }}
                         placeholder={t('profilePhone')}
-                        required
                       />
                       {phoneError && (
                         <p className="text-[12px] mt-1" style={{ color: '#DC2626' }}>{phoneError}</p>
@@ -781,26 +781,27 @@ export function AdminPage() {
                             toast.error(t('profileEmailRequired'));
                             return;
                           }
-                          if (!editPhone.trim()) {
-                            toast.error(t('profilePhoneRequired'));
-                            return;
-                          }
-                          const digitsOnly = editPhone.replace(/\D/g, '');
-                          if (digitsOnly.length < 9) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
-                                : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
-                            );
-                            return;
-                          }
-                          if (digitsOnly.length > 15) {
-                            setPhoneError(
-                              language === 'sr'
-                                ? 'Broj telefona ne može imati više od 15 cifara'
-                                : 'Phone number cannot have more than 15 digits'
-                            );
-                            return;
+                          const phoneTrim = editPhone.trim();
+                          if (phoneTrim) {
+                            const digitsOnly = phoneTrim.replace(/\D/g, '');
+                            if (digitsOnly.length < 9) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona mora imati najmanje 9 cifara (npr. 065 123 456 ili +387 65 123 456)'
+                                  : 'Phone number must have at least 9 digits (e.g. 065 123 456 or +387 65 123 456)'
+                              );
+                              return;
+                            }
+                            if (digitsOnly.length > 15) {
+                              setPhoneError(
+                                language === 'sr'
+                                  ? 'Broj telefona ne može imati više od 15 cifara'
+                                  : 'Phone number cannot have more than 15 digits'
+                              );
+                              return;
+                            }
+                          } else {
+                            setPhoneError('');
                           }
 
                           setUploadingImage(true);
@@ -812,7 +813,7 @@ export function AdminPage() {
                             formData.append('file', selectedFile);
                             formData.append('userId', user.id);
                             
-                            const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/upload/profile-image`, {
+                            const response = await fetch(apiUrl('/upload/profile-image'), {
                               method: 'POST',
                               headers: {
                                 'Authorization': `Bearer ${publicAnonKey}`,
@@ -831,7 +832,7 @@ export function AdminPage() {
                           }
                           
                           console.log('💾 Saving profile:', { name: editName, email: editEmail, phone: editPhone, profileImage: finalProfileImageUrl });
-                          await updateProfile(editName, editEmail, editPhone, finalProfileImageUrl);
+                          await updateProfile(editName, editEmail, phoneTrim === '' ? null : phoneTrim, finalProfileImageUrl);
                           
                           setSelectedFile(null);
                           setIsEditingProfile(false);
@@ -893,7 +894,7 @@ export function AdminPage() {
                         onClick={async () => {
                           if (!showDeleteAccount) {
                             try {
-                              const res = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/auth/admin-count`, {
+                              const res = await fetch(apiUrl('/auth/admin-count'), {
                                 headers: {
                                   'Authorization': `Bearer ${publicAnonKey}`,
                                   'x-auth-token': accessToken || '',
@@ -997,7 +998,7 @@ export function AdminPage() {
                             }
                             setChangingPassword(true);
                             try {
-                              const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/auth/change-password`, {
+                              const response = await fetch(apiUrl('/auth/change-password'), {
                                 method: 'POST',
                                 headers: {
                                   'Authorization': `Bearer ${publicAnonKey}`,
@@ -1071,7 +1072,7 @@ export function AdminPage() {
                             if (deleteConfirmText !== confirmWord) return;
                             setDeletingAccount(true);
                             try {
-                              const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb/auth/delete-account`, {
+                              const response = await fetch(apiUrl('/auth/delete-account'), {
                                 method: 'DELETE',
                                 headers: {
                                   'Authorization': `Bearer ${publicAnonKey}`,

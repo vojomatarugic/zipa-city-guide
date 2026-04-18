@@ -5,10 +5,9 @@
  * Nema localStorage fallbacka — backend je stabilan i uvijek dostupan.
  */
 
-import { projectId, publicAnonKey } from './supabase/info';
+import { publicAnonKey } from './supabase/info';
 import { supabase } from './supabaseClient';
-
-const API_BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-a0e1e9cb`;
+import { getApiBase } from '../config/apiBase';
 
 /**
  * Get current user's access token (if logged in).
@@ -191,7 +190,7 @@ export async function getAllItems(status?: ItemStatus, page_slug?: ItemCategory)
     if (status) params.append('status', status);
     if (page_slug) params.append('page_slug', page_slug);
 
-    const url = `${API_BASE_URL}/submissions${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `${getApiBase()}/submissions${params.toString() ? '?' + params.toString() : ''}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -231,7 +230,7 @@ export async function getVenues(page_slug?: string, city?: string): Promise<Item
     if (page_slug) params.append('page_slug', page_slug);
     if (city) params.append('city', city);
 
-    const url = `${API_BASE_URL}/venues${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `${getApiBase()}/venues${params.toString() ? '?' + params.toString() : ''}`;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -272,7 +271,7 @@ export async function getVenueById(id: string): Promise<Item | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(`${API_BASE_URL}/venues/${id}`, {
+    const response = await fetch(`${getApiBase()}/venues/${id}`, {
       method: 'GET',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -309,7 +308,7 @@ export async function getEventById(id: string): Promise<Item | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+    const response = await fetch(`${getApiBase()}/events/${id}`, {
       method: 'GET',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -343,7 +342,7 @@ export async function createItem(
   item: Omit<Item, 'id' | 'created_at' | 'is_custom' | 'status'> & Record<string, unknown>
 ): Promise<Item | null> {
   try {
-    console.log('🌐 [createItem] POST URL:', `${API_BASE_URL}/submissions`);
+    console.log('🌐 [createItem] POST URL:', `${getApiBase()}/submissions`);
     console.log('🌐 [createItem] POST BODY:', JSON.stringify(item, null, 2));
     console.log('🌐 [createItem] Has page_slug:', !!item.page_slug, '| value:', item.page_slug);
 
@@ -351,7 +350,7 @@ export async function createItem(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(`${API_BASE_URL}/submissions`, {
+    const response = await fetch(`${getApiBase()}/submissions`, {
       method: 'POST',
       headers: authHeaders(accessToken),
       body: JSON.stringify(item),
@@ -391,7 +390,7 @@ export async function updateVenue(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(`${API_BASE_URL}/venues/${id}`, {
+    const response = await fetch(`${getApiBase()}/venues/${id}`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
       body: JSON.stringify(venueData),
@@ -431,7 +430,7 @@ export async function updateEvent(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+    const response = await fetch(`${getApiBase()}/events/${id}`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
       body: JSON.stringify(eventData),
@@ -470,7 +469,7 @@ export async function approveItem(id: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}/approve`, {
+    const response = await fetch(`${getApiBase()}/submissions/${id}/approve`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -501,7 +500,7 @@ export async function rejectItem(id: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}/reject`, {
+    const response = await fetch(`${getApiBase()}/submissions/${id}/reject`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -532,7 +531,7 @@ export async function deleteItem(id: string): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${API_BASE_URL}/submissions/${id}`, {
+    const response = await fetch(`${getApiBase()}/submissions/${id}`, {
       method: 'DELETE',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -560,8 +559,8 @@ export async function deleteVenue(id: string): Promise<boolean> {
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[deleteVenue] No access token'); return false; }
     const attemptUrls = [
-      `${API_BASE_URL}/venues/${id}`,
-      `${API_BASE_URL}/submissions/${id}`, // fallback for older backend route layouts
+      `${getApiBase()}/venues/${id}`,
+      `${getApiBase()}/submissions/${id}`, // fallback for older backend route layouts
     ];
 
     for (let i = 0; i < attemptUrls.length; i++) {
@@ -621,8 +620,8 @@ export async function deleteEvent(id: string): Promise<boolean> {
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[deleteEvent] No access token'); return false; }
     const attemptUrls = [
-      `${API_BASE_URL}/events/${id}`,
-      `${API_BASE_URL}/submissions/${id}`, // fallback for older backend route layouts
+      `${getApiBase()}/events/${id}`,
+      `${getApiBase()}/submissions/${id}`, // fallback for older backend route layouts
     ];
 
     for (let i = 0; i < attemptUrls.length; i++) {
@@ -684,7 +683,7 @@ export async function getMyVenues(): Promise<Item[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${API_BASE_URL}/my-venues`, {
+    const response = await fetch(`${getApiBase()}/my-venues`, {
       method: 'GET',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -719,7 +718,7 @@ export async function getMyEvents(): Promise<Item[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${API_BASE_URL}/my-events`, {
+    const response = await fetch(`${getApiBase()}/my-events`, {
       method: 'GET',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -754,7 +753,7 @@ export async function deleteAllMySubmissions(): Promise<boolean> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(`${API_BASE_URL}/my-submissions/all`, {
+    const response = await fetch(`${getApiBase()}/my-submissions/all`, {
       method: 'DELETE',
       headers: authHeaders(accessToken),
       signal: controller.signal,
@@ -778,7 +777,7 @@ export async function deleteAllMySubmissions(): Promise<boolean> {
 
 export async function getFeaturedVenueIds(): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/featured-venues`, {
+    const response = await fetch(`${getApiBase()}/featured-venues`, {
       headers: authHeaders(),
     });
     if (!response.ok) return [];
@@ -792,7 +791,7 @@ export async function getFeaturedVenueIds(): Promise<string[]> {
 
 export async function getFeaturedVenues(): Promise<Item[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/featured-venues/full`, {
+    const response = await fetch(`${getApiBase()}/featured-venues/full`, {
       headers: authHeaders(),
     });
     if (!response.ok) return [];
@@ -811,7 +810,7 @@ export async function toggleFeaturedVenue(
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[toggleFeaturedVenue] No access token'); return null; }
 
-    const response = await fetch(`${API_BASE_URL}/venues/${id}/toggle-featured`, {
+    const response = await fetch(`${getApiBase()}/venues/${id}/toggle-featured`, {
       method: 'PATCH',
       headers: authHeaders(accessToken),
     });
@@ -833,7 +832,7 @@ export async function toggleFeaturedVenue(
 
 export async function getInactiveVenueIds(): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/inactive-venues`, {
+    const response = await fetch(`${getApiBase()}/inactive-venues`, {
       headers: authHeaders(),
     });
     if (!response.ok) return [];
@@ -853,8 +852,8 @@ export async function toggleVenueActive(
     if (!accessToken) { console.error('[toggleVenueActive] No access token'); return null; }
     // Prefer /venues/... first: deployed Edge often routes `venues|events` toggles but not `my-*` (404).
     const attemptUrls = [
-      `${API_BASE_URL}/venues/${id}/toggle-active`,
-      `${API_BASE_URL}/my-venues/${id}/toggle-active`,
+      `${getApiBase()}/venues/${id}/toggle-active`,
+      `${getApiBase()}/my-venues/${id}/toggle-active`,
     ];
 
     for (let i = 0; i < attemptUrls.length; i++) {
@@ -902,7 +901,7 @@ export async function toggleVenueActive(
 
 export async function getInactiveEventIds(): Promise<string[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/inactive-events`, {
+    const response = await fetch(`${getApiBase()}/inactive-events`, {
       headers: authHeaders(),
     });
     if (!response.ok) return [];
@@ -921,8 +920,8 @@ export async function toggleEventActive(
     const accessToken = await getAccessToken();
     if (!accessToken) { console.error('[toggleEventActive] No access token'); return null; }
     const attemptUrls = [
-      `${API_BASE_URL}/events/${id}/toggle-active`,
-      `${API_BASE_URL}/my-events/${id}/toggle-active`,
+      `${getApiBase()}/events/${id}/toggle-active`,
+      `${getApiBase()}/my-events/${id}/toggle-active`,
     ];
 
     for (let i = 0; i < attemptUrls.length; i++) {
