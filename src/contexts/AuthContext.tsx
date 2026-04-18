@@ -26,7 +26,7 @@ interface AuthContextType {
   sendVerificationCode: (email: string) => Promise<void>;
   verifyAndRegister: (email: string, code: string, name: string, phone?: string) => Promise<void>;
   socialLogin: (provider: 'google' | 'facebook' | 'apple') => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (name: string, email: string, phone?: string | null, profileImage?: string) => Promise<void>;
   showAuthModal: boolean;
   openAuthModal: (tab?: 'login' | 'signup') => void;
@@ -51,7 +51,7 @@ const defaultContextValue: AuthContextType = {
   sendVerificationCode: noopAsync,
   verifyAndRegister: noopAsync,
   socialLogin: noopAsync,
-  logout: noop,
+  logout: noopAsync,
   updateProfile: noopAsync,
   showAuthModal: false,
   openAuthModal: noop,
@@ -115,7 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? {
                 id: rawUser.id,
                 email: rawUser.email ?? '',
-                name: rawUser.user_metadata?.name,
+                name: authService.displayNameFromSessionMetadata(
+                  rawUser.user_metadata as Record<string, unknown> | undefined,
+                  rawUser.email ?? '',
+                ),
                 role: 'user' as AppRole,
                 profileImage: rawUser.user_metadata?.profileImage,
               }
@@ -164,7 +167,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const fallback: User = {
                 id: ru.id,
                 email: ru.email ?? '',
-                name: ru.user_metadata?.name,
+                name: authService.displayNameFromSessionMetadata(
+                  ru.user_metadata as Record<string, unknown> | undefined,
+                  ru.email ?? '',
+                ),
                 role: 'user',
                 phone: undefined,
                 profileImage: ru.user_metadata?.profileImage,
@@ -225,7 +231,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const base: User = {
             id: session.user.id,
             email: session.user.email!,
-            name: session.user.user_metadata?.name,
+            name: authService.displayNameFromSessionMetadata(
+              session.user.user_metadata as Record<string, unknown> | undefined,
+              session.user.email ?? '',
+            ),
             role: 'user',
             profileImage: session.user.user_metadata?.profileImage,
           };
@@ -416,9 +425,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = (): Promise<void> => {
     // 🔥 PROPER SIGN OUT - Clear Supabase session
-    authService.signOut().then(() => {
+    return authService.signOut().then(() => {
       setUser(null);
       setAccessToken(null);
       localStorage.removeItem(STORAGE_KEY);
@@ -459,7 +468,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[Auth] Profile updated:', email);
     } catch (error) {
       console.error('[Auth] Profile update failed:', error);
-      throw new Error('Ažuriranje profila nije uspjelo. Pokušajte ponovo.');
+      throw error instanceof Error ? error : new Error(String(error));
     }
   };
 

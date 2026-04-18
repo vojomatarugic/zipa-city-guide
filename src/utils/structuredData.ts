@@ -4,7 +4,7 @@ export const getOrganizationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "ZIPA City Guide",
-  "alternateName": "City Guide",
+  "alternateName": "Zipa City Guide",
   "url": "https://blcityguide.com",
   "logo": "https://blcityguide.com/logo.png",
   "description": "Kompletan turistički vodič kroz Banja Luku - restorani, dešavanja, noćni život, smještaj i znamenitosti.",

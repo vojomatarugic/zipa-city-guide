@@ -54,7 +54,7 @@ export default function App() {
       // Additional iOS meta tags (favicon links live in index.html)
       setMetaTag('apple-mobile-web-app-capable', 'yes', false);
       setMetaTag('apple-mobile-web-app-status-bar-style', 'default', false);
-      setMetaTag('apple-mobile-web-app-title', 'City Guide', false);
+      setMetaTag('apple-mobile-web-app-title', 'Zipa City Guide', false);
     } catch (error) {
       console.error('Error setting meta tags:', error);
     }

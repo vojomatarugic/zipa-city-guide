@@ -1,7 +1,7 @@
 export const translations = {
   appName: {
-    lat: "City Guide",
-    en: "City Guide",
+    lat: "Zipa City Guide",
+    en: "Zipa City Guide",
   },
 
   // Navigation
@@ -405,9 +405,9 @@ export const translations = {
     lat: "Sva prava zadržana",
     en: "All rights reserved",
   },
-  banjaLukaGuide: {
-    lat: "City Guide",
-    en: "City Guide",
+  zipaCityGuide: {
+    lat: "Zipa City Guide",
+    en: "Zipa City Guide",
   },
   about: {
     lat: "O nama",
@@ -748,7 +748,7 @@ export const translations = {
   // Guide Page
   guidePageTitle: {
     lat: "Vodič kroz Banju Luku",
-    en: "Guide to Banja Luka",
+    en: "Zipa City Guide",
   },
   guidePageDesc: {
     lat: "Znamenitosti, istorija, kultura – sve što treba da znate o Banjaluci.",
@@ -1262,7 +1262,7 @@ export const translations = {
   },
   articleNightlife: {
     lat: "Vodič kroz noćni život Banjaluke",
-    en: "Guide to Banja Luka Nightlife",
+    en: "Banja Luka Nightlife Guide",
   },
   articleNightlifeDesc: {
     lat: "Klubovi, barovi i mjesta gdje grad nikad ne spava.",
@@ -1387,7 +1387,7 @@ export const translations = {
   // Guide Page - Long Texts
   guideLongText1: {
     lat: "Vodič kroz Banju Luku donosi vam sve što treba da znate o gradu – od istorijskih znamenitosti i kulturnih institucija do najboljih restorana i noćnog života. Bilo da ste prvi put u gradu ili lokalni stanovnik koji želi otkriti nešto novo, naš vodič vam pomaže.",
-    en: "Guide to Banja Luka brings you everything you need to know about the city – from historical landmarks and cultural institutions to the best restaurants and nightlife. Whether you are visiting the city for the first time or a local resident who wants to discover something new, our guide helps you.",
+    en: "Zipa City Guide brings you everything you need to know about the city – from historical landmarks and cultural institutions to the best restaurants and nightlife. Whether you are visiting the city for the first time or a local resident who wants to discover something new, our guide helps you.",
   },
   guideLongText2: {
     lat: "Tvrđava Kastel, Hram Hrista Spasitelja, Ferhadija džamija, parkovi, mostovi i kulturne ustanove – sve to čini Banju Luku posebnom. Istražite grad kroz naše detaljne opise i fotografije.",
@@ -2143,6 +2143,10 @@ export const translations = {
   imageUploaded: { lat: "Slika je upload-ovana i profil ažuriran!", en: "Image uploaded and profile updated!" },
   profileSaved: { lat: "Profil uspješno sačuvan!", en: "Profile saved successfully!" },
   profileSaveError: { lat: "Greška pri čuvanju profila. Pokušajte ponovo.", en: "Error saving profile. Please try again." },
+  sessionExpiredReLogin: {
+    lat: "Sesija je završena. Prijavite se ponovo da nastavite.",
+    en: "Your session has ended. Please sign in again to continue.",
+  },
   profileNameRequired: { lat: "Ime je obavezno polje.", en: "Name is required." },
   profileEmailRequired: { lat: "Email je obavezno polje.", en: "Email is required." },
   profilePhoneRequired: { lat: "Telefon je obavezno polje.", en: "Phone is required." },
@@ -3478,7 +3482,7 @@ export const translations = {
   // Home Page SEO
   seoHomeTitle: {
     lat: "ZIPA City Guide | Banja Luka - Vodič kroz grad | Otkrijte Banjaluku",
-    en: "ZIPA City Guide | Banja Luka - City Guide | Discover Banja Luka",
+    en: "ZIPA City Guide | Banja Luka | Discover Banja Luka",
   },
   seoHomeDescription: {
     lat: "Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan vodič kroz grad sa preporukama lokalaca.",
@@ -3555,8 +3559,8 @@ export const translations = {
     en: "Contact the ZIPA City Guide team. Send us a message or visit us at the ZIPA Agency office in Banja Luka.",
   },
   seoContactKeywords: {
-    lat: "kontakt, City Guide, ZIPA Agency, kontakt forma",
-    en: "contact, City Guide, ZIPA Agency, contact form",
+    lat: "kontakt, Zipa City Guide, ZIPA Agency, kontakt forma",
+    en: "contact, Zipa City Guide, ZIPA Agency, contact form",
   },
 
   // Terms of Service Page SEO
@@ -3569,8 +3573,8 @@ export const translations = {
     en: "Read the Terms of Service of ZIPA City Guide platform. Rules, responsibilities, and legal information.",
   },
   seoTermsKeywords: {
-    lat: "uslovi korišćenja, pravila, politika, City Guide",
-    en: "terms of service, rules, policy, City Guide",
+    lat: "uslovi korišćenja, pravila, politika, Zipa City Guide",
+    en: "terms of service, rules, policy, Zipa City Guide",
   },
 
   // Theatre Page SEO
@@ -4093,6 +4097,10 @@ export const translations = {
   newPassword: { lat: "Nova lozinka", en: "New Password" },
   confirmNewPassword: { lat: "Potvrdi novu lozinku", en: "Confirm New Password" },
   passwordChanged: { lat: "Lozinka uspješno promijenjena", en: "Password changed successfully" },
+  passwordChangedReLogin: {
+    lat: "Lozinka je uspješno promijenjena. Prijavite se ponovo novom lozinkom.",
+    en: "Your password was changed successfully. Please sign in again with your new password.",
+  },
   passwordChangeError: { lat: "Greška pri promjeni lozinke", en: "Error changing password" },
   passwordsDoNotMatch: { lat: "Lozinke se ne poklapaju", en: "Passwords do not match" },
   passwordTooShort: { lat: "Lozinka mora imati najmanje 6 karaktera", en: "Password must be at least 6 characters" },

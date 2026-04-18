@@ -7,6 +7,8 @@ import { BannerAdminSection } from '../components/BannerAdminSection';
 import { UsersAdminSection } from '../components/UsersAdminSection';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import * as dataService from '../utils/dataService';
+import { ProfileUpdateSessionLostError, deleteUserAccount } from '../utils/authService';
+import { panelProfileDisplayName } from '../utils/userDisplay';
 import * as eventService from '../utils/eventService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
@@ -626,7 +628,7 @@ export function AdminPage() {
                     {t('adminPanel')}
                   </h1>
                   <p style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
-                    {user?.name || user?.email}
+                    {user ? panelProfileDisplayName(user) : ''}
                   </p>
                   <p className="text-[14px] mb-1" style={{ color: 'var(--text-secondary)' }}>
                     {user?.email}
@@ -730,7 +732,6 @@ export function AdminPage() {
                         onChange={(e) => setEditName(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[14px]"
                         placeholder={t('profileName')}
-                        required
                       />
                     </div>
                     <div>
@@ -772,11 +773,6 @@ export function AdminPage() {
                     <button
                       onClick={async () => {
                         try {
-                          // Validate required fields
-                          if (!editName.trim()) {
-                            toast.error(t('profileNameRequired'));
-                            return;
-                          }
                           if (!editEmail.trim()) {
                             toast.error(t('profileEmailRequired'));
                             return;
@@ -842,7 +838,11 @@ export function AdminPage() {
                         } catch (error) {
                           console.error('❌ Error saving profile:', error);
                           setUploadingImage(false);
-                          toast.error(t('profileSaveError'));
+                          if (error instanceof ProfileUpdateSessionLostError) {
+                            toast.info(t('sessionExpiredReLogin'));
+                          } else {
+                            toast.error(t('profileSaveError'));
+                          }
                         }
                       }}
                       className="px-4 py-2 bg-[#0E3DC5] text-white rounded-lg text-[14px] font-semibold hover:bg-[#0a2d94]"
@@ -1018,11 +1018,12 @@ export function AdminPage() {
                                 }
                                 throw new Error(errorData.error || errorData.details || 'Failed to change password');
                               }
-                              toast.success(t('passwordChanged'));
+                              toast.success(t('passwordChangedReLogin'));
                               setShowChangePassword(false);
                               setCurrentPassword('');
                               setNewPassword('');
                               setConfirmPassword('');
+                              await logout();
                             } catch (error) {
                               console.error('❌ Error changing password:', error);
                               toast.error(typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : t('passwordChangeError'));
@@ -1072,21 +1073,14 @@ export function AdminPage() {
                             if (deleteConfirmText !== confirmWord) return;
                             setDeletingAccount(true);
                             try {
-                              const response = await fetch(apiUrl('/auth/delete-account'), {
-                                method: 'DELETE',
-                                headers: {
-                                  'Authorization': `Bearer ${publicAnonKey}`,
-                                  'x-auth-token': accessToken || '',
-                                  'Content-Type': 'application/json',
-                                },
-                              });
-                              if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}));
-                                if (errorData.code === 'LAST_ADMIN') {
+                              const result = await deleteUserAccount(accessToken);
+                              if (!result.ok) {
+                                if (result.code === 'LAST_ADMIN') {
                                   toast.error(t('lastAdminError'));
                                   return;
                                 }
-                                throw new Error(errorData.error || 'Failed to delete account');
+                                toast.error(t('accountDeleteError'));
+                                return;
                               }
                               toast.success(t('accountDeleted'));
                               logout();

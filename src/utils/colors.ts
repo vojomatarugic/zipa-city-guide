@@ -1,5 +1,5 @@
 /**
- * Centralized color configuration for Banja Luka Guide
+ * Centralized color configuration for Zipa City Guide
  * All hardcoded colors should be imported from this file
  */
 

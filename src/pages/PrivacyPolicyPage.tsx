@@ -25,13 +25,13 @@ export function PrivacyPolicyPage() {
     title,
     description,
     ogImage: ogImage,
-    canonical: `https://banjalukaguide.com/${language}/privacyPolicy`,
+    canonical: `https://zipacityguide.com/${language}/privacyPolicy`,
   });
 
   // Breadcrumb Structured Data
   const breadcrumbSchema = getBreadcrumbSchema([
-    { name: language === "sr" ? "Početna" : "Home", url: "https://banjalukaguide.com" },
-    { name: title, url: `https://banjalukaguide.com/${language}/privacyPolicy` }
+    { name: language === "sr" ? "Početna" : "Home", url: "https://zipacityguide.com" },
+    { name: title, url: `https://zipacityguide.com/${language}/privacyPolicy` }
   ]);
 
   return (
@@ -124,7 +124,7 @@ export function PrivacyPolicyPage() {
             >
               <strong>{language === "sr" ? "Kontakt:" : "Contact:"}</strong>
               <br />
-              E-mail: <a href="mailto:info@banjalukaguide.com" style={{ color: BRAND.primary }}>info@banjalukaguide.com</a>
+              E-mail: <a href="mailto:info@zipacityguide.com" style={{ color: BRAND.primary }}>info@zipacityguide.com</a>
             </p>
           </div>
 

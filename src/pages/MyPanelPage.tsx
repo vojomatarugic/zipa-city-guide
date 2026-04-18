@@ -4,8 +4,10 @@ import { BACKGROUNDS, BORDERS, TEXT, BRAND } from '../utils/colors';
 import { Link, useNavigate } from 'react-router';
 import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import * as dataService from '../utils/dataService';
+import { ProfileUpdateSessionLostError, deleteUserAccount } from '../utils/authService';
+import { panelProfileDisplayName } from '../utils/userDisplay';
 import { toast } from 'sonner@2.0.3';
 import { publicAnonKey } from '../utils/supabase/info';
 import { apiUrl } from '../config/apiBase';
@@ -17,7 +19,7 @@ import { listingDocumentTitle } from '../utils/documentTitle';
 
 export function MyPanelPage() {
   const { t, language } = useT();
-  const { isLoggedIn, isAdmin, user, updateProfile, isLoading, logout, accessToken } = useAuth(); // ✅ ADD isLoading
+  const { isLoggedIn, isAdmin, user, updateProfile, isLoading, logout, accessToken } = useAuth();
   const navigate = useNavigate();
   const { selectedCity } = useSelectedCity();
   const panelTitle = useMemo(
@@ -131,6 +133,27 @@ export function MyPanelPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleConfirmedAccountDeletion = useCallback(async () => {
+    const confirmWord = language === 'sr' ? 'OBRIŠI' : 'DELETE';
+    if (deleteConfirmText !== confirmWord) return;
+    setDeletingAccount(true);
+    try {
+      const result = await deleteUserAccount(accessToken);
+      if (!result.ok) {
+        toast.error(t('accountDeleteError'));
+        return;
+      }
+      toast.success(t('accountDeleted'));
+      logout();
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast.error(t('accountDeleteError'));
+    } finally {
+      setDeletingAccount(false);
+    }
+  }, [accessToken, deleteConfirmText, language, logout, navigate, t]);
 
   // 🔄 SYNC EDIT STATE WITH USER (never overwrite while actively editing)
   useEffect(() => {
@@ -337,7 +360,7 @@ export function MyPanelPage() {
                       marginBottom: '2px'
                     }}
                   >
-                    {user.name || user.email}
+                    {panelProfileDisplayName(user)}
                   </p>
                   <p className="text-[14px] mb-1" style={{ color: TEXT.secondary }}>
                     {user.email}
@@ -350,7 +373,9 @@ export function MyPanelPage() {
                   {!user.phone && <div className="mb-2"></div>}
                   <div className="flex gap-3">
                     <button
-                      onClick={() => setIsEditingProfile(true)}
+                      onClick={() => {
+                        setIsEditingProfile(true);
+                      }}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-[14px] font-semibold hover:bg-gray-200 transition-all"
                       style={{ cursor: 'pointer' }}
                     >
@@ -383,7 +408,6 @@ export function MyPanelPage() {
                         onChange={(e) => setEditName(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-[14px]"
                         placeholder={t('profileName')}
-                        required
                       />
                     </div>
                     <div>
@@ -425,11 +449,6 @@ export function MyPanelPage() {
                     <button
                       onClick={async () => {
                         try {
-                          // Validate required fields
-                          if (!editName.trim()) {
-                            toast.error(t('profileNameRequired'));
-                            return;
-                          }
                           if (!editEmail.trim()) {
                             toast.error(t('profileEmailRequired'));
                             return;
@@ -498,7 +517,11 @@ export function MyPanelPage() {
                         } catch (error) {
                           console.error('❌ Error saving profile:', error);
                           setUploadingImage(false);
-                          toast.error(t('profileSaveError'));
+                          if (error instanceof ProfileUpdateSessionLostError) {
+                            toast.info(t('sessionExpiredReLogin'));
+                          } else {
+                            toast.error(t('profileSaveError'));
+                          }
                         }
                       }}
                       className="px-4 py-2 bg-[#0E3DC5] text-white rounded-lg text-[14px] font-semibold hover:bg-[#0a2d94]"
@@ -647,11 +670,12 @@ export function MyPanelPage() {
                                 }
                                 throw new Error(errorData.error || errorData.details || 'Failed to change password');
                               }
-                              toast.success(t('passwordChanged'));
+                              toast.success(t('passwordChangedReLogin'));
                               setShowChangePassword(false);
                               setCurrentPassword('');
                               setNewPassword('');
                               setConfirmPassword('');
+                              await logout();
                             } catch (error) {
                               console.error('Error changing password:', error);
                               toast.error(typeof error === 'object' && error !== null && 'message' in error ? (error as Error).message : t('passwordChangeError'));
@@ -694,33 +718,8 @@ export function MyPanelPage() {
                           />
                         </div>
                         <button
-                          onClick={async () => {
-                            const confirmWord = language === 'sr' ? 'OBRIŠI' : 'DELETE';
-                            if (deleteConfirmText !== confirmWord) return;
-                            setDeletingAccount(true);
-                            try {
-                              const response = await fetch(apiUrl('/auth/delete-account'), {
-                                method: 'DELETE',
-                                headers: {
-                                  'Authorization': `Bearer ${publicAnonKey}`,
-                                  'x-auth-token': accessToken || '',
-                                  'Content-Type': 'application/json',
-                                },
-                              });
-                              if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}));
-                                throw new Error(errorData.error || 'Failed to delete account');
-                              }
-                              toast.success(t('accountDeleted'));
-                              logout();
-                              navigate('/', { replace: true });
-                            } catch (error) {
-                              console.error('Error deleting account:', error);
-                              toast.error(t('accountDeleteError'));
-                            } finally {
-                              setDeletingAccount(false);
-                            }
-                          }}
+                          type="button"
+                          onClick={() => void handleConfirmedAccountDeletion()}
                           className="px-4 py-2 rounded-lg text-[13px] font-semibold transition-colors"
                           disabled={deletingAccount || deleteConfirmText !== (language === 'sr' ? 'OBRIŠI' : 'DELETE')}
                           style={{

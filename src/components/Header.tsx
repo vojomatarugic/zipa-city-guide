@@ -4,6 +4,7 @@ import { Link, useLocation as useRouterLocation } from 'react-router';
 import { useT } from '../hooks/useT';
 import { useLocation } from '../contexts/LocationContext';
 import { useAuth } from '../contexts/AuthContext';
+import { headerProfileButtonLabel } from '../utils/userDisplay';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { GRADIENTS, BORDERS, SHADOWS } from '../utils/colors';
 import zipaLogo from '../assets/9265992fac3001b28e85179123b7b79ce1f668b0.png';
@@ -78,7 +79,7 @@ export function Header() {
             background: '#E5E9F0'
           }} />
           
-          {/* BL City Guide Logo - Internal Link */}
+          {/* Zipa City Guide Logo - Internal Link */}
           <Link 
             to="/" 
             className="flex items-center no-underline"
@@ -221,7 +222,7 @@ export function Header() {
                 whiteSpace: 'nowrap',
               }}
             >
-              {user?.name?.split(' ')[0] || user?.email?.split('@')[0] || t('myPanel')}
+              {user ? headerProfileButtonLabel(user) : t('myPanel')}
             </Link>
           )}
         </div>

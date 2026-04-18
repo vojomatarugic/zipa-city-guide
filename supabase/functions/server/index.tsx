@@ -299,11 +299,16 @@ async function fetchProfilesRoleMapByUserId(supabase: any): Promise<Map<string, 
 /** Display label for admin user list — name lives in GoTrue `user_metadata`, not `public.profiles`. */
 function displayNameFromAuthUser(user: { email?: string | null; user_metadata?: Record<string, unknown> | null }): string {
   const um = user.user_metadata ?? {};
+  const fromDisplay = String(um.display_name ?? "").trim();
+  if (fromDisplay) return fromDisplay;
   const fromName = String(um.name ?? "").trim();
   if (fromName) return fromName;
   const fromFull = String(um.full_name ?? "").trim();
   if (fromFull) return fromFull;
-  return String(user.email ?? "").trim() || "";
+  const em = String(user.email ?? "").trim();
+  const at = em.indexOf("@");
+  if (at > 0) return em.slice(0, at) || em;
+  return em;
 }
 
 /**
@@ -566,9 +571,11 @@ app.post("/make-server-a0e1e9cb/auth/signup", async (c) => {
     const body = await c.req.json();
     
     const { email, password, name, phone, role, adminSecret } = body;
-    
-    if (!email || !password || !name) {
-      return c.json({ error: 'Missing required fields: email, password, name' }, 400);
+    // Required: email + password only. Name is optional (set later in Edit Profile).
+    const emailStr = typeof email === "string" ? email.trim() : "";
+    const passwordStr = typeof password === "string" ? password : "";
+    if (!emailStr || !passwordStr) {
+      return c.json({ error: 'Missing required fields: email, password' }, 400);
     }
     
     // Determine user role
@@ -580,23 +587,30 @@ app.post("/make-server-a0e1e9cb/auth/signup", async (c) => {
       
       if (adminSecret === ADMIN_SECRET) {
         userRole = 'admin';
-        console.log(`🛡️  Creating admin user: ${email}`);
+        console.log(`🛡️  Creating admin user: ${emailStr}`);
       } else {
-        console.warn(`⚠️  Attempted admin creation without valid secret: ${email}`);
+        console.warn(`⚠️  Attempted admin creation without valid secret: ${emailStr}`);
         return c.json({ error: 'Invalid admin secret' }, 403);
       }
     }
     
     const supabase = getSupabaseClient();
     
+    const trimmedSignupName = typeof name === "string" ? name.trim() : "";
+    const userMetadata: Record<string, unknown> = {
+      role: userRole,
+    };
+    if (trimmedSignupName) {
+      userMetadata.name = trimmedSignupName;
+    }
+    if (phone != null && String(phone).trim() !== "") {
+      userMetadata.phone = String(phone).trim();
+    }
+
     const { data, error } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      user_metadata: { 
-        name,
-        phone,
-        role: userRole
-      },
+      email: emailStr,
+      password: passwordStr,
+      user_metadata: userMetadata,
       // Automatically confirm the user's email since an email server hasn't been configured.
       email_confirm: true
     });
@@ -607,7 +621,7 @@ app.post("/make-server-a0e1e9cb/auth/signup", async (c) => {
     }
 
     const createdId = data.user.id;
-    const createdEmail = (data.user.email ?? email).trim();
+    const createdEmail = (data.user.email ?? emailStr).trim();
     const phoneNorm =
       phone != null && String(phone).trim() !== "" ? String(phone).trim() : null;
     const { error: profileUpsertErr } = await supabase.from("profiles").upsert(
@@ -624,7 +638,7 @@ app.post("/make-server-a0e1e9cb/auth/signup", async (c) => {
       return c.json({ error: "Failed to create profile row", details: profileUpsertErr.message }, 500);
     }
     
-    console.log(`✅ User created: ${data.user.id} (${email}) - Role: ${userRole}`);
+    console.log(`✅ User created: ${data.user.id} (${emailStr}) - Role: ${userRole}`);
     
     return c.json({ 
       success: true, 
@@ -785,6 +799,7 @@ app.get("/make-server-a0e1e9cb/users/me/profile", async (c) => {
       return c.json({ error: error.message, code: 500 }, 500);
     }
     const um = (userData.user.user_metadata ?? {}) as Record<string, unknown>;
+    const displayFromAuth = String(um.display_name ?? "").trim();
     const nameFromAuth = String(um.name ?? "").trim();
     const fullFromAuth = String(um.full_name ?? "").trim();
     /** Display name is not stored on `profiles` in this schema; hydrate from GoTrue metadata when present. */
@@ -793,8 +808,9 @@ app.get("/make-server-a0e1e9cb/users/me/profile", async (c) => {
         ? null
         : {
             ...(data as Record<string, unknown>),
+            display_name: displayFromAuth || null,
             name: nameFromAuth || null,
-            full_name: fullFromAuth || nameFromAuth || null,
+            full_name: fullFromAuth || null,
           };
     console.log("[users/me/profile] ok", { userId: uid, hasRow: !!data, role: (data as { role?: unknown } | null)?.role });
     return c.json({ profile });
@@ -1091,7 +1107,7 @@ app.delete("/make-server-a0e1e9cb/users/:userId", requireAdmin, async (c) => {
 app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
   try {
     const body = await c.req.json();
-    const { userId, name, email, oldEmail, phone, profileImage } = body;
+    const { userId, name, email, oldEmail, phone, profileImage, display_name } = body;
     
     if (!userId) {
       return c.json({ error: 'Missing required field: userId' }, 400);
@@ -1113,6 +1129,12 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
     };
     if (name !== undefined) {
       metadataPatch.name = name;
+    }
+    if (display_name !== undefined) {
+      metadataPatch.display_name =
+        display_name === null || display_name === ""
+          ? ""
+          : String(display_name).trim();
     }
     // Phone lives only in `public.profiles.phone` — do not sync to auth user_metadata
     if (profileImage !== undefined) {
@@ -1216,12 +1238,17 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
     }
     
     console.log(`✅ User profile updated: ${userId}`);
+    const umOut = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+    const resolvedOutName = displayNameFromAuthUser({
+      email: data.user.email,
+      user_metadata: umOut,
+    });
     return c.json({ 
       success: true, 
       user: {
         id: data.user.id,
         email: data.user.email,
-        name: data.user.user_metadata?.name,
+        name: resolvedOutName,
         role: profileRole,
         phone: synced.phone ?? null,
         profileImage: synced.avatar_url ?? data.user.user_metadata?.profileImage ?? null,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   MapPin,
   ChevronDown,
@@ -84,6 +84,7 @@ export function HomePage() {
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
     {},
   );
+  const searchShellRef = useRef<HTMLDivElement>(null);
 
   // Same bucket as EventsPage: top-level category "events" only
   useEffect(() => {
@@ -153,6 +154,17 @@ export function HomePage() {
     const timeoutId = setTimeout(performSearch, 300); // Debounce 300ms
     return () => clearTimeout(timeoutId);
   }, [searchQuery, language]);
+
+  useEffect(() => {
+    if (!isSearchMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const root = searchShellRef.current;
+      if (!root || root.contains(e.target as Node)) return;
+      setIsSearchMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isSearchMenuOpen]);
 
   // Nearby cities mapping - shows cities near the selected city
   const nearbyCitiesMap: Record<
@@ -308,6 +320,7 @@ export function HomePage() {
 
           {/* Search Bar */}
           <div
+            ref={searchShellRef}
             className="w-full max-w-2xl bg-white rounded-md shadow-lg relative"
             style={{
               padding: "8px",

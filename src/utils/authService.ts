@@ -4,9 +4,19 @@
 
 import { supabase } from './supabaseClient';
 import { projectId, publicAnonKey } from './supabase/info';
-import { getApiBase } from '../config/apiBase';
+import { getApiBase, apiUrl } from '../config/apiBase';
+import { getSupabaseAuthRedirectTo } from './authRedirect';
+import { normalizeUserChosenName, resolvedDisplayNameFromSources } from './userDisplay';
 
 const SUPABASE_URL = `https://${projectId}.supabase.co`;
+
+/** Profile PATCH succeeded but the client session could not be refreshed (e.g. after password change). */
+export class ProfileUpdateSessionLostError extends Error {
+  constructor() {
+    super('PROFILE_UPDATE_SESSION_LOST');
+    this.name = 'ProfileUpdateSessionLostError';
+  }
+}
 
 /** Profile hydration — Edge Function only (no browser `supabase.from('profiles')`). */
 const PROFILE_ME_URL = `${SUPABASE_URL}/functions/v1/make-server-a0e1e9cb/users/me/profile`;
@@ -93,6 +103,8 @@ type ProfileRow = {
   id: string;
   email?: string | null;
   role?: unknown;
+  /** App override in GoTrue `user_metadata` (not a DB column); returned by GET users/me/profile. */
+  display_name?: string | null;
   name?: string | null;
   full_name?: string | null;
   phone?: string | null;
@@ -154,13 +166,19 @@ async function fetchProfileRowFromEdgeApi(userId: string, access_token: string):
   return profile;
 }
 
-function displayNameFromProfileRow(row: ProfileRow, fallback?: string): string | undefined {
-  const fromName = String(row.name ?? '').trim();
-  if (fromName) return fromName;
-  const fromFull = String(row.full_name ?? '').trim();
-  if (fromFull) return fromFull;
-  const fb = String(fallback ?? '').trim();
-  return fb || undefined;
+/** Resolve `User.name` from GoTrue `user_metadata` + email (used before profile merge and in AuthContext fallbacks). */
+export function displayNameFromSessionMetadata(
+  userMetadata: Record<string, unknown> | null | undefined,
+  email: string,
+): string | undefined {
+  const s = resolvedDisplayNameFromSources({
+    display_name: userMetadata?.display_name != null ? String(userMetadata.display_name) : undefined,
+    name: userMetadata?.name != null ? String(userMetadata.name) : undefined,
+    full_name: userMetadata?.full_name != null ? String(userMetadata.full_name) : undefined,
+    email,
+  });
+  const t = String(s ?? '').trim();
+  return normalizeUserChosenName(t) ?? (t || undefined);
 }
 
 async function ensureProfileRowExists(base: User): Promise<void> {
@@ -175,7 +193,7 @@ async function ensureProfileRowExists(base: User): Promise<void> {
         userId: base.id,
         email: base.email,
         oldEmail: base.email,
-        name: base.name || base.email.split('@')[0] || 'User',
+        name: normalizeUserChosenName(base.name) ?? '',
       }),
     });
   } catch (err) {
@@ -209,7 +227,16 @@ export async function mergeProfileIntoUser(base: User, accessToken?: string | nu
     throw new Error(msg);
   }
 
-  const mergedName = displayNameFromProfileRow(row, base.name);
+  const emailForResolve = String(row.email ?? '').trim() || base.email;
+  const mergedNameRaw = resolvedDisplayNameFromSources({
+    display_name: row.display_name,
+    name: row.name,
+    full_name: row.full_name,
+    email: emailForResolve,
+  });
+  const t = String(mergedNameRaw ?? '').trim();
+  const mergedName =
+    normalizeUserChosenName(t) ?? (t || undefined) ?? normalizeUserChosenName(base.name);
   const phoneFromProfile = String(row.phone ?? '').trim();
   const phoneMerged = phoneFromProfile || undefined;
   const imageMerged = String(row.avatar_url ?? '').trim() || base.profileImage;
@@ -219,7 +246,7 @@ export async function mergeProfileIntoUser(base: User, accessToken?: string | nu
     ...base,
     email: String(row.email ?? '').trim() || base.email,
     role: finalRole,
-    name: mergedName ?? base.name,
+    name: mergedName,
     phone: phoneMerged,
     profileImage: imageMerged,
   };
@@ -236,13 +263,22 @@ export interface AuthResponse {
 export async function signUp(email: string, password: string, name?: string, phone?: string, role?: 'user' | 'admin'): Promise<AuthResponse> {
   try {
     // Call backend signup endpoint
+    const payload: Record<string, unknown> = {
+      email,
+      password,
+      role: role || 'user',
+    };
+    const trimmedSignupName = String(name ?? '').trim();
+    if (trimmedSignupName) payload.name = trimmedSignupName;
+    if (phone != null && String(phone).trim() !== '') payload.phone = String(phone).trim();
+
     const response = await fetch(`${getApiBase()}/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${publicAnonKey}`,
       },
-      body: JSON.stringify({ email, password, name: name || 'User', phone, role: role || 'user' }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -266,7 +302,7 @@ export async function signUp(email: string, password: string, name?: string, pho
     const baseUser: User = {
       id: signInData.user.id,
       email: signInData.user.email!,
-      name: signInData.user.user_metadata?.name,
+      name: displayNameFromSessionMetadata(signInData.user.user_metadata, signInData.user.email!),
       role: 'user',
       profileImage: signInData.user.user_metadata?.profileImage,
     };
@@ -284,6 +320,29 @@ export async function signUp(email: string, password: string, name?: string, pho
     console.error('❌ Error signing up:', error);
     throw error;
   }
+}
+
+export type DeleteAccountApiResult =
+  | { ok: true }
+  | { ok: false; code?: string; message: string };
+
+/** DELETE `/auth/delete-account` — same contract as My Panel / Admin profile flows. */
+export async function deleteUserAccount(accessToken: string | null): Promise<DeleteAccountApiResult> {
+  const response = await fetch(apiUrl('/auth/delete-account'), {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${publicAnonKey}`,
+      'x-auth-token': accessToken || '',
+      'Content-Type': 'application/json',
+    },
+  });
+  if (response.ok) return { ok: true };
+  const errorData = (await response.json().catch(() => ({}))) as { code?: string; error?: string };
+  return {
+    ok: false,
+    code: errorData.code,
+    message: errorData.error || 'Failed to delete account',
+  };
 }
 
 /**
@@ -322,7 +381,7 @@ export async function signInOrSignUp(email: string, password: string): Promise<A
 export async function resetPassword(email: string): Promise<void> {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+      redirectTo: getSupabaseAuthRedirectTo(),
     });
     if (error) throw error;
   } catch (error) {
@@ -355,7 +414,7 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
     const baseUser: User = {
       id: data.user.id,
       email: data.user.email!,
-      name: data.user.user_metadata?.name,
+      name: displayNameFromSessionMetadata(data.user.user_metadata, data.user.email!),
       role: 'user',
       profileImage: data.user.user_metadata?.profileImage,
     };
@@ -459,7 +518,10 @@ export async function verifyAndRegister(email: string, code: string, name: strin
     const baseUser: User = {
       id: data.user.id,
       email: data.user.email!,
-      name,
+      name: displayNameFromSessionMetadata(
+        { ...(data.user.user_metadata ?? {}), name } as Record<string, unknown>,
+        data.user.email!,
+      ),
       role: 'user',
       profileImage: data.user.user_metadata?.profileImage,
     };
@@ -492,7 +554,7 @@ export async function signInWithSocial(provider: 'google' | 'facebook' | 'apple'
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: getSupabaseAuthRedirectTo(),
       },
     });
 
@@ -585,7 +647,7 @@ async function buildAuthResponseAsync(session: { user: any; access_token: string
   const baseUser: User = {
     id: session.user.id,
     email: session.user.email!,
-    name: session.user.user_metadata?.name,
+    name: displayNameFromSessionMetadata(session.user.user_metadata, session.user.email!),
     role: 'user',
     profileImage: session.user.user_metadata?.profileImage,
   };
@@ -634,7 +696,16 @@ export async function updateProfile(
     
     console.log('📤 [updateProfile] Sending to backend:', { userId, name, email, oldEmail, phone, profileImage });
     
-    const payload: Record<string, unknown> = { userId, name, email, oldEmail, profileImage };
+    const nameForBackend = String(name ?? '').trim();
+    const payload: Record<string, unknown> = {
+      userId,
+      name: nameForBackend,
+      /** App-level override so OAuth re-sync does not replace the edited label. */
+      display_name: nameForBackend,
+      email,
+      oldEmail,
+      profileImage,
+    };
     if (phone !== undefined) {
       const t = typeof phone === 'string' ? phone.trim() : '';
       payload.phone = phone === null || t === '' ? null : t;
@@ -663,7 +734,7 @@ export async function updateProfile(
     const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
     
     if (refreshError || !refreshData.session) {
-      throw new Error('Failed to refresh session after profile update');
+      throw new ProfileUpdateSessionLostError();
     }
 
     console.log('✅ [updateProfile] Session refreshed successfully');
@@ -671,7 +742,7 @@ export async function updateProfile(
     const baseUser: User = {
       id: refreshData.user.id,
       email: refreshData.user.email!,
-      name: refreshData.user.user_metadata?.name,
+      name: displayNameFromSessionMetadata(refreshData.user.user_metadata, refreshData.user.email!),
       role: 'user',
       profileImage: refreshData.user.user_metadata?.profileImage,
     };
