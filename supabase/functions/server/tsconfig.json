@@ -8,14 +8,7 @@
     "strict": false,
     "noEmit": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "baseUrl": ".",
-    "paths": {
-      "hono": ["../../../../node_modules/hono/dist/types/index.d.ts"],
-      "hono/cors": ["../../../../node_modules/hono/dist/types/middleware/cors/index.d.ts"],
-      "hono/logger": ["../../../../node_modules/hono/dist/types/middleware/logger/index.d.ts"],
-      "@supabase/supabase-js": ["../../../../node_modules/@supabase/supabase-js/dist/index.d.mts"]
-    }
+    "allowImportingTsExtensions": true
   },
   "include": ["./**/*.ts", "./**/*.tsx", "./deno-ambient.d.ts"]
 }

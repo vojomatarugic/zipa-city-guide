@@ -1,7 +1,7 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { logger } from "hono/logger";
-import { createClient } from "@supabase/supabase-js";
+import { Hono } from "npm:hono";
+import { cors } from "npm:hono/cors";
+import { logger } from "npm:hono/logger";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_correct.tsx";
 
 console.log('🚀 Make Server starting... (ylztclwqmfhczklsswrt) - v9.1 CATEGORY_KILLED_v9.1 — ping endpoint live check');
