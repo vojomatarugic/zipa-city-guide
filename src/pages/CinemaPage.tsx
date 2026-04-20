@@ -11,6 +11,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
@@ -109,13 +110,13 @@ export function CinemaPage() {
     keywords: t("seoCinemaKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/cinema",
+    canonical: SITE_URL + "/cinema",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
-          { name: "Bioskop", url: "https://blcityguide.com/cinema" },
+          { name: "Home", url: SITE_URL + "/" },
+          { name: "Bioskop", url: SITE_URL + "/cinema" },
         ]),
       ],
     },

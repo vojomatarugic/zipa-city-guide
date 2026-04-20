@@ -10,6 +10,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { DOC_TITLE_THEATRE, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
@@ -53,13 +54,13 @@ export function TheatrePage() {
     keywords: t("seoTheatreKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/theatre",
+    canonical: SITE_URL + "/theatre",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
-          { name: "Pozorište", url: "https://blcityguide.com/theatre" },
+          { name: "Home", url: SITE_URL + "/" },
+          { name: "Pozorište", url: SITE_URL + "/theatre" },
         ]),
       ],
     },

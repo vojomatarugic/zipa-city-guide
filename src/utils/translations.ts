@@ -3391,6 +3391,14 @@ export const translations = {
     lat: "Forma je uspješno poslata!",
     en: "Form submitted successfully!",
   },
+  contactFormMissingConfig: {
+    lat: "Slanje poruke trenutno nije dostupno. Molimo pokušajte kasnije ili nas kontaktirajte direktno e-poštom.",
+    en: "Sending messages is temporarily unavailable. Please try again later or email us directly.",
+  },
+  contactFormSendError: {
+    lat: "Poruka nije poslata. Pokušajte ponovo.",
+    en: "Your message could not be sent. Please try again.",
+  },
 
   // Contact Page
   contactPageTitle: { lat: "Kontakt", en: "Contact Us" },
@@ -3481,8 +3489,8 @@ export const translations = {
   // ==== SEO META TAGS ====
   // Home Page SEO
   seoHomeTitle: {
-    lat: "ZIPA City Guide | Banja Luka - Vodič kroz grad | Otkrijte Banjaluku",
-    en: "ZIPA City Guide | Banja Luka | Discover Banja Luka",
+    lat: "Zipa City Guide | Banja Luka - Vodič kroz grad | Otkrijte Banjaluku",
+    en: "Zipa City Guide | Banja Luka | Discover Banja Luka",
   },
   seoHomeDescription: {
     lat: "Otkrijte najbolje restorane, dešavanja i noćni život u Banjaluci. Kompletan vodič kroz grad sa preporukama lokalaca.",
@@ -3495,8 +3503,8 @@ export const translations = {
 
   // Restaurants Page SEO
   seoRestaurantsTitle: {
-    lat: "Hrana i piće u Banjoj Luci | ZIPA City Guide - Gastronomija",
-    en: "Food & Drink in Banja Luka | ZIPA City Guide - Best Gastronomy",
+    lat: "Hrana i piće u Banjoj Luci | Zipa City Guide - Gastronomija",
+    en: "Food & Drink in Banja Luka | Zipa City Guide - Best Gastronomy",
   },
   seoRestaurantsDescription: {
     lat: "Pronađite najbolje restorane u Banjoj Luci. Tradicionalna kuhinja, internacionalni specijaliteti, live muzika, terase. Recenzije i preporuke lokalaca.",
@@ -3509,8 +3517,8 @@ export const translations = {
 
   // Events Page SEO
   seoEventsTitle: {
-    lat: "Dešavanja u Banjoj Luci | ZIPA City Guide - Eventi, koncerti, kultura",
-    en: "Events in Banja Luka | ZIPA City Guide - Events, concerts, culture",
+    lat: "Dešavanja u Banjoj Luci | Zipa City Guide - Eventi, koncerti, kultura",
+    en: "Events in Banja Luka | Zipa City Guide - Events, concerts, culture",
   },
   seoEventsDescription: {
     lat: "Kalendar svih dešavanja u Banjoj Luci. Koncerti, festivali, sportski događaji, kulturne manifestacije, pozorište, izložbe. Uvijek ažurno!",
@@ -3523,8 +3531,8 @@ export const translations = {
 
   // Nightlife Page SEO
   seoNightlifeTitle: {
-    lat: "Noćni život u Banjoj Luci | ZIPA City Guide - Klubovi, barovi, žurke",
-    en: "Nightlife in Banja Luka | ZIPA City Guide - Clubs, bars, parties",
+    lat: "Noćni život u Banjoj Luci | Zipa City Guide - Klubovi, barovi, žurke",
+    en: "Nightlife in Banja Luka | Zipa City Guide - Clubs, bars, parties",
   },
   seoNightlifeDescription: {
     lat: "Najbolji klubovi, barovi i kafići u Banjoj Luci. DJ nastupi, live muzika, cocktail barovi. Pronađite savršeno mjesto za izlazak!",
@@ -3537,12 +3545,12 @@ export const translations = {
 
   // Clubs Page SEO
   seoClubsTitle: {
-    lat: "Klubovi u Banjoj Luci | ZIPA City Guide - Noćni život, žurke, DJ",
-    en: "Clubs in Banja Luka | ZIPA City Guide - Nightlife, parties, DJs",
+    lat: "Klubovi u Banjoj Luci | Zipa City Guide - Noćni život, žurke, DJ",
+    en: "Clubs in Banja Luka | Zipa City Guide - Nightlife, parties, DJs",
   },
   seoClubsDescription: {
-    lat: "Najbolji klubovi i noćni život u Banjoj Luci. DJ nastupi, žurke, barovi. Pronađite mjesto za izlazak uz ZIPA City Guide.",
-    en: "Best clubs and nightlife in Banja Luka. DJ sets, parties, bars. Find where to go out with ZIPA City Guide.",
+    lat: "Najbolji klubovi i noćni život u Banjoj Luci. DJ nastupi, žurke, barovi. Pronađite mjesto za izlazak uz Zipa City Guide.",
+    en: "Best clubs and nightlife in Banja Luka. DJ sets, parties, bars. Find where to go out with Zipa City Guide.",
   },
   seoClubsKeywords: {
     lat: "klubovi Banja Luka, noćni život, žurke, DJ, party, izlazak, kafići, barovi",
@@ -3551,12 +3559,12 @@ export const translations = {
 
   // Contact Page SEO
   seoContactTitle: {
-    lat: "Kontakt - ZIPA City Guide | Banja Luka",
-    en: "Contact - ZIPA City Guide | Banja Luka",
+    lat: "Kontakt - Zipa City Guide | Banja Luka",
+    en: "Contact - Zipa City Guide | Banja Luka",
   },
   seoContactDescription: {
-    lat: "Kontaktirajte ZIPA City Guide tim. Pošaljite nam poruku ili nas posjetite u ZIPA Agency kancelariji u Banjaluci.",
-    en: "Contact the ZIPA City Guide team. Send us a message or visit us at the ZIPA Agency office in Banja Luka.",
+    lat: "Kontaktirajte Zipa City Guide tim. Pošaljite nam poruku ili nas posjetite u ZIPA Agency kancelariji u Banjaluci.",
+    en: "Contact the Zipa City Guide team. Send us a message or visit us at the ZIPA Agency office in Banja Luka.",
   },
   seoContactKeywords: {
     lat: "kontakt, Zipa City Guide, ZIPA Agency, kontakt forma",
@@ -3565,12 +3573,12 @@ export const translations = {
 
   // Terms of Service Page SEO
   seoTermsTitle: {
-    lat: "Uslovi korišćenja - ZIPA City Guide | Banja Luka",
-    en: "Terms of Service - ZIPA City Guide | Banja Luka",
+    lat: "Uslovi korišćenja - Zipa City Guide | Banja Luka",
+    en: "Terms of Service - Zipa City Guide | Banja Luka",
   },
   seoTermsDescription: {
-    lat: "Pročitajte Uslove korišćenja ZIPA City Guide platforme. Pravila, odgovornosti i pravne informacije.",
-    en: "Read the Terms of Service of ZIPA City Guide platform. Rules, responsibilities, and legal information.",
+    lat: "Pročitajte Uslove korišćenja Zipa City Guide platforme. Pravila, odgovornosti i pravne informacije.",
+    en: "Read the Terms of Service of Zipa City Guide platform. Rules, responsibilities, and legal information.",
   },
   seoTermsKeywords: {
     lat: "uslovi korišćenja, pravila, politika, Zipa City Guide",
@@ -3579,8 +3587,8 @@ export const translations = {
 
   // Theatre Page SEO
   seoTheatreTitle: {
-    lat: "Pozorište u Banjoj Luci | ZIPA City Guide - Predstave, balet, opera",
-    en: "Theatre in Banja Luka | ZIPA City Guide - Plays, ballet, opera",
+    lat: "Pozorište u Banjoj Luci | Zipa City Guide - Predstave, balet, opera",
+    en: "Theatre in Banja Luka | Zipa City Guide - Plays, ballet, opera",
   },
   seoTheatreDescription: {
     lat: "Pozorišni repertoar Banje Luke. Predstave, balet, opera, pozorišne večeri. Kompletan vodič kroz pozorišni život grada.",
@@ -3593,8 +3601,8 @@ export const translations = {
 
   // Cinema Page SEO
   seoCinemaTitle: {
-    lat: "Bioskopi u Banjoj Luci | ZIPA City Guide - Filmovi, repertoar, projekcije",
-    en: "Cinemas in Banja Luka | ZIPA City Guide - Movies, repertoire, screenings",
+    lat: "Bioskopi u Banjoj Luci | Zipa City Guide - Filmovi, repertoar, projekcije",
+    en: "Cinemas in Banja Luka | Zipa City Guide - Movies, repertoire, screenings",
   },
   seoCinemaDescription: {
     lat: "Bioskopski repertoar u Banjoj Luci. Svi bioskopi, filmovi na repertoaru, projekcije. Pronađite gdje gledati najnovije filmove.",
@@ -3607,12 +3615,12 @@ export const translations = {
 
   // Concerts Page SEO
   seoConcertsTitle: {
-    lat: "Koncerti u Banjoj Luci | ZIPA City Guide - Muzika, festivali, živa muzika",
-    en: "Concerts in Banja Luka | ZIPA City Guide - Music, festivals, live shows",
+    lat: "Koncerti u Banjoj Luci | Zipa City Guide - Muzika, festivali, živa muzika",
+    en: "Concerts in Banja Luka | Zipa City Guide - Music, festivals, live shows",
   },
   seoConcertsDescription: {
-    lat: "Koncerti i muzička dešavanja u Banjoj Luci. Rock, pop, jazz, festivali i živa muzika. Pronađite sljedeći koncert uz ZIPA City Guide.",
-    en: "Concerts and music events in Banja Luka. Rock, pop, jazz, festivals, and live music. Find your next concert with ZIPA City Guide.",
+    lat: "Koncerti i muzička dešavanja u Banjoj Luci. Rock, pop, jazz, festivali i živa muzika. Pronađite sljedeći koncert uz Zipa City Guide.",
+    en: "Concerts and music events in Banja Luka. Rock, pop, jazz, festivals, and live music. Find your next concert with Zipa City Guide.",
   },
   seoConcertsKeywords: {
     lat: "koncerti Banja Luka, muzika, festivali, živa muzika, rock, jazz, događaji",

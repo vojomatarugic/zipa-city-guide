@@ -10,6 +10,7 @@ import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
@@ -60,13 +61,13 @@ export function EventsPage() {
     keywords: t("seoEventsKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/events",
+    canonical: SITE_URL + "/events",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
-          { name: "Dešavanja", url: "https://blcityguide.com/events" },
+          { name: "Home", url: SITE_URL + "/" },
+          { name: "Dešavanja", url: SITE_URL + "/events" },
         ]),
         {
           "@type": "ItemList",

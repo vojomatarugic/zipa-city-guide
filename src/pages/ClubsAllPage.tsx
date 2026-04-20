@@ -145,7 +145,7 @@ export function ClubsAllPage() {
                       {venueTagsFallbackLine(
                         club.tags,
                         language === "en" ? "en" : "sr",
-                        t("nightlife")
+                        t("clubs")
                       )}
                     </span>
                     {club.opening_hours && (

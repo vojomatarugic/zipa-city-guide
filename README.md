@@ -1,7 +1,7 @@
 
-  # Zipa Events Guide
+  # Zipa City Guide
 
-  This is a code bundle for Zipa Events Guide. The original project is available at https://www.figma.com/design/QuEO0wxi4iNUHoiTczoQDE/Zipa-Events-Guide.
+  This is a code bundle for Zipa City Guide. The original project is available at https://www.figma.com/design/QuEO0wxi4iNUHoiTczoQDE/Zipa-Events-Guide.
 
   ## Running the code
 

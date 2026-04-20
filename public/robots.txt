@@ -1,4 +1,4 @@
-# ZIPA City Guide - Robots.txt
+# Zipa City Guide - Robots.txt
 
 User-agent: *
 Allow: /
@@ -9,7 +9,7 @@ Disallow: /addVenue
 Disallow: /submitEvent
 
 # Sitemap location
-Sitemap: https://blcityguide.com/sitemap.xml
+Sitemap: https://zipa-city-guide.vercel.app/sitemap.xml
 
 # Crawl-delay for polite crawling
 Crawl-delay: 1

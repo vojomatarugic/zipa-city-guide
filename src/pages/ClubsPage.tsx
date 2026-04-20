@@ -8,6 +8,7 @@ import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
@@ -43,15 +44,15 @@ export function ClubsPage() {
     keywords: t("seoClubsKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/clubs",
+    canonical: SITE_URL + "/clubs",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
+          { name: "Home", url: SITE_URL + "/" },
           {
             name: "Klubovi",
-            url: "https://blcityguide.com/clubs",
+            url: SITE_URL + "/clubs",
           },
         ]),
         {
@@ -159,7 +160,7 @@ export function ClubsPage() {
                           {venueTagsFallbackLine(
                             club.tags,
                             language === 'en' ? 'en' : 'sr',
-                            t('nightlife')
+                            t('clubs')
                           )}
                         </span>
                       </div>
@@ -275,7 +276,7 @@ export function ClubsPage() {
                           {venueTagsFallbackLine(
                             club.tags,
                             language === 'en' ? 'en' : 'sr',
-                            t('nightlife')
+                            t('clubs')
                           )}
                         </span>
                       </div>

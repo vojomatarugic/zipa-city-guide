@@ -5,6 +5,7 @@ import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import {
   BRAND,
   TEXT,
@@ -28,18 +29,18 @@ export function TermsOfServicePage() {
     keywords: t("seoTermsKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/terms",
+    canonical: SITE_URL + "/termsOfService",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
+          { name: "Home", url: SITE_URL + "/" },
           {
             name:
               language === "sr"
                 ? "Uslovi korišćenja"
                 : "Terms of Service",
-            url: "https://blcityguide.com/terms",
+            url: SITE_URL + "/termsOfService",
           },
         ]),
       ],

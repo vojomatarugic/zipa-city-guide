@@ -10,6 +10,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { DOC_TITLE_CONCERTS, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
@@ -53,13 +54,13 @@ export function ConcertsPage() {
     keywords: t("seoConcertsKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/concerts",
+    canonical: SITE_URL + "/concerts",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
-          { name: "Koncerti", url: "https://blcityguide.com/concerts" },
+          { name: "Home", url: SITE_URL + "/" },
+          { name: "Koncerti", url: SITE_URL + "/concerts" },
         ]),
       ],
     },

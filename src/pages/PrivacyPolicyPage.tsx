@@ -5,6 +5,7 @@ import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 import { getBreadcrumbSchema } from '../utils/structuredData';
+import { CONTACT_EMAIL, SITE_URL } from '../config/siteConfig';
 import { BRAND, TEXT, BACKGROUNDS, BORDERS } from '../utils/colors';
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 
@@ -25,13 +26,13 @@ export function PrivacyPolicyPage() {
     title,
     description,
     ogImage: ogImage,
-    canonical: `https://zipacityguide.com/${language}/privacyPolicy`,
+    canonical: SITE_URL + "/privacyPolicy",
   });
 
   // Breadcrumb Structured Data
   const breadcrumbSchema = getBreadcrumbSchema([
-    { name: language === "sr" ? "Početna" : "Home", url: "https://zipacityguide.com" },
-    { name: title, url: `https://zipacityguide.com/${language}/privacyPolicy` }
+    { name: language === "sr" ? "Početna" : "Home", url: SITE_URL + "/" },
+    { name: title, url: SITE_URL + "/privacyPolicy" }
   ]);
 
   return (
@@ -124,7 +125,10 @@ export function PrivacyPolicyPage() {
             >
               <strong>{language === "sr" ? "Kontakt:" : "Contact:"}</strong>
               <br />
-              E-mail: <a href="mailto:info@zipacityguide.com" style={{ color: BRAND.primary }}>info@zipacityguide.com</a>
+              E-mail:{" "}
+              <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: BRAND.primary }}>
+                {CONTACT_EMAIL}
+              </a>
             </p>
           </div>
 

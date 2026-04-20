@@ -6,13 +6,14 @@ import { LocationProvider } from './contexts/LocationContext';
 import { AuthProvider } from './contexts/AuthContext';
 import ogImage from './assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
 import { Toaster } from 'sonner@2.0.3';
+import { SITE_URL } from './config/siteConfig';
 
 // Force rebuild after backend ?? fix
 export default function App() {
   // Set meta tags for SEO and social sharing
   useEffect(() => {
     try {
-      const appTitle = 'ZIPA City Guide';
+      const appTitle = 'Zipa City Guide';
       const appDescription = 'Otkrij najbolje događaje i mjesta u svom gradu';
 
       // Set or update meta tags
@@ -29,12 +30,12 @@ export default function App() {
 
       // Primary meta tags
       setMetaTag('description', appDescription, false);
-      setMetaTag('keywords', 'ZIPA City Guide, turizam, restorani, noćni život, dešavanja, vodič, gradski vodič, kultura, magazin', false);
+      setMetaTag('keywords', 'Zipa City Guide, turizam, restorani, noćni život, dešavanja, vodič, gradski vodič, kultura, magazin', false);
       setMetaTag('author', 'ZIPA Agency', false);
       
       // Open Graph / Facebook
       setMetaTag('og:type', 'website');
-      setMetaTag('og:url', 'https://blcityguide.com/');
+      setMetaTag('og:url', SITE_URL + '/');
       setMetaTag('og:title', appTitle);
       setMetaTag('og:description', appDescription);
       setMetaTag('og:image', ogImage);
@@ -43,7 +44,7 @@ export default function App() {
       
       // Twitter
       setMetaTag('twitter:card', 'summary_large_image');
-      setMetaTag('twitter:url', 'https://blcityguide.com/');
+      setMetaTag('twitter:url', SITE_URL + '/');
       setMetaTag('twitter:title', appTitle);
       setMetaTag('twitter:description', appDescription);
       setMetaTag('twitter:image', ogImage);

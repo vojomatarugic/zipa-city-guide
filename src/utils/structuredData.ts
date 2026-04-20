@@ -1,12 +1,14 @@
 // Structured Data (Schema.org) helpers for rich snippets
 
+import { CONTACT_EMAIL, SITE_URL } from "../config/siteConfig";
+
 export const getOrganizationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "ZIPA City Guide",
-  "alternateName": "Zipa City Guide",
-  "url": "https://blcityguide.com",
-  "logo": "https://blcityguide.com/logo.png",
+  "@id": SITE_URL + "/#organization",
+  "name": "Zipa City Guide",
+  "url": SITE_URL,
+  "logo": SITE_URL + "/logo.png",
   "description": "Kompletan turistički vodič kroz Banja Luku - restorani, dešavanja, noćni život, smještaj i znamenitosti.",
   "address": {
     "@type": "PostalAddress",
@@ -14,23 +16,20 @@ export const getOrganizationSchema = () => ({
     "addressRegion": "Republika Srpska",
     "addressCountry": "BA"
   },
-  "sameAs": [
-    "https://www.facebook.com/blcityguide",
-    "https://www.instagram.com/blcityguide"
-  ],
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "Customer Service",
-    "email": "info@blcityguide.com"
+    "email": CONTACT_EMAIL
   }
 });
 
 export const getTouristDestinationSchema = () => ({
   "@context": "https://schema.org",
   "@type": "TouristDestination",
+  "@id": SITE_URL + "/#touristDestination",
   "name": "Banja Luka",
   "description": "Drugi po veličini grad u Bosni i Hercegovini, poznat po kulturnim znamenitostima, restoranima i noćnom životu.",
-  "url": "https://blcityguide.com",
+  "url": SITE_URL,
   "touristType": [
     "Culture enthusiasts",
     "Food lovers",
@@ -48,13 +47,14 @@ export const getTouristDestinationSchema = () => ({
 export const getWebSiteSchema = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": "ZIPA City Guide",
-  "url": "https://blcityguide.com",
+  "@id": SITE_URL + "/#website",
+  "name": "Zipa City Guide",
+  "url": SITE_URL,
   "description": "Otkrijte najbolje restorane, dešavanja, noćni život, smještaj i znamenitosti Banjaluke.",
   "inLanguage": ["sr-Latn", "en"],
   "potentialAction": {
     "@type": "SearchAction",
-    "target": "https://blcityguide.com/search?q={search_term_string}",
+    "target": SITE_URL + "/search?q={search_term_string}",
     "query-input": "required name=search_term_string"
   }
 });
@@ -135,26 +135,6 @@ export const getEventSchema = (event: {
     "priceCurrency": "BAM",
     "availability": "https://schema.org/InStock"
   } : undefined
-});
-
-export const getNightlifeSchema = (venue: {
-  name: string;
-  description: string;
-  address?: string;
-  image?: string;
-}) => ({
-  "@context": "https://schema.org",
-  "@type": "NightClub",
-  "name": venue.name,
-  "description": venue.description,
-  "image": venue.image,
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": venue.address,
-    "addressLocality": "Banja Luka",
-    "addressRegion": "Republika Srpska",
-    "addressCountry": "BA"
-  }
 });
 
 export const getAccommodationSchema = (accommodation: {

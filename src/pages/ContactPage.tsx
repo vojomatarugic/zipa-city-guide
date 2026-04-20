@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MapPin, Phone, Mail, Send } from 'lucide-react';
+import emailjs from '@emailjs/browser';
+import { MapPin, Phone, Mail } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
@@ -7,6 +8,7 @@ import { useSEO } from '../hooks/useSEO';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 import ogImage from '../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
+import { CONTACT_EMAIL, SITE_URL } from '../config/siteConfig';
 
 export function ContactPage() {
   const { t } = useT();
@@ -23,6 +25,7 @@ export function ContactPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // SEO optimization
   useSEO({
@@ -31,7 +34,7 @@ export function ContactPage() {
     keywords: t('seoContactKeywords'),
     ogImage: ogImage,
     ogType: 'website',
-    canonical: 'https://blcityguide.com/contact'
+    canonical: SITE_URL + '/contact'
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -44,19 +47,43 @@ export function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID?.trim() ?? '';
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID?.trim() ?? '';
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY?.trim() ?? '';
+
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
+    if (!serviceId || !templateId || !publicKey) {
+      setSubmitError(t('contactFormMissingConfig'));
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
+    const templateParams = {
+      from_name: formData.name.trim(),
+      from_email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      subject: `${t('contactPageTitle')} — ${formData.name.trim()}`,
+      message: formData.message.trim(),
+      to_email: CONTACT_EMAIL,
+    };
+
+    try {
+      await emailjs.send(serviceId, templateId, templateParams, { publicKey });
       setSubmitSuccess(true);
       setFormData({ name: '', email: '', phone: '', message: '' });
-      
-      // Hide success message after 5 seconds
-      setTimeout(() => {
+      window.setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
-    }, 1000);
+    } catch {
+      setSubmitError(t('contactFormSendError'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -106,6 +133,20 @@ export function ContactPage() {
                   }}
                 >
                   {t('formSubmitted')}
+                </div>
+              )}
+
+              {submitError && (
+                <div
+                  className="mb-6 p-4 rounded-lg"
+                  style={{
+                    backgroundColor: '#FFEBEE',
+                    border: '1px solid #EF5350',
+                    color: '#C62828'
+                  }}
+                  role="alert"
+                >
+                  {submitError}
                 </div>
               )}
 
@@ -283,7 +324,9 @@ export function ContactPage() {
                     Email
                   </h4>
                   <p style={{ fontSize: '14px', color: '#0E3DC5', fontWeight: 500 }}>
-                    info@blcityguide.com
+                    <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'inherit', fontWeight: 500 }}>
+                      {CONTACT_EMAIL}
+                    </a>
                   </p>
                 </div>
               </div>

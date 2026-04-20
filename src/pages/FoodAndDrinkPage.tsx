@@ -8,6 +8,7 @@ import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_FOOD, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import { VenueBadgeRow } from "../components/VenueBadgeRow";
@@ -192,15 +193,15 @@ export function FoodAndDrinkPage() {
     keywords: t("seoRestaurantsKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/food-and-drink",
+    canonical: SITE_URL + "/food-and-drink",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getBreadcrumbSchema([
-          { name: "Home", url: "https://blcityguide.com/" },
+          { name: "Home", url: SITE_URL + "/" },
           {
             name: language === 'en' ? "Food & Drink" : "Hrana i piće",
-            url: "https://blcityguide.com/food-and-drink",
+            url: SITE_URL + "/food-and-drink",
           },
         ]),
         {

@@ -21,6 +21,7 @@ import {
   getTouristDestinationSchema,
   getBreadcrumbSchema,
 } from "../utils/structuredData";
+import { SITE_URL } from "../config/siteConfig";
 import { BannerAd, useBannerExists } from "../components/BannerAd";
 import { SquareBannersGrid } from "../components/SquareBannersGrid";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
@@ -263,14 +264,14 @@ export function HomePage() {
     keywords: t("seoHomeKeywords"),
     ogImage: ogImage,
     ogType: "website",
-    canonical: "https://blcityguide.com/",
+    canonical: SITE_URL + "/",
     structuredData: {
       "@context": "https://schema.org",
       "@graph": [
         getWebSiteSchema(),
         getTouristDestinationSchema(),
         getBreadcrumbSchema([
-          { name: t("home"), url: "https://blcityguide.com/" },
+          { name: t("home"), url: SITE_URL + "/" },
         ]),
       ],
     },
@@ -1410,7 +1411,7 @@ export function HomePage() {
             }}
           >
             <Link
-              to="/nightlife"
+              to="/clubs"
               style={{ textDecoration: "none", color: "inherit" }}
             >
               {language === "sr" ? "Klubovi" : "Clubs"}
@@ -1468,7 +1469,7 @@ export function HomePage() {
                 className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
               >
                 <Link
-                  to="/nightlife"
+                  to="/clubs"
                   style={{
                     textDecoration: "none",
                     color: "inherit",
