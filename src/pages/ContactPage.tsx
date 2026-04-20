@@ -10,6 +10,8 @@ import { listingDocumentTitle } from '../utils/documentTitle';
 import ogImage from '../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
 import { CONTACT_EMAIL, SITE_URL } from '../config/siteConfig';
 
+const UI_CONTACT_EMAIL = 'info@zipaagency.com';
+
 export function ContactPage() {
   const { t } = useT();
   const { language } = useLanguage();
@@ -79,8 +81,31 @@ export function ContactPage() {
       window.setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
-    } catch {
-      setSubmitError(t('contactFormSendError'));
+    } catch (error) {
+      console.error('EMAILJS ERROR:', error);
+      if (error && typeof error === 'object') {
+        const emailJsError = error as { text?: unknown; message?: unknown; status?: unknown };
+        console.error('EMAILJS ERROR DETAILS:', {
+          text: emailJsError.text,
+          message: emailJsError.message,
+          status: emailJsError.status,
+        });
+
+        const debugDetail =
+          typeof emailJsError.text === 'string'
+            ? emailJsError.text
+            : typeof emailJsError.message === 'string'
+              ? emailJsError.message
+              : null;
+
+        setSubmitError(
+          import.meta.env.DEV && debugDetail
+            ? `${t('contactFormSendError')} (${debugDetail})`
+            : t('contactFormSendError')
+        );
+      } else {
+        setSubmitError(t('contactFormSendError'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -324,8 +349,8 @@ export function ContactPage() {
                     Email
                   </h4>
                   <p style={{ fontSize: '14px', color: '#0E3DC5', fontWeight: 500 }}>
-                    <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: 'inherit', fontWeight: 500 }}>
-                      {CONTACT_EMAIL}
+                    <a href={`mailto:${UI_CONTACT_EMAIL}`} style={{ color: 'inherit', fontWeight: 500 }}>
+                      {UI_CONTACT_EMAIL}
                     </a>
                   </p>
                 </div>
