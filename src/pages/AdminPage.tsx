@@ -19,13 +19,23 @@ import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminDocumentTitle } from '../utils/documentTitle';
+import { pluralize } from '../utils/pluralize';
+
+const PLURAL_OBJEKAT_VENUE = {
+  sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
+  en: { one: 'venue', many: 'venues' },
+} as const;
+
+const PLURAL_DESAVANJE_EVENT = {
+  sr: { one: 'dešavanje', few: 'dešavanja', many: 'dešavanja' },
+  en: { one: 'event', many: 'events' },
+} as const;
 
 // Interface for Submission (updated to match dataService.Item)
 interface Submission {
   id: string;
   title: string;
   title_en?: string;
-  category?: string;
   phone?: string;
   website?: string;
   contactEmail?: string;
@@ -33,6 +43,7 @@ interface Submission {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string; // ✅ SNAKE_CASE
   submitted_by?: string;
+  submitted_by_user_id?: string;
   submitted_by_name?: string;
   contact_name?: string;
   contact_email?: string;
@@ -58,6 +69,7 @@ interface Event {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   submitted_by?: string;
+  submitted_by_user_id?: string;
   submitted_by_name?: string;
   contact_name?: string;
   contact_email?: string;
@@ -147,6 +159,8 @@ export function AdminPage() {
   const [inactiveEventIds, setInactiveEventIds] = useState<Set<string>>(new Set());
   const [togglingEventActive, setTogglingEventActive] = useState<string | null>(null);
   const topBadgeBaseClass = "inline-flex items-center h-7 px-2.5 rounded-[6px] text-[12px] leading-none font-semibold";
+  const getSubmitterDisplay = (item: { submitted_by_name?: string; submitted_by?: string }) =>
+    item.submitted_by_name || item.submitted_by || (language === 'sr' ? 'Nepoznat korisnik' : 'Unknown user');
 
   // 🔒 AUTH GUARD - Redirect if not logged in or not admin
   useEffect(() => {
@@ -404,7 +418,7 @@ export function AdminPage() {
   };
 
   const handleEdit = (id: string) => {
-    // Find the submission to determine its category
+    // Find the submission to route edit (venue vs event)
     const submission = submissions.find(s => s.id === id);
     if (!submission) {
       console.error('❌ Submission not found:', id);
@@ -1234,8 +1248,8 @@ export function AdminPage() {
                       setPendingConfirm({
                         title: language === 'sr' ? 'Brisanje objekata' : 'Delete Venues',
                         message: language === 'sr'
-                          ? `Da li ste sigurni da želite da obrišete ${count} odabran${count === 1 ? 'i' : 'ih'} objekat${count === 1 ? '' : 'a'}? Ova akcija se ne može poništiti!`
-                          : `Are you sure you want to delete ${count} selected venue${count === 1 ? '' : 's'}? This action cannot be undone!`,
+                          ? `Da li ste sigurni da želite da obrišete ${count} ${pluralize(count, 'sr', PLURAL_OBJEKAT_VENUE)}? Ova akcija se ne može poništiti!`
+                          : `Are you sure you want to delete ${count} selected ${pluralize(count, 'en', PLURAL_OBJEKAT_VENUE)}? This action cannot be undone!`,
                         confirmText: language === 'sr' ? 'Obriši' : 'Delete',
                         variant: 'danger',
                         action: async () => {
@@ -1267,7 +1281,7 @@ export function AdminPage() {
                           setSelectedVenueIds(new Set());
                           setDeletingVenues(false);
                           if (failed === 0) {
-                            toast.success(language === 'sr' ? `Obrisano ${deleted} objekat${deleted === 1 ? '' : 'a'}` : `Deleted ${deleted} venue${deleted === 1 ? '' : 's'}`);
+                            toast.success(language === 'sr' ? `Obrisano ${deleted} ${pluralize(deleted, 'sr', PLURAL_OBJEKAT_VENUE)}` : `Deleted ${deleted} ${pluralize(deleted, 'en', PLURAL_OBJEKAT_VENUE)}`);
                           } else {
                             toast.error(language === 'sr' ? `Obrisano ${deleted}, neuspješno ${failed}` : `Deleted ${deleted}, failed ${failed}`);
                           }
@@ -1467,11 +1481,9 @@ export function AdminPage() {
                                 </>
                               );
                             })()}
-                            {submission.submitted_by && (
-                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
-                                {language === 'sr' ? 'Dodao:' : 'Added by:'} {submission.submitted_by_name || submission.submitted_by}
-                              </span>
-                            )}
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
+                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {getSubmitterDisplay(submission)}
+                            </span>
                             <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
                               📅 {formatDate(submission.created_at)}
                             </span>
@@ -1588,8 +1600,8 @@ export function AdminPage() {
                       setPendingConfirm({
                         title: language === 'sr' ? 'Brisanje dešavanja' : 'Delete Events',
                         message: language === 'sr'
-                          ? `Da li ste sigurni da želite da obrišete ${count} odabran${count === 1 ? 'o' : 'ih'} dešavanje${count === 1 ? '' : 'a'}? Ova akcija se ne može poništiti!`
-                          : `Are you sure you want to delete ${count} selected event${count === 1 ? '' : 's'}? This action cannot be undone!`,
+                          ? `Da li ste sigurni da želite da obrišete ${count} ${pluralize(count, 'sr', PLURAL_DESAVANJE_EVENT)}? Ova akcija se ne može poništiti!`
+                          : `Are you sure you want to delete ${count} selected ${pluralize(count, 'en', PLURAL_DESAVANJE_EVENT)}? This action cannot be undone!`,
                         confirmText: language === 'sr' ? 'Obriši' : 'Delete',
                         variant: 'danger',
                         action: async () => {
@@ -1621,7 +1633,7 @@ export function AdminPage() {
                           setSelectedEventIds(new Set());
                           setDeletingEvents(false);
                           if (failed === 0) {
-                            toast.success(language === 'sr' ? `Obrisano ${deleted} dešavanje${deleted === 1 ? '' : 'a'}` : `Deleted ${deleted} event${deleted === 1 ? '' : 's'}`);
+                            toast.success(language === 'sr' ? `Obrisano ${deleted} ${pluralize(deleted, 'sr', PLURAL_DESAVANJE_EVENT)}` : `Deleted ${deleted} ${pluralize(deleted, 'en', PLURAL_DESAVANJE_EVENT)}`);
                           } else {
                             toast.error(language === 'sr' ? `Obrisano ${deleted}, neuspješno ${failed}` : `Deleted ${deleted}, failed ${failed}`);
                           }
@@ -1826,11 +1838,9 @@ export function AdminPage() {
                                 </>
                               );
                             })()}
-                            {event.submitted_by && (
-                              <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
-                                {language === 'sr' ? 'Dodao:' : 'Added by:'} {event.submitted_by_name || event.submitted_by}
-                              </span>
-                            )}
+                            <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.08)', border: '1px solid rgba(107,114,128,0.2)', color: '#6B7280', fontWeight: 500 }}>
+                              {language === 'sr' ? 'Dodao:' : 'Added by:'} {getSubmitterDisplay(event)}
+                            </span>
                             <span className={topBadgeBaseClass} style={{ background: 'rgba(107,114,128,0.06)', border: '1px solid rgba(107,114,128,0.15)', color: '#9CA3AF', fontWeight: 500 }}>
                               📅 {formatDate(event.created_at)}
                             </span>

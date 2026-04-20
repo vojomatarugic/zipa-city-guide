@@ -18,7 +18,6 @@ import { enUS } from 'date-fns/locale';
 import { publicAnonKey } from '../utils/supabase/info';
 import { apiUrl } from '../config/apiBase';
 import * as dataService from '../utils/dataService';
-import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { scheduleLocalDayKey, getEventScheduleSlots } from '../utils/eventService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
@@ -590,8 +589,6 @@ export function SubmitEventPage() {
       return;
     }
 
-    const page_slug = getCanonicalEventPageSlug(formData.eventType);
-
     // ===== CONVERT schedule terms → ISO (first term mirrors legacy start_at / end_at) =====
     let startAt: string;
     let endAt: string | null = null;
@@ -628,10 +625,12 @@ export function SubmitEventPage() {
       builtSlots.length > 0 ? builtSlots : null;
 
     // Create event submission object
-    const newEvent: Omit<dataService.Item, 'id' | 'created_at' | 'is_custom' | 'status'> & {
+    const newEvent: Omit<
+      dataService.Item,
+      'id' | 'created_at' | 'is_custom' | 'status' | 'page_slug'
+    > & {
       assign_user_id?: string;
     } = {
-      page_slug,
       title: formData.eventName,
       title_en: formData.eventNameEn,
       description: formData.description,
@@ -642,7 +641,6 @@ export function SubmitEventPage() {
         formData.image.trim() ||
         'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800',
       price: formData.priceType === 'free' ? 'Free' : formData.price,
-      submitted_by: (isAdmin ? formData.submittedByEmail.trim() : (user?.email || '').trim()),
       venue_name: formData.venue.trim(),
       ticket_link: formData.ticketLink,
       organizer_name: formData.organizerName,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { Calendar, MapPin, Star } from "lucide-react";
 import { EventCardSkeleton } from "../components/EventCard";
@@ -14,21 +14,44 @@ import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
 
 /**
  * Cinema-specific card with star rating display
  */
-function CinemaCard({ event, language, imageHeight = "300px" }: { event: Item; language: string; imageHeight?: string }) {
+function CinemaCard({
+  event,
+  language,
+  imageHeight = "300px",
+  showEventCity = false,
+}: {
+  event: Item;
+  language: string;
+  imageHeight?: string;
+  /** When true, event city is shown in the date/time meta line; venue line omits city fallback to avoid duplication. */
+  showEventCity?: boolean;
+}) {
   const lang = language === "en" ? "en" : "sr";
   const title = lang === "sr" ? event.title : (event.title_en || event.title);
   const isFree = /^(free|besplatn|gratis)/i.test(event.price || '');
   const eventType = eventService.translateEventType(event.event_type || '', lang);
   const dateLabel = event.start_at ? eventService.getRelativeDateLabel(event.start_at, lang) : '';
   const timeLabel = event.start_at ? eventService.formatEventTime(event.start_at, event.end_at, lang) : '';
-  const venue = event.venue_name || event.address || event.city || '';
+  const venue =
+    showEventCity && event.city
+      ? event.venue_name || event.address || ""
+      : event.venue_name || event.address || event.city || "";
+
+  const showCalendarRow =
+    Boolean(dateLabel) || (showEventCity && Boolean(event.city));
+  let metaCalendarText = "";
+  if (dateLabel) {
+    metaCalendarText = dateLabel + (timeLabel ? ` • ${timeLabel}` : "");
+    if (showEventCity && event.city) metaCalendarText += ` • ${event.city}`;
+  } else if (showEventCity && event.city) {
+    metaCalendarText = event.city;
+  }
 
   return (
     <Link
@@ -64,11 +87,11 @@ function CinemaCard({ event, language, imageHeight = "300px" }: { event: Item; l
         <h3 className="text-base font-semibold mb-2" style={{ color: "#1a1a1a" }}>
           {title}
         </h3>
-        {dateLabel && (
+        {showCalendarRow && (
           <div className="flex items-center gap-2 mb-1">
             <Calendar size={14} style={{ color: "#6B7280" }} />
             <span className="text-sm" style={{ color: "#6B7280" }}>
-              {dateLabel}{timeLabel ? ` • ${timeLabel}` : ''}
+              {metaCalendarText}
             </span>
           </div>
         )}
@@ -83,24 +106,77 @@ function CinemaCard({ event, language, imageHeight = "300px" }: { event: Item; l
   );
 }
 
+function isApprovedCinemaBySlug(e: Item): boolean {
+  return (
+    e.status === "approved" &&
+    String(e.page_slug || "").toLowerCase().trim() === "cinema"
+  );
+}
+
+function sortByStartAtAsc(events: Item[]): Item[] {
+  return [...events].sort(
+    (a, b) =>
+      (a.start_at ? new Date(a.start_at).getTime() : 0) -
+      (b.start_at ? new Date(b.start_at).getTime() : 0),
+  );
+}
+
+function isActiveThroughNow(e: Item, now: Date): boolean {
+  if (!e.start_at) return false;
+  const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
+  return end >= now;
+}
+
 export function CinemaPage() {
   const { t } = useT();
   const { language } = useLanguage();
   const { selectedCity } = useSelectedCity();
-  const [events, setEvents] = useState<Item[]>([]);
+  const [cinemaEvents, setCinemaEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchCinema() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents("upcoming", undefined);
-      setEvents(
-        fetched.filter((e) => getTopLevelPageCategory(e) === "cinema")
+      const fetched = await eventService.getEvents(
+        "all",
+        undefined,
+        undefined,
+        "cinema",
       );
+      setCinemaEvents(fetched.filter(isApprovedCinemaBySlug));
       setIsLoading(false);
     }
     fetchCinema();
   }, []);
+
+  const { nowShowing, comingSoon, otherCities } = useMemo(() => {
+    const now = new Date();
+    const inSelectedCity = cinemaEvents.filter((e) => e.city === selectedCity);
+    const activeInCity = sortByStartAtAsc(
+      inSelectedCity.filter((e) => isActiveThroughNow(e, now)),
+    );
+    const nowShowing = activeInCity.slice(0, 5);
+    const repertoireIds = new Set(nowShowing.map((e) => e.id));
+
+    const upcomingInCity = sortByStartAtAsc(
+      inSelectedCity.filter(
+        (e) =>
+          e.start_at &&
+          new Date(e.start_at) > now &&
+          !repertoireIds.has(e.id),
+      ),
+    );
+    const comingSoon = upcomingInCity.slice(0, 8);
+
+    const otherPool = sortByStartAtAsc(
+      cinemaEvents.filter(
+        (e) => e.city && e.city !== selectedCity && isActiveThroughNow(e, now),
+      ),
+    );
+    const otherCities = otherPool.slice(0, 4);
+
+    return { nowShowing, comingSoon, otherCities };
+  }, [cinemaEvents, selectedCity]);
 
   useDocumentTitle(listingDocumentTitle(DOC_TITLE_CINEMA, selectedCity));
 
@@ -121,10 +197,6 @@ export function CinemaPage() {
       ],
     },
   });
-
-  const nowShowing = events.slice(0, 5);
-  const comingSoon = events.slice(5, 13);
-  const nearby = events.filter(e => e.city && e.city !== 'Banja Luka').slice(0, 4);
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
@@ -235,20 +307,28 @@ export function CinemaPage() {
         </div>
       </section>
 
-      {/* NEARBY CINEMAS */}
+      {/* OTHER CITIES REPERTOIRE */}
       <section className="py-16" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left"
             style={{ fontSize: "24px", fontWeight: 600, color: "#00897B", marginBottom: "24px" }}
           >
-            {language === "sr" ? "Bioskopi u okolini" : "Nearby Cinemas"}
+            {language === "sr"
+              ? "Bioskopski repertoar iz drugih gradova"
+              : "Cinema repertoire from other cities"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {nearby.length > 0 ? (
-              nearby.map((event) => (
-                <CinemaCard key={event.id} event={event} language={language} imageHeight="280px" />
+            {otherCities.length > 0 ? (
+              otherCities.map((event) => (
+                <CinemaCard
+                  key={event.id}
+                  event={event}
+                  language={language}
+                  imageHeight="280px"
+                  showEventCity
+                />
               ))
             ) : (
               <div className="col-span-4">

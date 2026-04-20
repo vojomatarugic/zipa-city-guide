@@ -1,11 +1,21 @@
 /**
  * MonthAccordion - Collapsible month sections for "All" event pages.
- * Current month is expanded by default, others collapsed.
+ * First month that contains events is expanded by default; others collapsed.
  * Shows max INITIAL_SHOW events with "Show more" button.
  */
 import { useState } from "react";
 import { Calendar, ChevronDown, ChevronRight } from "lucide-react";
 import { Item } from "../utils/dataService";
+import { pluralize, type PluralWordForms } from "../utils/pluralize";
+
+const MORE_EVENTS_LABEL: PluralWordForms = {
+  sr: { one: "događaj", few: "događaja", many: "događaja" },
+  en: { one: "event", many: "events" },
+};
+
+function countLocale(language: string): "sr" | "en" {
+  return language === "en" ? "en" : "sr";
+}
 
 const INITIAL_SHOW = 6;
 
@@ -24,8 +34,7 @@ interface MonthAccordionProps {
   accentColor: string;
   badgeBg: string;
   badgeBorder: string;
-  countLabelSr: string;
-  countLabelEn: string;
+  countPluralForms: PluralWordForms;
   renderCard: (event: Item) => React.ReactNode;
 }
 
@@ -35,10 +44,11 @@ export function MonthAccordion({
   accentColor,
   badgeBg,
   badgeBorder,
-  countLabelSr,
-  countLabelEn,
+  countPluralForms,
   renderCard,
 }: MonthAccordionProps) {
+  const locale = countLocale(language);
+  const countWord = (n: number) => pluralize(n, locale, countPluralForms);
   // Group events by month
   const grouped: Record<string, Item[]> = {};
   const monthOrder: string[] = [];
@@ -54,17 +64,15 @@ export function MonthAccordion({
     grouped[key].push(event);
   });
 
-  // Current month key
-  const now = new Date();
-  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+  const firstMonthKey = monthOrder[0] ?? null;
 
   return (
     <>
       <div className="mb-6">
         <p className="text-sm" style={{ color: "#6B7280" }}>
           {language === "sr"
-            ? `Pronađeno ${events.length} ${countLabelSr}`
-            : `Found ${events.length} ${countLabelEn}`}
+            ? `Pronađeno ${events.length} ${countWord(events.length)}`
+            : `Found ${events.length} ${countWord(events.length)}`}
         </p>
       </div>
 
@@ -73,13 +81,12 @@ export function MonthAccordion({
           key={key}
           monthKey={key}
           events={grouped[key]}
-          isCurrentMonth={key === currentMonthKey}
+          defaultExpanded={key === firstMonthKey}
           language={language}
           accentColor={accentColor}
           badgeBg={badgeBg}
           badgeBorder={badgeBorder}
-          countLabelSr={countLabelSr}
-          countLabelEn={countLabelEn}
+          countPluralForms={countPluralForms}
           renderCard={renderCard}
         />
       ))}
@@ -90,28 +97,28 @@ export function MonthAccordion({
 function MonthSection({
   monthKey,
   events,
-  isCurrentMonth,
+  defaultExpanded,
   language,
   accentColor,
   badgeBg,
   badgeBorder,
-  countLabelSr,
-  countLabelEn,
+  countPluralForms,
   renderCard,
 }: {
   monthKey: string;
   events: Item[];
-  isCurrentMonth: boolean;
+  defaultExpanded: boolean;
   language: string;
   accentColor: string;
   badgeBg: string;
   badgeBorder: string;
-  countLabelSr: string;
-  countLabelEn: string;
+  countPluralForms: PluralWordForms;
   renderCard: (event: Item) => React.ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(isCurrentMonth);
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
   const [showAll, setShowAll] = useState(false);
+  const locale = countLocale(language);
+  const countWord = (n: number) => pluralize(n, locale, countPluralForms);
 
   const [yearStr, monthStr] = monthKey.split('-');
   const monthIndex = parseInt(monthStr, 10);
@@ -157,7 +164,7 @@ function MonthSection({
           className="text-xs font-medium px-2 py-1 rounded-full"
           style={{ background: badgeBg, color: accentColor, border: `1px solid ${badgeBorder}` }}
         >
-          {events.length} {language === 'sr' ? countLabelSr : countLabelEn}
+          {events.length} {countWord(events.length)}
         </span>
       </button>
 
@@ -180,9 +187,17 @@ function MonthSection({
                   cursor: 'pointer',
                 }}
               >
-                {language === 'sr'
-                  ? `Prikaži još ${events.length - INITIAL_SHOW} događaja`
-                  : `Show ${events.length - INITIAL_SHOW} more events`}
+                {language === "sr"
+                  ? `Prikaži još ${events.length - INITIAL_SHOW} ${pluralize(
+                      events.length - INITIAL_SHOW,
+                      "sr",
+                      MORE_EVENTS_LABEL,
+                    )}`
+                  : `Show ${events.length - INITIAL_SHOW} more ${pluralize(
+                      events.length - INITIAL_SHOW,
+                      "en",
+                      MORE_EVENTS_LABEL,
+                    )}`}
               </button>
             </div>
           )}

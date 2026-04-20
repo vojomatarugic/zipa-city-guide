@@ -89,6 +89,90 @@ function sbService() {
 // Legacy helper for backward compatibility
 const getSupabaseClient = sbService;
 
+const VENUE_IMAGES_BUCKET = "make-ee0c365c-venue-images";
+const PROFILE_IMAGES_BUCKET = "profile-images-ee0c365c";
+type OwnedStorageBucket = typeof VENUE_IMAGES_BUCKET | typeof PROFILE_IMAGES_BUCKET;
+
+function resolveOwnedStorageTarget(
+  rawValue: unknown,
+  allowedBuckets: readonly OwnedStorageBucket[]
+): { bucket: OwnedStorageBucket; path: string } | null {
+  const value = String(rawValue ?? "").trim();
+  if (!value) return null;
+  if (value.startsWith("data:")) return null;
+
+  const allowed = new Set(allowedBuckets);
+  const normalizePath = (input: string): string => input.replace(/^\/+/, "").trim();
+  const asOwnedBucket = (b: string): OwnedStorageBucket | null => (
+    allowed.has(b as OwnedStorageBucket) ? (b as OwnedStorageBucket) : null
+  );
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    try {
+      const url = new URL(value);
+      const pathname = decodeURIComponent(url.pathname || "");
+      const marker = "/storage/v1/object/";
+      const markerIdx = pathname.indexOf(marker);
+      if (markerIdx < 0) return null;
+
+      const rest = pathname.slice(markerIdx + marker.length);
+      const segs = rest.split("/").filter(Boolean);
+      if (segs.length < 3) return null;
+
+      const mode = segs[0]; // public|sign|authenticated|...
+      if (mode !== "public" && mode !== "sign" && mode !== "authenticated") return null;
+      const bucket = asOwnedBucket(segs[1]);
+      if (!bucket) return null;
+      const path = normalizePath(segs.slice(2).join("/"));
+      if (!path) return null;
+      return { bucket, path };
+    } catch {
+      return null;
+    }
+  }
+
+  if (value.includes("://")) return null;
+  const path = normalizePath(value);
+  if (!path) return null;
+  const bucket = allowedBuckets[0];
+  return bucket ? { bucket, path } : null;
+}
+
+function sameOwnedStorageObject(
+  currentValue: unknown,
+  nextValue: unknown,
+  allowedBuckets: readonly OwnedStorageBucket[]
+): boolean {
+  const current = resolveOwnedStorageTarget(currentValue, allowedBuckets);
+  const next = resolveOwnedStorageTarget(nextValue, allowedBuckets);
+  if (!current || !next) return false;
+  return current.bucket === next.bucket && current.path === next.path;
+}
+
+async function bestEffortDeleteOwnedStorageObject(
+  supabase: ReturnType<typeof sbService>,
+  rawValue: unknown,
+  allowedBuckets: readonly OwnedStorageBucket[],
+  context: string
+): Promise<void> {
+  const target = resolveOwnedStorageTarget(rawValue, allowedBuckets);
+  if (!target) return;
+
+  const { error } = await supabase.storage.from(target.bucket).remove([target.path]);
+  if (error) {
+    console.warn(`⚠️ [${context}] Storage cleanup failed`, {
+      bucket: target.bucket,
+      path: target.path,
+      reason: error.message,
+    });
+  } else {
+    console.log(`🧹 [${context}] Deleted storage object`, {
+      bucket: target.bucket,
+      path: target.path,
+    });
+  }
+}
+
 type EventScheduleRow = { start_at: string; end_at?: string | null };
 
 /** Client/DB → JSON array for `events_ee0c365c.event_schedules` (jsonb). */
@@ -139,6 +223,16 @@ async function resolveRegisteredSubmitterEmail(
     if (users.length < perPage) break;
     page += 1;
   }
+  return null;
+}
+
+function extractDisplayNameFromAuthUser(user: { user_metadata?: Record<string, unknown> } | null | undefined): string | null {
+  if (!user?.user_metadata) return null;
+  const meta = user.user_metadata;
+  const fromName = typeof meta.name === 'string' ? meta.name.trim() : '';
+  if (fromName) return fromName;
+  const fromFullName = typeof meta.full_name === 'string' ? meta.full_name.trim() : '';
+  if (fromFullName) return fromFullName;
   return null;
 }
 
@@ -1079,6 +1173,12 @@ app.delete("/make-server-a0e1e9cb/users/:userId", requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId');
     const supabase = getSupabaseClient();
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
+    const oldProfileImage = (profileRow as { avatar_url?: string | null } | null)?.avatar_url ?? null;
     
     // ✅ Master admin protection (`profiles.role` only)
     const deleteTargetRole = await getProfileRoleById(supabase, userId);
@@ -1094,6 +1194,13 @@ app.delete("/make-server-a0e1e9cb/users/:userId", requireAdmin, async (c) => {
       console.error('❌ Error deleting user:', error);
       return c.json({ error: 'Failed to delete user', details: error.message }, 500);
     }
+
+    await bestEffortDeleteOwnedStorageObject(
+      supabase,
+      oldProfileImage,
+      [PROFILE_IMAGES_BUCKET],
+      "delete-user-profile-image"
+    );
     
     console.log(`✅ User deleted: ${userId}`);
     return c.json({ success: true });
@@ -1114,6 +1221,12 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
     }
     
     const supabase = getSupabaseClient();
+    const { data: existingProfileRow } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
+    const previousProfileImage = (existingProfileRow as { avatar_url?: string | null } | null)?.avatar_url ?? null;
     
     // Source of truth for role is `profiles` — sync into auth metadata only for legacy clients
     const profileRole = await getProfileRoleById(supabase, userId);
@@ -1235,6 +1348,19 @@ app.patch("/make-server-a0e1e9cb/users/profile", async (c) => {
     } else {
       console.log('ℹ️  Email not changed or oldEmail not provided. Skipping submissions update.');
       console.log({ email, oldEmail, emailChanged: email !== oldEmail });
+    }
+
+    if (
+      profileImage !== undefined &&
+      previousProfileImage &&
+      !sameOwnedStorageObject(previousProfileImage, profileImage, [PROFILE_IMAGES_BUCKET])
+    ) {
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        previousProfileImage,
+        [PROFILE_IMAGES_BUCKET],
+        "replace-profile-image"
+      );
     }
     
     console.log(`✅ User profile updated: ${userId}`);
@@ -1560,8 +1686,14 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     const body = await c.req.json();
     
     // ✅ SVA polja su snake_case — nema camelCase fallbackova
-    const page_slug = body.page_slug;
-    if (!page_slug) {
+    // Events: start_at / event_type, or legacy routing via page_slug (never persisted on event rows).
+    const EVENT_PAGE_SLUGS = ['events', 'event', 'concerts', 'theatre', 'cinema'];
+    const submittedPageSlug = String(body.page_slug ?? '').toLowerCase().trim();
+    const isEvent =
+      !!body.start_at ||
+      !!body.event_type ||
+      EVENT_PAGE_SLUGS.includes(submittedPageSlug);
+    if (!isEvent && !body.page_slug) {
       return c.json({ error: 'Missing required field: page_slug' }, 400);
     }
     if (!body.title) {
@@ -1570,7 +1702,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     if (!body.description) {
       return c.json({ error: 'Missing required field: description' }, 400);
     }
-    const bodySubmittedRaw = typeof body.submitted_by === 'string' ? body.submitted_by.trim() : '';
+    const assignUserIdRaw = typeof body.assign_user_id === 'string' ? body.assign_user_id.trim() : '';
     // ✅ Use sbService() to bypass broken RLS policy
     const supabase = sbService();
 
@@ -1580,32 +1712,19 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     }
     const isAdminSubmitter = await profileHasAdminAccess(supabase, authUser.id);
 
-    let finalSubmittedBy: string;
-    if (!isAdminSubmitter) {
-      finalSubmittedBy = authEmail;
-      if (bodySubmittedRaw && bodySubmittedRaw.toLowerCase() !== authEmail.toLowerCase()) {
-        return c.json({ error: 'submitted_by must match your logged-in account email.' }, 400);
+    let ownerUserId = authUser.id;
+    let finalSubmittedBy = authEmail;
+    let finalSubmittedByName = extractDisplayNameFromAuthUser(authUser);
+
+    if (isAdminSubmitter && assignUserIdRaw) {
+      const { data: assignedData, error: assignedErr } = await supabase.auth.admin.getUserById(assignUserIdRaw);
+      const assignedUser = assignedData?.user;
+      if (assignedErr || !assignedUser?.id || !assignedUser?.email) {
+        return c.json({ error: 'Invalid assign_user_id.' }, 400);
       }
-    } else {
-      if (!bodySubmittedRaw) {
-        return c.json({ error: 'Missing required field: submitted_by (select a registered user).' }, 400);
-      }
-      const resolved = await resolveRegisteredSubmitterEmail(supabase, bodySubmittedRaw);
-      if (!resolved) {
-        return c.json({
-          error: 'submitted_by must be the email of a registered user. Choose someone from search results.',
-        }, 400);
-      }
-      finalSubmittedBy = resolved;
-      if (body.assign_user_id) {
-        const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(body.assign_user_id);
-        if (uidErr || !uidData?.user?.email) {
-          return c.json({ error: 'Invalid assign_user_id.' }, 400);
-        }
-        if (uidData.user.email.toLowerCase() !== resolved.toLowerCase()) {
-          return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
-        }
-      }
+      ownerUserId = assignedUser.id;
+      finalSubmittedBy = assignedUser.email.trim();
+      finalSubmittedByName = extractDisplayNameFromAuthUser(assignedUser);
     }
     
     // ✅ Check if submitter is admin/master_admin (profiles.role) → auto-approve
@@ -1615,10 +1734,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     }
     
     // Determine which table to use
-    // ⚠️ 'clubs' is NOT in this list — it's shared by nightclub VENUES (venue_type='nightclub')
-    //    and club EVENTS (event_type='club'). We use event_type/start_at to distinguish.
-    const EVENT_PAGE_SLUGS = ['events', 'event', 'concerts', 'theatre', 'cinema'];
-    const isEvent = EVENT_PAGE_SLUGS.includes(page_slug) || !!body.event_type || !!body.start_at;
+    // ⚠️ 'clubs' is shared by nightclub VENUES (venue_type='nightclub') and club EVENTS — use start_at/event_type for events.
     const tableName = isEvent ? 'events_ee0c365c' : 'venues_ee0c365c';
     
     if (isEvent) {
@@ -1638,20 +1754,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       }
       
       const eventType = body.event_type || null;
-      const canonicalEventPageSlug = (() => {
-        const et = String(eventType || '').toLowerCase().trim();
-        if (et === 'concert') return 'concerts';
-        if (et === 'cinema') return 'cinema';
-        if (et === 'theatre') return 'theatre';
-        if (et) return 'events';
-        const slug = String(body.page_slug || '').toLowerCase().trim();
-        if (slug === 'concerts') return 'concerts';
-        if (slug === 'cinema') return 'cinema';
-        if (slug === 'theatre') return 'theatre';
-        return 'events';
-      })();
       const event = {
-        page_slug: canonicalEventPageSlug,
         event_type: eventType,
         title: body.title,
         title_en: body.title_en || body.title,
@@ -1672,7 +1775,9 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         organizer_phone: body.organizer_phone || null,
         organizer_email: body.organizer_email || null,
         status: isSubmitterAdmin ? 'approved' : 'pending',
+        submitted_by_user_id: ownerUserId,
         submitted_by: finalSubmittedBy,
+        submitted_by_name: finalSubmittedByName,
       };
       
       console.log(`📋 [CREATE EVENT] table=${tableName} status=${event.status} admin=${isSubmitterAdmin} start_at=${event.start_at}`);
@@ -1715,7 +1820,9 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         contact_email: body.contact_email || null,
         tags: normalizeVenueTagsInput(body.tags),
         status: isSubmitterAdmin ? 'approved' : 'pending',
+        submitted_by_user_id: ownerUserId,
         submitted_by: finalSubmittedBy,
+        submitted_by_name: finalSubmittedByName,
         is_custom: true,
       };
       
@@ -1863,7 +1970,7 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     // Try deleting from events table first
     const { data: eventToDelete, error: eventFetchError } = await supabase
       .from('events_ee0c365c')
-      .select('id, submitted_by, organizer_email')
+      .select('id, submitted_by_user_id, submitted_by, organizer_email, image')
       .eq('id', id)
       .maybeSingle();
 
@@ -1872,7 +1979,10 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     }
 
     if (eventToDelete) {
-      const isOwner = normalize(eventToDelete.submitted_by) === userEmail || normalize(eventToDelete.organizer_email) === userEmail;
+      const isOwner =
+        normalize((eventToDelete as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
+        normalize(eventToDelete.submitted_by) === userEmail ||
+        normalize(eventToDelete.organizer_email) === userEmail;
       if (!isAdmin && !isOwner) {
         return c.json({ error: 'Forbidden - not your event' }, 403);
       }
@@ -1889,6 +1999,13 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       if (!deletedEventRows || deletedEventRows.length === 0) {
         return c.json({ error: 'Event not found' }, 404);
       }
+
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        (eventToDelete as Record<string, unknown>).image,
+        [VENUE_IMAGES_BUCKET],
+        "delete-submission-event-image"
+      );
 
       console.log(`✅ Event deleted via /submissions route: ${id}`);
       return c.json({ success: true, entity: 'event', deleted_id: id });
@@ -1909,6 +2026,7 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     }
 
     const isVenueOwner =
+      normalize((venueToDelete as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
       normalize(venueToDelete.submitted_by) === userEmail ||
       normalize(venueToDelete.contact_email) === userEmail ||
       normalize((venueToDelete as any).organizer_email) === userEmail;
@@ -1937,6 +2055,13 @@ app.delete("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     if (!deletedVenueRows || deletedVenueRows.length === 0) {
       return c.json({ error: 'Submission not found' }, 404);
     }
+
+    await bestEffortDeleteOwnedStorageObject(
+      supabase,
+      (venueToDelete as Record<string, unknown>).image,
+      [VENUE_IMAGES_BUCKET],
+      "delete-submission-venue-image"
+    );
 
     console.log(`✅ Venue deleted via /submissions route: ${id}`);
     return c.json({ success: true, entity: 'venue', deleted_id: id });
@@ -1967,14 +2092,15 @@ app.get("/make-server-a0e1e9cb/my-events", async (c) => {
     }
     
     const userEmail = user.email;
-    console.log(`🔍 Fetching events for user: ${userEmail}`);
+    const userId = user.id;
+    console.log(`🔍 Fetching events for user: ${userEmail} (${userId})`);
     
     // Get ALL events submitted by this user (any status)
     const supabase = sbService();
     const { data: events, error } = await supabase
       .from('events_ee0c365c')
       .select('*')
-      .or(`submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
+      .or(`submitted_by_user_id.eq.${userId},submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
       .order('created_at', { ascending: false });
     
     if (error) {
@@ -1986,11 +2112,14 @@ app.get("/make-server-a0e1e9cb/my-events", async (c) => {
     const { data: venueEvents } = await supabase
       .from('venues_ee0c365c')
       .select('*')
-      .or(`submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
+      .or(`submitted_by_user_id.eq.${userId},submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
       .not('start_at', 'is', null)
       .order('created_at', { ascending: false });
     
-    const allEvents = [...(events || []), ...(venueEvents || []).map((v: any) => ({ ...v, _legacy_venue: true }))];
+    const allEvents = [
+      ...(events || []),
+      ...(venueEvents || []).map((v: any) => ({ ...v, _legacy_venue: true })),
+    ];
     
     console.log(`✅ Found ${events?.length || 0} events + ${venueEvents?.length || 0} legacy venue-events for ${userEmail}`);
     return c.json({ events: allEvents });
@@ -2019,14 +2148,15 @@ app.delete("/make-server-a0e1e9cb/my-submissions/all", async (c) => {
     // Use service role for DB operations
     const supabase = sbService();
     const userEmail = user.email;
+    const userId = user.id;
     console.log(`🗑️ DELETING ALL SUBMISSIONS for user: ${userEmail}`);
     
     // ✅ FIXED: Use select() to get deleted records for accurate count
     const { data: deletedVenues, error: venuesError } = await supabase
       .from('venues_ee0c365c')
       .delete()
-      .or(`submitted_by.eq.${userEmail},contact_email.eq.${userEmail}`)
-      .select('id');
+      .or(`submitted_by_user_id.eq.${userId},submitted_by.eq.${userEmail},contact_email.eq.${userEmail}`)
+      .select('id, image');
     
     if (venuesError) {
       console.error('❌ Error deleting venues:', venuesError);
@@ -2039,8 +2169,8 @@ app.delete("/make-server-a0e1e9cb/my-submissions/all", async (c) => {
     const { data: deletedEvents, error: eventsError } = await supabase
       .from('events_ee0c365c')
       .delete()
-      .or(`submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
-      .select('id');
+      .or(`submitted_by_user_id.eq.${userId},submitted_by.eq.${userEmail},organizer_email.eq.${userEmail}`)
+      .select('id, image');
     
     if (eventsError) {
       console.error('❌ Error deleting events:', eventsError);
@@ -2048,6 +2178,23 @@ app.delete("/make-server-a0e1e9cb/my-submissions/all", async (c) => {
     }
     
     const eventsCount = deletedEvents?.length || 0;
+
+    for (const row of (deletedVenues || []) as Array<Record<string, unknown>>) {
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        row.image,
+        [VENUE_IMAGES_BUCKET],
+        "delete-my-submissions-venue-image"
+      );
+    }
+    for (const row of (deletedEvents || []) as Array<Record<string, unknown>>) {
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        row.image,
+        [VENUE_IMAGES_BUCKET],
+        "delete-my-submissions-event-image"
+      );
+    }
     
     console.log(`✅ DELETED ${venuesCount || 0} venues and ${eventsCount || 0} events for ${userEmail}`);
     return c.json({ 
@@ -2326,7 +2473,11 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
           }
           
           // Check if user owns this event
-          if (event.submitted_by === userEmail || event.organizer_email === userEmail) {
+          if (
+            normalize((event as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
+            event.submitted_by === userEmail ||
+            event.organizer_email === userEmail
+          ) {
             console.log(`✅ User ${userEmail} has access to their own event (status: ${event.status})`);
             return c.json({ event });
           }
@@ -2364,48 +2515,36 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     
     // ✅ Use sbService() to bypass broken RLS policy
     const supabase = sbService();
+    const { data: existingEventRow } = await supabase
+      .from('events_ee0c365c')
+      .select('id, image')
+      .eq('id', id)
+      .maybeSingle();
+    const previousEventImage = (existingEventRow as { image?: string | null } | null)?.image ?? null;
 
     let resolvedEventSubmittedBy: string | undefined = undefined;
-    if (body.assign_user_id && body.submitted_by !== undefined && body.submitted_by !== null) {
-      const rawSb = String(body.submitted_by).trim();
-      if (!rawSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+    let resolvedEventSubmittedByUserId: string | undefined = undefined;
+    let resolvedEventSubmittedByName: string | null | undefined = undefined;
+    if (typeof body.assign_user_id === 'string' && body.assign_user_id.trim()) {
+      const assignUserId = body.assign_user_id.trim();
+      const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(assignUserId);
+      if (uidErr || !uidData?.user?.id || !uidData.user.email) {
+        return c.json({ error: 'Invalid assign_user_id.' }, 400);
       }
-      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
-      if (!resolvedSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
-      }
-      const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(body.assign_user_id);
-      if (uidErr || !uidData?.user?.email || uidData.user.email.toLowerCase() !== resolvedSb.toLowerCase()) {
-        return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
-      }
-      resolvedEventSubmittedBy = resolvedSb;
-      console.log(`🔗 Auto-assigning event to user: ${resolvedSb} (userId: ${body.assign_user_id})`);
+      resolvedEventSubmittedBy = uidData.user.email.trim();
+      resolvedEventSubmittedByUserId = uidData.user.id;
+      resolvedEventSubmittedByName = extractDisplayNameFromAuthUser(uidData.user);
+      console.log(`🔗 Auto-assigning event to user: ${resolvedEventSubmittedBy} (userId: ${assignUserId})`);
     } else if (body.submitted_by !== undefined) {
       const rawSb = String(body.submitted_by ?? '').trim();
-      if (!rawSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      if (rawSb) {
+        const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+        if (resolvedSb) {
+          resolvedEventSubmittedBy = resolvedSb;
+        }
       }
-      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
-      if (!resolvedSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
-      }
-      resolvedEventSubmittedBy = resolvedSb;
     }
     
-    const canonicalEventPageSlug = (() => {
-      const et = String(body.event_type || '').toLowerCase().trim();
-      if (et === 'concert') return 'concerts';
-      if (et === 'cinema') return 'cinema';
-      if (et === 'theatre') return 'theatre';
-      if (et) return 'events';
-      const slug = String(body.page_slug || '').toLowerCase().trim();
-      if (slug === 'concerts') return 'concerts';
-      if (slug === 'cinema') return 'cinema';
-      if (slug === 'theatre') return 'theatre';
-      return 'events';
-    })();
-
     // ✅ snake_case only — nema camelCase fallbackova
     const updatePayload: Record<string, unknown> = {
       title: body.title,
@@ -2413,7 +2552,6 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       description: body.description,
       description_en: body.description_en,
       event_type: body.event_type,
-      page_slug: canonicalEventPageSlug,
       city: body.city,
       venue_name: body.venue_name,
       address: body.address,
@@ -2425,7 +2563,9 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       organizer_name: body.organizer_name,
       organizer_phone: body.organizer_phone,
       organizer_email: body.organizer_email,
+      ...(resolvedEventSubmittedByUserId !== undefined ? { submitted_by_user_id: resolvedEventSubmittedByUserId } : {}),
       ...(resolvedEventSubmittedBy !== undefined ? { submitted_by: resolvedEventSubmittedBy } : {}),
+      ...(resolvedEventSubmittedByName !== undefined ? { submitted_by_name: resolvedEventSubmittedByName } : {}),
       updated_at: new Date().toISOString(),
     };
     if (body.date !== undefined) updatePayload.date = body.date ?? null;
@@ -2442,6 +2582,18 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       .select();
     
     if (!eventsError && eventsRows && eventsRows.length > 0) {
+      if (
+        body.image !== undefined &&
+        previousEventImage &&
+        !sameOwnedStorageObject(previousEventImage, body.image, [VENUE_IMAGES_BUCKET])
+      ) {
+        await bestEffortDeleteOwnedStorageObject(
+          supabase,
+          previousEventImage,
+          [VENUE_IMAGES_BUCKET],
+          "replace-event-image"
+        );
+      }
       console.log(`✅ Updated event in events table: ${eventsRows[0].title}`);
       return c.json({ event: eventsRows[0] });
     }
@@ -2466,7 +2618,6 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         description: updatePayload.description ?? venueCheck.description,
         description_en: updatePayload.description_en ?? venueCheck.description_en,
         event_type: updatePayload.event_type || venueCheck.event_type || 'other',
-        page_slug: canonicalEventPageSlug,
         city: updatePayload.city ?? venueCheck.city,
         venue_name: updatePayload.venue_name ?? venueCheck.venue_name,
         address: updatePayload.address ?? venueCheck.address,
@@ -2487,6 +2638,14 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         status: venueCheck.status || 'approved',
         submitted_by:
           resolvedEventSubmittedBy !== undefined ? resolvedEventSubmittedBy : venueCheck.submitted_by,
+        submitted_by_user_id:
+          resolvedEventSubmittedByUserId !== undefined
+            ? resolvedEventSubmittedByUserId
+            : (venueCheck as { submitted_by_user_id?: string | null }).submitted_by_user_id ?? null,
+        submitted_by_name:
+          resolvedEventSubmittedByName !== undefined
+            ? resolvedEventSubmittedByName
+            : (venueCheck as { submitted_by_name?: string | null }).submitted_by_name ?? null,
         source: venueCheck.source,
         created_at: venueCheck.created_at,
         updated_at: new Date().toISOString(),
@@ -2515,6 +2674,18 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       }
       
       console.log(`✅ Successfully migrated event "${insertedEvent.title}" from venues → events table`);
+      if (
+        body.image !== undefined &&
+        (venueCheck as Record<string, unknown>).image &&
+        !sameOwnedStorageObject((venueCheck as Record<string, unknown>).image, body.image, [VENUE_IMAGES_BUCKET])
+      ) {
+        await bestEffortDeleteOwnedStorageObject(
+          supabase,
+          (venueCheck as Record<string, unknown>).image,
+          [VENUE_IMAGES_BUCKET],
+          "replace-legacy-event-image"
+        );
+      }
       return c.json({ event: insertedEvent, migrated: true });
     }
     
@@ -2556,7 +2727,7 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
     // Primary source: events table
     const { data: event, error: eventFetchError } = await supabase
       .from('events_ee0c365c')
-      .select('id, submitted_by, organizer_email')
+      .select('id, submitted_by_user_id, submitted_by, organizer_email, image')
       .eq('id', id)
       .maybeSingle();
 
@@ -2566,7 +2737,10 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
     }
 
     if (event) {
-      const isOwner = normalize(event.submitted_by) === userEmail || normalize(event.organizer_email) === userEmail;
+      const isOwner =
+        normalize((event as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
+        normalize(event.submitted_by) === userEmail ||
+        normalize(event.organizer_email) === userEmail;
       console.log('🗑️ [DELETE /events/:id] Ownership check (events table)', {
         id,
         submitted_by: normalize(event.submitted_by),
@@ -2595,6 +2769,13 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
         return c.json({ error: 'Event not found' }, 404);
       }
 
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        (event as Record<string, unknown>).image,
+        [VENUE_IMAGES_BUCKET],
+        "delete-event-image"
+      );
+
       return c.json({ success: true, deleted_id: id, entity: 'event' });
     }
 
@@ -2614,6 +2795,7 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
     }
 
     const isLegacyOwner =
+      normalize((legacyEvent as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
       normalize(legacyEvent.submitted_by) === userEmail ||
       normalize(legacyEvent.contact_email) === userEmail ||
       normalize((legacyEvent as any).organizer_email) === userEmail;
@@ -2645,6 +2827,13 @@ app.delete("/make-server-a0e1e9cb/events/:id", async (c) => {
     if (!deletedLegacyRows || deletedLegacyRows.length === 0) {
       return c.json({ error: 'Event not found' }, 404);
     }
+
+    await bestEffortDeleteOwnedStorageObject(
+      supabase,
+      (legacyEvent as Record<string, unknown>).image,
+      [VENUE_IMAGES_BUCKET],
+      "delete-legacy-event-image"
+    );
 
     return c.json({ success: true, deleted_id: id, entity: 'event', legacy_venue: true });
   } catch (error) {
@@ -2682,7 +2871,8 @@ app.get("/make-server-a0e1e9cb/my-venues", async (c) => {
     // Use service role for DB queries
     const supabase = sbService();
     const userEmail = user.email;
-    console.log(`🔍 [MY-VENUES] Fetching venues for user: "${userEmail}"`);
+    const userId = user.id;
+    console.log(`🔍 [MY-VENUES] Fetching venues for user: "${userEmail}" (${userId})`);
     console.log(`🔍 [MY-VENUES] User email length: ${userEmail.length}`);
     console.log(`🔍 [MY-VENUES] User email bytes: ${JSON.stringify([...userEmail].map(c => c.charCodeAt(0)))}`);
     
@@ -2690,7 +2880,7 @@ app.get("/make-server-a0e1e9cb/my-venues", async (c) => {
     const { data: venues, error, count } = await supabase
       .from('venues_ee0c365c')
       .select('*', { count: 'exact' })
-      .eq('submitted_by', userEmail)
+      .or(`submitted_by_user_id.eq.${userId},submitted_by.eq.${userEmail}`)
       .order('created_at', { ascending: false });
     
     console.log(`🔍 [MY-VENUES] Query executed`);
@@ -2836,7 +3026,11 @@ app.get("/make-server-a0e1e9cb/venues/:id", async (c) => {
           }
           
           // Check if user owns this venue
-          if (venue.submitted_by === userEmail || venue.contact_email === userEmail) {
+          if (
+            normalize((venue as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
+            venue.submitted_by === userEmail ||
+            venue.contact_email === userEmail
+          ) {
             console.log(`✅ User ${userEmail} has access to their own venue (status: ${venue.status})`);
             return c.json({ venue });
           }
@@ -2868,6 +3062,12 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
     }
     
     const supabase = getSupabaseClient();
+    const { data: existingVenueRow } = await supabase
+      .from('venues_ee0c365c')
+      .select('id, image')
+      .eq('id', id)
+      .maybeSingle();
+    const previousVenueImage = (existingVenueRow as { image?: string | null } | null)?.image ?? null;
     
     // ✅ FIXED: Use ?? instead of || so empty strings "" are preserved (not treated as falsy)
     // || treats "" as falsy → field update skipped → old value stays in DB forever
@@ -2876,34 +3076,28 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
     
     // ✅ FIXED: Auto-assign submitted_by when admin selects a registered user
     // ✅ snake_case only
-    const assignUserId = body.assign_user_id;
-    let submittedByUpdate: Record<string, any> = {};
-    if (assignUserId && body.submitted_by !== undefined && body.submitted_by !== null) {
-      const rawSb = String(body.submitted_by).trim();
-      if (!rawSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
-      }
-      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
-      if (!resolvedSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
-      }
+    const assignUserId = typeof body.assign_user_id === 'string' ? body.assign_user_id.trim() : '';
+    let submittedByUpdate: Record<string, unknown> = {};
+    if (assignUserId) {
       const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(assignUserId);
-      if (uidErr || !uidData?.user?.email || uidData.user.email.toLowerCase() !== resolvedSb.toLowerCase()) {
-        return c.json({ error: 'assign_user_id does not match submitted_by email.' }, 400);
+      if (uidErr || !uidData?.user?.id || !uidData.user.email) {
+        return c.json({ error: 'Invalid assign_user_id.' }, 400);
       }
-      submittedByUpdate = { submitted_by: resolvedSb };
-      console.log(`🔗 Auto-assigning venue to user: ${resolvedSb} (userId: ${assignUserId})`);
+      submittedByUpdate = {
+        submitted_by_user_id: uidData.user.id,
+        submitted_by: uidData.user.email.trim(),
+        submitted_by_name: extractDisplayNameFromAuthUser(uidData.user),
+      };
+      console.log(`🔗 Auto-assigning venue to user: ${uidData.user.email} (userId: ${assignUserId})`);
     } else if (body.submitted_by !== undefined) {
       const rawSb = String(body.submitted_by ?? '').trim();
-      if (!rawSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
+      if (rawSb) {
+        const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+        if (resolvedSb) {
+          submittedByUpdate = { submitted_by: resolvedSb };
+          console.log(`🔗 Updating submitted_by to: ${resolvedSb}`);
+        }
       }
-      const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
-      if (!resolvedSb) {
-        return c.json({ error: 'submitted_by must be a registered user email.' }, 400);
-      }
-      submittedByUpdate = { submitted_by: resolvedSb };
-      console.log(`🔗 Updating submitted_by to: ${resolvedSb}`);
     }
 
     const tagsUpdate =
@@ -2945,6 +3139,19 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
       return c.json({ error: 'Failed to update venue', details: String(error) }, 500);
     }
     
+    if (
+      body.image !== undefined &&
+      previousVenueImage &&
+      !sameOwnedStorageObject(previousVenueImage, body.image, [VENUE_IMAGES_BUCKET])
+    ) {
+      await bestEffortDeleteOwnedStorageObject(
+        supabase,
+        previousVenueImage,
+        [VENUE_IMAGES_BUCKET],
+        "replace-venue-image"
+      );
+    }
+
     console.log(`✅ Updated venue: ${venue.title}${submittedByUpdate.submitted_by ? ` (assigned to ${submittedByUpdate.submitted_by})` : ''}`);
     return c.json({ venue });
   } catch (error) {
@@ -2994,6 +3201,7 @@ app.delete("/make-server-a0e1e9cb/venues/:id", async (c) => {
     }
 
     const isOwner =
+      normalize((venue as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
       normalize(venue.submitted_by) === userEmail ||
       normalize(venue.contact_email) === userEmail ||
       normalize((venue as any).organizer_email) === userEmail;
@@ -3025,6 +3233,13 @@ app.delete("/make-server-a0e1e9cb/venues/:id", async (c) => {
     if (!deletedVenues || deletedVenues.length === 0) {
       return c.json({ error: 'Venue not found' }, 404);
     }
+
+    await bestEffortDeleteOwnedStorageObject(
+      supabase,
+      (venue as Record<string, unknown>).image,
+      [VENUE_IMAGES_BUCKET],
+      "delete-venue-image"
+    );
 
     return c.json({ success: true, deleted_id: id, entity: 'venue' });
   } catch (error) {
@@ -3287,18 +3502,22 @@ async function handleToggleVenueActiveRequest(c: any): Promise<Response> {
 
   const supabase = sbService();
   const userEmail = user.email;
+  const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
   const isAdmin = await profileHasAdminAccess(supabase, user.id);
 
   const { data: venue, error: venueError } = await supabase
     .from('venues_ee0c365c')
-    .select('id, submitted_by, contact_email')
+    .select('id, submitted_by_user_id, submitted_by, contact_email')
     .eq('id', id)
     .maybeSingle();
 
   if (venueError) return c.json({ error: 'Failed to load venue', details: venueError.message }, 500);
   if (!venue) return c.json({ error: 'Venue not found' }, 404);
 
-  const ownsVenue = venue.submitted_by === userEmail || venue.contact_email === userEmail;
+  const ownsVenue =
+    normalize((venue as Record<string, unknown>).submitted_by_user_id) === normalize(user.id) ||
+    venue.submitted_by === userEmail ||
+    venue.contact_email === userEmail;
   if (!ownsVenue && !isAdmin) return c.json({ error: 'Forbidden - not your venue' }, 403);
 
   let ids = [...(await loadInactiveIds())];
@@ -3333,37 +3552,42 @@ async function handleToggleEventActiveRequest(c: any): Promise<Response> {
 
   const supabase = sbService();
   const userEmail = user.email;
+  const normalize = (value: unknown): string => String(value ?? '').trim().toLowerCase();
   const isAdmin = await profileHasAdminAccess(supabase, user.id);
 
   const { data: eventRow, error: eventError } = await supabase
     .from('events_ee0c365c')
-    .select('id, submitted_by, organizer_email')
+    .select('id, submitted_by_user_id, submitted_by, organizer_email')
     .eq('id', id)
     .maybeSingle();
 
   if (eventError) return c.json({ error: 'Failed to load event', details: eventError.message }, 500);
 
+  let submittedByUserId: string | null = null;
   let submittedBy: string | null = null;
   let organizerEmail: string | null = null;
 
   if (eventRow) {
+    submittedByUserId = (eventRow as Record<string, unknown>).submitted_by_user_id as string | null ?? null;
     submittedBy = eventRow.submitted_by ?? null;
     organizerEmail = eventRow.organizer_email ?? null;
   } else {
     const { data: legacyVenue, error: legacyErr } = await supabase
       .from('venues_ee0c365c')
-      .select('id, submitted_by, organizer_email, contact_email, start_at, event_type')
+      .select('id, submitted_by_user_id, submitted_by, organizer_email, contact_email, start_at, event_type')
       .eq('id', id)
       .maybeSingle();
     if (legacyErr) return c.json({ error: 'Failed to load legacy event', details: legacyErr.message }, 500);
     if (!legacyVenue || (!legacyVenue.start_at && !legacyVenue.event_type)) {
       return c.json({ error: 'Event not found' }, 404);
     }
+    submittedByUserId = (legacyVenue as Record<string, unknown>).submitted_by_user_id as string | null ?? null;
     submittedBy = legacyVenue.submitted_by ?? null;
     organizerEmail = legacyVenue.organizer_email ?? legacyVenue.contact_email ?? null;
   }
 
   const ownsEvent =
+    normalize(submittedByUserId) === normalize(user.id) ||
     submittedBy === userEmail ||
     organizerEmail === userEmail;
   if (!ownsEvent && !isAdmin) return c.json({ error: 'Forbidden - not your event' }, 403);
@@ -3597,6 +3821,12 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
 
     const userId = userData.user.id;
     const supabase = sbService();
+    const { data: ownProfileRow } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
+    const ownProfileImage = (ownProfileRow as { avatar_url?: string | null } | null)?.avatar_url ?? null;
 
     // 🛡️ ADMIN GUARD: privileged users cannot delete the last admin-capable account (profiles.role)
     const selfRole = await getProfileRoleById(supabase, userId);
@@ -3627,17 +3857,41 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
     // Delete user's venues and events from database
     try {
       if (userEmail) {
-        const { error: venueDelError } = await supabase
+        const { data: deletedVenueRows, error: venueDelError } = await supabase
           .from('venues_ee0c365c')
           .delete()
-          .eq('submitted_by', userEmail);
-        if (venueDelError) console.warn('⚠️ Error deleting user venues:', venueDelError);
+          .eq('submitted_by', userEmail)
+          .select('id, image');
+        if (venueDelError) {
+          console.warn('⚠️ Error deleting user venues:', venueDelError);
+        } else {
+          for (const row of deletedVenueRows as Array<Record<string, unknown>>) {
+            await bestEffortDeleteOwnedStorageObject(
+              supabase,
+              row.image,
+              [VENUE_IMAGES_BUCKET],
+              "delete-account-venue-image"
+            );
+          }
+        }
 
-        const { error: eventDelError } = await supabase
+        const { data: deletedEventRows, error: eventDelError } = await supabase
           .from('events_ee0c365c')
           .delete()
-          .eq('submitted_by', userEmail);
-        if (eventDelError) console.warn('⚠️ Error deleting user events:', eventDelError);
+          .eq('submitted_by', userEmail)
+          .select('id, image');
+        if (eventDelError) {
+          console.warn('⚠️ Error deleting user events:', eventDelError);
+        } else {
+          for (const row of (deletedEventRows || []) as Array<Record<string, unknown>>) {
+            await bestEffortDeleteOwnedStorageObject(
+              supabase,
+              row.image,
+              [VENUE_IMAGES_BUCKET],
+              "delete-account-event-image"
+            );
+          }
+        }
       }
     } catch (cleanupError) {
       console.warn('⚠️ Error cleaning up user data (continuing with account deletion):', cleanupError);
@@ -3650,6 +3904,13 @@ app.delete('/make-server-a0e1e9cb/auth/delete-account', async (c) => {
       console.error('❌ Error deleting account:', error);
       return c.json({ error: 'Failed to delete account', details: error.message }, 500);
     }
+
+    await bestEffortDeleteOwnedStorageObject(
+      supabase,
+      ownProfileImage,
+      [PROFILE_IMAGES_BUCKET],
+      "delete-account-profile-image"
+    );
 
     console.log('✅ Account deleted for user:', userId);
     return c.json({ success: true });

@@ -119,7 +119,9 @@ export interface Item {
   cuisine?: string;
   cuisine_en?: string;
   status: ItemStatus;
-  submitted_by: string;
+  submitted_by?: string;
+  submitted_by_user_id?: string;
+  submitted_by_name?: string;
   created_at: string;
   approved_at?: string;
   rejected_at?: string;
@@ -339,12 +341,22 @@ export async function getEventById(id: string): Promise<Item | null> {
  * Create a new item (venue or event).
  */
 export async function createItem(
-  item: Omit<Item, 'id' | 'created_at' | 'is_custom' | 'status'> & Record<string, unknown>
+  item: Omit<
+    Item,
+    | 'id'
+    | 'created_at'
+    | 'is_custom'
+    | 'status'
+    | 'submitted_by'
+    | 'submitted_by_user_id'
+    | 'submitted_by_name'
+    | 'page_slug'
+  > & { page_slug?: ItemCategory } &
+    Record<string, unknown>
 ): Promise<Item | null> {
   try {
     console.log('🌐 [createItem] POST URL:', `${getApiBase()}/submissions`);
     console.log('🌐 [createItem] POST BODY:', JSON.stringify(item, null, 2));
-    console.log('🌐 [createItem] Has page_slug:', !!item.page_slug, '| value:', item.page_slug);
 
     const accessToken = await getAccessToken();
     const controller = new AbortController();
@@ -430,10 +442,12 @@ export async function updateEvent(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+    const { page_slug: _omitPageSlug, ...eventPayload } = eventData;
+
     const response = await fetch(`${getApiBase()}/events/${id}`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
-      body: JSON.stringify(eventData),
+      body: JSON.stringify(eventPayload),
       signal: controller.signal,
     });
 

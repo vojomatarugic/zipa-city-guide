@@ -117,8 +117,10 @@ export function TheatreAllPage() {
             accentColor="#8E24AA"
             badgeBg="#F3E5F5"
             badgeBorder="#CE93D8"
-            countLabelSr="predstava"
-            countLabelEn="shows"
+            countPluralForms={{
+              sr: { one: "predstava", few: "predstave", many: "predstava" },
+              en: { one: "show", many: "shows" },
+            }}
             renderCard={(event) => (
               <Link
                 key={event.id}

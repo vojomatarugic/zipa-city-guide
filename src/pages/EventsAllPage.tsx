@@ -144,8 +144,10 @@ export function EventsAllPage() {
             accentColor={EVENTS_CATEGORY_THEME.accentColor}
             badgeBg="#FFF7ED"
             badgeBorder="#FDBA74"
-            countLabelSr="događaja"
-            countLabelEn="events"
+            countPluralForms={{
+              sr: { one: "događaj", few: "događaja", many: "događaja" },
+              en: { one: "event", many: "events" },
+            }}
             renderCard={(event) => (
               <Link
                 key={event.id}

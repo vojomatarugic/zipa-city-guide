@@ -9,7 +9,6 @@ import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
@@ -26,14 +25,36 @@ export function CinemaAllPage() {
     async function fetchCinema() {
       setIsLoading(true);
       try {
-        const fetched = await eventService.getEvents("all", selectedCity);
+        const fetched = await eventService.getEvents(
+          "all",
+          selectedCity,
+          undefined,
+          "cinema",
+        );
         const now = new Date();
         const active = fetched
-          .filter((e) => getTopLevelPageCategory(e) === "cinema")
-          .filter((e) => { if (!e.start_at) return false; const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at); return end >= now; })
-          .sort((a, b) => (a.start_at ? new Date(a.start_at).getTime() : 0) - (b.start_at ? new Date(b.start_at).getTime() : 0));
+          .filter(
+            (e) =>
+              e.status === "approved" &&
+              String(e.page_slug || "").toLowerCase().trim() === "cinema" &&
+              e.city === selectedCity,
+          )
+          .filter((e) => {
+            if (!e.start_at) return false;
+            const end = e.end_at
+              ? new Date(e.end_at)
+              : new Date(e.start_at);
+            return end >= now;
+          })
+          .sort(
+            (a, b) =>
+              (a.start_at ? new Date(a.start_at).getTime() : 0) -
+              (b.start_at ? new Date(b.start_at).getTime() : 0),
+          );
         setEvents(active);
-      } catch (err) { console.error("❌ CinemaAllPage:", err); }
+      } catch (err) {
+        console.error("❌ CinemaAllPage:", err);
+      }
       setIsLoading(false);
     }
     fetchCinema();
@@ -70,13 +91,16 @@ export function CinemaAllPage() {
 
         {!isLoading && events.length > 0 && (
           <MonthAccordion
+            key={selectedCity}
             events={events}
             language={language}
             accentColor="#00897B"
             badgeBg="#E0F2F1"
             badgeBorder="#80CBC4"
-            countLabelSr="projekcija"
-            countLabelEn="screenings"
+            countPluralForms={{
+              sr: { one: "projekcija", few: "projekcije", many: "projekcija" },
+              en: { one: "screening", many: "screenings" },
+            }}
             renderCard={(event) => (
               <Link key={event.id} to={`/events/${event.id}`} className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block" style={{ textDecoration: "none" }}>
                 <ImageWithFallback src={event.image || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"} alt={language === "en" && event.title_en ? event.title_en : event.title} className="w-full h-[200px] object-cover rounded-md" />

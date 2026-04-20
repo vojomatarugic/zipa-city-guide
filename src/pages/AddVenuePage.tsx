@@ -186,7 +186,6 @@ export function AddVenuePage() {
       cuisine:          cuisine || null,
       cuisine_en:       cuisine_en || null,
       tags:             tags_payload,
-      submitted_by:     form_data.submitted_by_email || user?.email || '',
       contact_name:     form_data.contact_name,
       contact_phone:    form_data.contact_phone,
       contact_email:    form_data.contact_email,

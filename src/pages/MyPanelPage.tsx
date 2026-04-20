@@ -16,6 +16,17 @@ import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
+import { pluralize } from '../utils/pluralize';
+
+const PLURAL_OBJEKAT_VENUE = {
+  sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
+  en: { one: 'venue', many: 'venues' },
+} as const;
+
+const PLURAL_DESAVANJE_EVENT = {
+  sr: { one: 'dešavanje', few: 'dešavanja', many: 'dešavanja' },
+  en: { one: 'event', many: 'events' },
+} as const;
 
 export function MyPanelPage() {
   const { t, language } = useT();
@@ -900,8 +911,8 @@ export function MyPanelPage() {
                       setPendingConfirm({
                         title: language === 'sr' ? 'Brisanje objekata' : 'Delete Venues',
                         message: language === 'sr'
-                          ? `Da li ste sigurni da želite da obrišete ${count} odabran${count === 1 ? 'i' : 'ih'} objekat${count === 1 ? '' : 'a'}? Ova akcija se ne može poništiti!`
-                          : `Are you sure you want to delete ${count} selected venue${count === 1 ? '' : 's'}? This action cannot be undone!`,
+                          ? `Da li ste sigurni da želite da obrišete ${count} ${pluralize(count, 'sr', PLURAL_OBJEKAT_VENUE)}? Ova akcija se ne može poništiti!`
+                          : `Are you sure you want to delete ${count} selected ${pluralize(count, 'en', PLURAL_OBJEKAT_VENUE)}? This action cannot be undone!`,
                         confirmText: language === 'sr' ? 'Obriši' : 'Delete',
                         variant: 'danger',
                         action: async () => {
@@ -933,7 +944,7 @@ export function MyPanelPage() {
                           setSelectedVenueIds(new Set());
                           setDeletingVenues(false);
                           if (failed === 0) {
-                            toast.success(language === 'sr' ? `Obrisano ${deleted} objekat${deleted === 1 ? '' : 'a'}` : `Deleted ${deleted} venue${deleted === 1 ? '' : 's'}`);
+                            toast.success(language === 'sr' ? `Obrisano ${deleted} ${pluralize(deleted, 'sr', PLURAL_OBJEKAT_VENUE)}` : `Deleted ${deleted} ${pluralize(deleted, 'en', PLURAL_OBJEKAT_VENUE)}`);
                           } else {
                             toast.error(language === 'sr' ? `Obrisano ${deleted}, neuspješno ${failed}` : `Deleted ${deleted}, failed ${failed}`);
                           }
@@ -1143,8 +1154,8 @@ export function MyPanelPage() {
                       setPendingConfirm({
                         title: language === 'sr' ? 'Brisanje dešavanja' : 'Delete Events',
                         message: language === 'sr'
-                          ? `Da li ste sigurni da želite da obrišete ${count} odabran${count === 1 ? 'o' : 'ih'} dešavanje${count === 1 ? '' : 'a'}? Ova akcija se ne može poništiti!`
-                          : `Are you sure you want to delete ${count} selected event${count === 1 ? '' : 's'}? This action cannot be undone!`,
+                          ? `Da li ste sigurni da želite da obrišete ${count} ${pluralize(count, 'sr', PLURAL_DESAVANJE_EVENT)}? Ova akcija se ne može poništiti!`
+                          : `Are you sure you want to delete ${count} selected ${pluralize(count, 'en', PLURAL_DESAVANJE_EVENT)}? This action cannot be undone!`,
                         confirmText: language === 'sr' ? 'Obriši' : 'Delete',
                         variant: 'danger',
                         action: async () => {
@@ -1176,7 +1187,7 @@ export function MyPanelPage() {
                           setSelectedEventIds(new Set());
                           setDeletingEvents(false);
                           if (failed === 0) {
-                            toast.success(language === 'sr' ? `Obrisano ${deleted} dešavanje${deleted === 1 ? '' : 'a'}` : `Deleted ${deleted} event${deleted === 1 ? '' : 's'}`);
+                            toast.success(language === 'sr' ? `Obrisano ${deleted} ${pluralize(deleted, 'sr', PLURAL_DESAVANJE_EVENT)}` : `Deleted ${deleted} ${pluralize(deleted, 'en', PLURAL_DESAVANJE_EVENT)}`);
                           } else {
                             toast.error(language === 'sr' ? `Obrisano ${deleted}, neuspješno ${failed}` : `Deleted ${deleted}, failed ${failed}`);
                           }

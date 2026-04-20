@@ -7,6 +7,12 @@ import { Item } from '../utils/dataService';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
+import { pluralize } from '../utils/pluralize';
+
+const RESULT_FORMS = {
+  sr: { one: 'rezultat', few: 'rezultata', many: 'rezultata' },
+  en: { one: 'result', many: 'results' },
+} as const;
 
 export function SearchResultsPage() {
   const { t, language } = useT();
@@ -107,10 +113,9 @@ export function SearchResultsPage() {
           </h1>
           {!loading && (
             <p className="text-gray-600 mb-3 md:mb-4" style={{ fontSize: '14px' }}>
-              {language === 'sr' 
-                ? `Pronađeno ${results.length} rezultata${query ? ` za "${query}"` : ''}`
-                : `Found ${results.length} result${results.length !== 1 ? 's' : ''}${query ? ` for "${query}"` : ''}`
-              }
+              {language === 'sr'
+                ? `Pronađeno ${results.length} ${pluralize(results.length, 'sr', RESULT_FORMS)}${query ? ` za "${query}"` : ''}`
+                : `Found ${results.length} ${pluralize(results.length, 'en', RESULT_FORMS)}${query ? ` for "${query}"` : ''}`}
             </p>
           )}
           
