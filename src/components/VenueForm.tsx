@@ -1,6 +1,7 @@
 import React, { useState as useLocalState, useRef, useEffect } from 'react';
 import { Building2, MapPin, Phone, Globe, Users, Clock, Image as ImageIcon, Utensils, Tag, X, Search, User, Loader2, UserCheck, Pencil } from 'lucide-react';
 import { useT } from '../hooks/useT';
+import { toast } from 'sonner@2.0.3';
 import { CustomDropdown } from './CustomDropdown';
 import { WorkingHoursSelector } from './WorkingHoursSelector';
 import { ImageUpload } from './ImageUpload';
@@ -265,7 +266,7 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
     if (is_admin) {
       const read_only_creator = !!(initial_data?.submitted_by_email && !creator_edit_mode);
       if (!read_only_creator && !selected_user_id) {
-        alert(t('mustSelectRegisteredUser'));
+        toast.error(t('mustSelectRegisteredUser'));
         return;
       }
     }

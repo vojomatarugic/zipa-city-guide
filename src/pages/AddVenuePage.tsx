@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { VenueForm } from '../components/VenueForm';
-import { NotificationDialog } from '../components/NotificationDialog';
+import { toast } from 'sonner@2.0.3';
 import * as dataService from '../utils/dataService';
 import { parseCuisineSrSelectionsFromDb, serializeCuisineForDb } from '../utils/venueCuisineTaxonomy';
 import { parseVenueTagKeysFromDb, type VenueTagKey } from '../utils/venueTagLabels';
@@ -50,7 +50,6 @@ export function AddVenuePage() {
   const { user, isAdmin } = useAuth();
 
   useDocumentTitle(listingDocumentTitle(t('addVenue'), selectedCity));
-  const [show_notification, set_show_notification] = useState(false);
   const [existing_venue, set_existing_venue] = useState<dataService.Item | null>(null);
   const [loading, set_loading] = useState(false);
   const [is_saving, set_is_saving] = useState(false);
@@ -79,13 +78,13 @@ export function AddVenuePage() {
             console.log('✅ Venue loaded for editing:', venue);
           } else {
             console.error('❌ Venue not found');
-            alert(t('venueNotFoundOrNoAccess') || 'Venue not found or you do not have access');
+            toast.error(t('venueNotFoundOrNoAccess') || 'Venue not found or you do not have access');
             navigate(-1);
           }
           set_loading(false);
         }).catch((err) => {
           console.error('❌ Error loading venue:', err);
-          alert(t('errorLoadingVenue'));
+          toast.error(t('errorLoadingVenue'));
           set_loading(false);
           navigate(-1);
         });
@@ -165,7 +164,7 @@ export function AddVenuePage() {
 
     if (!page_slug) {
       console.error(`❌ [AddVenuePage] Nepoznat venue_type: "${form_data.venue_type}" — nema mapiranja u VENUE_TYPE_TO_CATEGORY. Submission blokiran.`);
-      alert(`Greška: tip lokala "${form_data.venue_type}" nije mapiran na stranicu. Kontaktirajte administratora.`);
+      toast.error(`Greška: tip lokala "${form_data.venue_type}" nije mapiran na stranicu. Kontaktirajte administratora.`);
       return;
     }
 
@@ -205,14 +204,15 @@ export function AddVenuePage() {
         try {
           const result = await dataService.updateVenue(id, payload_with_assign);
           if (result) {
-            set_show_notification(true);
+            toast.success(t('venueUpdatedSuccess'), { description: t('venueUpdatedMessage') });
+            navigate(isAdmin ? '/admin' : '/my-panel');
             console.log('✅ Venue updated successfully!');
           } else {
-            alert(t('errorUpdatingVenue') || 'Error updating venue. Please try again.');
+            toast.error(t('errorUpdatingVenue') || 'Error updating venue. Please try again.');
           }
         } catch (err) {
           console.error('❌ updateVenue:', err);
-          alert(err instanceof Error ? err.message : (t('errorUpdatingVenue') || 'Error updating venue.'));
+          toast.error(err instanceof Error ? err.message : (t('errorUpdatingVenue') || 'Error updating venue.'));
         }
       } else {
         // CREATE MODE (admin: include assign_user_id so server can verify id ↔ email)
@@ -221,7 +221,7 @@ export function AddVenuePage() {
 
           if (!created?.id) {
             console.error('❌ createItem returned null — venue was NOT saved to database');
-            alert(t('errorSubmittingVenue') || 'Greška: objekat nije sačuvan. Pokušajte ponovo ili provjerite konzolu za detalje.');
+            toast.error(t('errorSubmittingVenue') || 'Greška: objekat nije sačuvan. Pokušajte ponovo ili provjerite konzolu za detalje.');
             return;
           }
 
@@ -236,16 +236,17 @@ export function AddVenuePage() {
             }
           }
 
-          set_show_notification(true);
+          toast.success(t('venueSentForApproval'), { description: t('venuePendingApproval') });
+          navigate(isAdmin ? '/admin' : '/my-panel');
           console.log('✅ Venue saved', isAdmin ? '(auto-approved)' : '(PENDING — čeka admin odobrenje)');
         } catch (err) {
           console.error('❌ createItem:', err);
-          alert(err instanceof Error ? err.message : (t('errorSubmittingVenue') || 'Error submitting venue.'));
+          toast.error(err instanceof Error ? err.message : (t('errorSubmittingVenue') || 'Error submitting venue.'));
         }
       }
     } catch (error) {
       console.error('❌ Error submitting venue:', error);
-      alert(t('errorSubmittingVenue') || 'Error submitting venue. Please try again.');
+      toast.error(t('errorSubmittingVenue') || 'Error submitting venue. Please try again.');
     } finally {
       set_is_saving(false);
     }
@@ -287,15 +288,6 @@ export function AddVenuePage() {
         )}
       </div>
 
-      <NotificationDialog
-        isOpen={show_notification}
-        title={id ? t('venueUpdatedSuccess') : t('venueSentForApproval')}
-        message={id ? t('venueUpdatedMessage') : t('venuePendingApproval')}
-        onClose={() => {
-          set_show_notification(false);
-          navigate(isAdmin ? '/admin' : '/my-panel');
-        }}
-      />
     </div>
   );
 }

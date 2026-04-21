@@ -7,6 +7,11 @@ import { Item } from './dataService';
 import { supabase } from './supabaseClient';
 import { formatDate } from './dateFormat';
 import { getApiBase } from '../config/apiBase';
+import {
+  mapDbRowToUiEvent,
+  normalizeEventSchedulesInput,
+  type EventDbRow,
+} from '../shared/eventSchema';
 
 export type EventFilter = 'upcoming' | 'today' | 'tomorrow' | 'weekend' | 'past' | 'all';
 
@@ -72,7 +77,8 @@ export async function getEvents(filter?: EventFilter, city?: string, type?: stri
 
     const data = await response.json();
     console.log(`✅ Fetched ${data.events?.length || 0} events (filter: ${filter || 'all'})`);
-    return data.events || [];
+    const events = Array.isArray(data.events) ? (data.events as EventDbRow[]) : [];
+    return events.map((event) => mapDbRowToUiEvent(event) as Item);
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.error('❌ Request timeout - server took too long to respond');
@@ -130,7 +136,8 @@ export async function getEventById(id: string): Promise<Item | null> {
 
     const data = await response.json();
     console.log('✅ Fetched event:', data.event?.id);
-    return data.event || null;
+    const event = (data.event || null) as EventDbRow | null;
+    return event ? (mapDbRowToUiEvent(event) as Item) : null;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.error('❌ Request timeout - server took too long to respond');
@@ -157,29 +164,7 @@ export type EventScheduleSlot = { start_at: string; end_at?: string | null };
  * Parse `event_schedules` from API/DB (may be JSON string, camelCase keys, or missing).
  */
 export function parseEventSchedulesField(raw: unknown): EventScheduleSlot[] | null {
-  if (raw === undefined || raw === null) return null;
-  if (typeof raw === 'string') {
-    const t = raw.trim();
-    if (!t) return null;
-    try {
-      return parseEventSchedulesField(JSON.parse(t));
-    } catch {
-      return null;
-    }
-  }
-  if (!Array.isArray(raw)) return null;
-  const out: EventScheduleSlot[] = [];
-  for (const row of raw) {
-    if (!row || typeof row !== 'object') continue;
-    const o = row as Record<string, unknown>;
-    const start = o.start_at ?? o.startAt;
-    if (typeof start !== 'string' || !start.trim()) continue;
-    const endRaw = o.end_at ?? o.endAt;
-    const end_at =
-      typeof endRaw === 'string' && endRaw.trim() ? endRaw.trim() : null;
-    out.push({ start_at: start.trim(), end_at });
-  }
-  return out.length ? out : null;
+  return normalizeEventSchedulesInput(raw);
 }
 
 function mergeScheduleSources(
@@ -473,7 +458,8 @@ export async function getAllEvents(): Promise<Item[]> {
       return [];
     }
 
-    return parsed?.events || [];
+    const events = Array.isArray(parsed?.events) ? (parsed.events as EventDbRow[]) : [];
+    return events.map((event) => mapDbRowToUiEvent(event) as Item);
   };
 
   try {
@@ -508,7 +494,7 @@ export async function getAllEvents(): Promise<Item[]> {
 
     if (response.ok && Array.isArray(data?.events) && data.events.length > 0) {
       console.log(`✅ Fetched ${data.events.length} events for admin via status=all`);
-      return data.events;
+      return (data.events as EventDbRow[]).map((event) => mapDbRowToUiEvent(event) as Item);
     }
 
     // Fallback for backend deployments where status=all is not supported correctly.

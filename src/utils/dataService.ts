@@ -8,6 +8,11 @@
 import { publicAnonKey } from './supabase/info';
 import { supabase } from './supabaseClient';
 import { getApiBase } from '../config/apiBase';
+import {
+  mapDbRowToUiEvent,
+  type EventApiPayload,
+  type EventDbRow,
+} from '../shared/eventSchema';
 
 /**
  * Get current user's access token (if logged in).
@@ -324,7 +329,8 @@ export async function getEventById(id: string): Promise<Item | null> {
     }
 
     const data = await response.json();
-    return data.event || null;
+    const event = (data.event || null) as EventDbRow | null;
+    return event ? (mapDbRowToUiEvent(event) as Item) : null;
   }
 
   try {
@@ -435,26 +441,63 @@ export async function updateVenue(
  */
 export async function updateEvent(
   id: string,
-  eventData: Partial<Item> & Record<string, unknown>
+  eventData: Partial<EventApiPayload> & Record<string, unknown>
 ): Promise<Item | null> {
   try {
+    console.log('[updateEvent] START', { id });
     const accessToken = await getAccessToken();
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
     const { page_slug: _omitPageSlug, ...eventPayload } = eventData;
+    const attemptUrls = [
+      `${getApiBase()}/events/${id}`, // canonical event update route
+      `${getApiBase()}/submissions/${id}`, // compatibility fallback for older deployments
+    ];
+    console.log('[updateEvent] method', 'PUT');
+    console.log('[updateEvent] payload', eventPayload);
+    let response: Response | null = null;
 
-    const response = await fetch(`${getApiBase()}/events/${id}`, {
-      method: 'PUT',
-      headers: authHeaders(accessToken),
-      body: JSON.stringify(eventPayload),
-      signal: controller.signal,
-    });
+    for (let i = 0; i < attemptUrls.length; i++) {
+      const url = attemptUrls[i];
+      console.log('[updateEvent] final URL', url);
+      const isLastAttempt = i === attemptUrls.length - 1;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      try {
+        console.log("[updateEvent FINAL BODY]", eventPayload);
+        response = await fetch(url, {
+          method: 'PUT',
+          headers: authHeaders(accessToken),
+          body: JSON.stringify(eventPayload),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
-    clearTimeout(timeoutId);
+      if (response.ok) break;
+
+      // Only fallback for route-compatibility failures.
+      if (!isLastAttempt && [404, 405, 501].includes(response.status)) {
+        console.warn('[updateEvent] Falling back to compatibility route', {
+          id,
+          failedUrl: url,
+          status: response.status,
+        });
+        continue;
+      }
+      break;
+    }
+
+    if (!response) {
+      throw new Error('No response received while updating event');
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
+      console.error('[updateEvent] response/error', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+      });
       console.error('[updateEvent] Error:', response.status, errorData);
       const msg =
         (errorData && typeof errorData.error === 'string' && errorData.error) ||
@@ -464,8 +507,15 @@ export async function updateEvent(
     }
 
     const data = await response.json();
-    return data.event || null;
+    console.log('[updateEvent] response/error', {
+      status: response.status,
+      statusText: response.statusText,
+      data,
+    });
+    const event = (data.submission || data.event || null) as EventDbRow | null;
+    return event ? (mapDbRowToUiEvent(event) as Item) : null;
   } catch (error) {
+    console.error('[updateEvent] response/error', error);
     console.error('[updateEvent] Error:', error);
     if (error instanceof Error) throw error;
     return null;
@@ -749,7 +799,8 @@ export async function getMyEvents(): Promise<Item[]> {
     }
 
     const data = await response.json();
-    return data.events || [];
+    const events = Array.isArray(data.events) ? (data.events as EventDbRow[]) : [];
+    return events.map((event) => mapDbRowToUiEvent(event) as Item);
   } catch (error) {
     console.error('[getMyEvents] Error:', error);
     return [];

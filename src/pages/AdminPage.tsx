@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
-import { Check, X, Edit2, Lock, Calendar, User, Phone, FileText, Trash2, KeyRound, LogOut, Star, Building2, MapPin, Mail } from 'lucide-react';
+import { Check, X, Edit2, Lock, Calendar, User, Phone, FileText, Trash2, KeyRound, LogOut, Star, Building2, MapPin, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { BannerAdminSection } from '../components/BannerAdminSection';
 import { UsersAdminSection } from '../components/UsersAdminSection';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -121,6 +121,8 @@ export function AdminPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [venuesListExpanded, setVenuesListExpanded] = useState(false);
+  const [eventsListExpanded, setEventsListExpanded] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [storageMode, setStorageMode] = useState<'local' | 'supabase'>('supabase');
@@ -409,7 +411,7 @@ export function AdminPage() {
       // Reload submissions to get updated data
       loadSubmissions();
     } else {
-      alert(t('errorApprovingSubmission') || 'Error approving submission');
+      toast.error(t('errorApprovingSubmission') || 'Error approving submission');
     }
   };
 
@@ -453,7 +455,7 @@ export function AdminPage() {
         loadSubmissions();
         setRejectConfirmId(null);
       } else {
-        alert(t('errorRejectingSubmission') || 'Error rejecting submission');
+        toast.error(t('errorRejectingSubmission') || 'Error rejecting submission');
       }
     }
   };
@@ -465,7 +467,7 @@ export function AdminPage() {
         loadSubmissions();
         setDeleteConfirmId(null);
       } else {
-        alert(t('errorDeletingSubmission') || 'Error deleting submission');
+        toast.error(t('errorDeletingSubmission') || 'Error deleting submission');
       }
     }
   };
@@ -537,7 +539,7 @@ export function AdminPage() {
       // Reload events to get updated data
       loadEvents();
     } else {
-      alert(t('errorApprovingEvent') || 'Error approving event');
+      toast.error(t('errorApprovingEvent') || 'Error approving event');
     }
   };
 
@@ -560,7 +562,7 @@ export function AdminPage() {
         loadEvents();
         setRejectEventConfirmId(null);
       } else {
-        alert(t('errorRejectingEvent') || 'Error rejecting event');
+        toast.error(t('errorRejectingEvent') || 'Error rejecting event');
       }
     }
   };
@@ -572,7 +574,7 @@ export function AdminPage() {
         loadEvents();
         setDeleteEventConfirmId(null);
       } else {
-        alert(t('errorDeletingEvent') || 'Error deleting event');
+        toast.error(t('errorDeletingEvent') || 'Error deleting event');
       }
     }
   };
@@ -1089,7 +1091,7 @@ export function AdminPage() {
                             try {
                               const result = await deleteUserAccount(accessToken);
                               if (!result.ok) {
-                                if (result.code === 'LAST_ADMIN') {
+                                if ('code' in result && result.code === 'LAST_ADMIN') {
                                   toast.error(t('lastAdminError'));
                                   return;
                                 }
@@ -1219,13 +1221,19 @@ export function AdminPage() {
 
           {/* VENUES LIST */}
           <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-            {/* HEADER ROW: Title + Select All + Delete Selected */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <h2 className="m-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                {t('venuesList')}
-              </h2>
-              {filteredSubmissions.length > 0 && (
-                <div className="flex items-center gap-3">
+            {/* HEADER ROW: Title (accordion) + Select All + Delete Selected when expanded */}
+            <div className={`flex w-full min-w-0 items-center gap-3 flex-wrap ${venuesListExpanded ? 'mb-4' : 'mb-0'}`}>
+              <button
+                type="button"
+                onClick={() => setVenuesListExpanded((v) => !v)}
+                className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+              >
+                <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                  {t('venuesList')}
+                </h2>
+              </button>
+              {venuesListExpanded && filteredSubmissions.length > 0 && (
+                <div className="flex shrink-0 items-center gap-3">
                   <label className="flex items-center gap-2 cursor-pointer select-none text-[13px]" style={{ color: 'var(--text-muted)' }}>
                     <input
                       type="checkbox"
@@ -1311,8 +1319,22 @@ export function AdminPage() {
                   </button>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => setVenuesListExpanded((v) => !v)}
+                className="flex shrink-0 items-center justify-center rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+                aria-expanded={venuesListExpanded}
+              >
+                {venuesListExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+                )}
+              </button>
             </div>
 
+            {venuesListExpanded && (
+            <>
             {/* Filteri za objekte */}
             <div className="flex flex-wrap gap-3 mb-5">
               <button
@@ -1567,17 +1589,25 @@ export function AdminPage() {
                 })
               )}
             </div>
+            </>
+            )}
           </section>
 
           {/* EVENTS LIST */}
           <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            {/* HEADER ROW: Title + Select All + Delete Selected */}
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <h2 className="m-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                {t('eventsList')}
-              </h2>
-              {filteredEvents.length > 0 && (
-                <div className="flex items-center gap-3">
+            {/* HEADER ROW: Title (accordion) + Select All + Delete Selected when expanded */}
+            <div className={`flex w-full min-w-0 items-center gap-3 flex-wrap ${eventsListExpanded ? 'mb-4' : 'mb-0'}`}>
+              <button
+                type="button"
+                onClick={() => setEventsListExpanded((v) => !v)}
+                className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+              >
+                <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                  {t('eventsList')}
+                </h2>
+              </button>
+              {eventsListExpanded && filteredEvents.length > 0 && (
+                <div className="flex shrink-0 items-center gap-3">
                   <label className="flex items-center gap-2 cursor-pointer select-none text-[13px]" style={{ color: 'var(--text-muted)' }}>
                     <input
                       type="checkbox"
@@ -1663,8 +1693,22 @@ export function AdminPage() {
                   </button>
                 </div>
               )}
+              <button
+                type="button"
+                onClick={() => setEventsListExpanded((v) => !v)}
+                className="flex shrink-0 items-center justify-center rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+                aria-expanded={eventsListExpanded}
+              >
+                {eventsListExpanded ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+                )}
+              </button>
             </div>
 
+            {eventsListExpanded && (
+            <>
             {/* Filteri za događaje */}
             <div className="flex flex-wrap gap-3 mb-5">
               <button
@@ -1779,9 +1823,9 @@ export function AdminPage() {
                             </span>
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if expired/inactive) */}
                             {(() => {
-                              const isExpired = event.start_at 
-                                ? new Date(event.end_at || event.start_at) < new Date() 
-                                : false;
+                              const isExpired =
+                                event.start_at &&
+                                new Date(event.end_at || event.start_at) < new Date();
                               const isEventActive = !inactiveEventIds.has(event.id);
                               const isFullyActive = isEventActive && !isExpired;
                               const isPendingInAllTab = eventFilter === 'all' && event.status === 'pending';
@@ -1848,7 +1892,12 @@ export function AdminPage() {
                           <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
                             {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
                             {event.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{event.address}</span>}
-                            {event.start_at && <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{formatDate(event.start_at)}</span>}
+                            {event.start_at && (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Calendar size={14} />
+                                {formatDate(event.start_at)}
+                              </span>
+                            )}
                             {(event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{event.organizer_name || event.contact_name}</span>}
                             {(event.organizer_phone || event.phone) && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{event.organizer_phone || event.phone}</span>}
                             {(event.organizer_email || event.contact_email) && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{event.organizer_email || event.contact_email}</span>}
@@ -1921,6 +1970,8 @@ export function AdminPage() {
                 })
               )}
             </div>
+            </>
+            )}
           </section>
 
         </div>

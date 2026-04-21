@@ -10,16 +10,20 @@ export function getCanonicalEventPageSlug(
   eventType?: string | null,
   rawPageSlug?: string | null
 ): TopLevelPageCategory {
+  // Persisted listing bucket (`page_slug`) wins over fine-grained `event_type`, same as
+  // TheatrePage `isApprovedTheatreEvent` / CinemaPage `isApprovedCinemaEvent` (e.g. standup
+  // with page_slug theatre stays "theatre", not "events").
+  const slug = (rawPageSlug || "").toLowerCase().trim();
+  if (slug === "concerts") return "concerts";
+  if (slug === "cinema") return "cinema";
+  if (slug === "theatre") return "theatre";
+
   const t = (eventType || "").toLowerCase().trim();
   if (t === "concert") return "concerts";
   if (t === "cinema") return "cinema";
   if (t === "theatre") return "theatre";
   if (t) return "events";
 
-  const slug = (rawPageSlug || "").toLowerCase().trim();
-  if (slug === "concerts") return "concerts";
-  if (slug === "cinema") return "cinema";
-  if (slug === "theatre") return "theatre";
   return "events";
 }
 

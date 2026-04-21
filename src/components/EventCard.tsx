@@ -16,7 +16,13 @@ interface EventCardProps {
   interestCount?: number;
 }
 
-export function EventCard({ event, language, accentColor, imageHeight = "300px", interestCount }: EventCardProps) {
+export function EventCard({
+  event,
+  language,
+  accentColor,
+  imageHeight = "300px",
+  interestCount,
+}: EventCardProps) {
   const locale: "sr" | "en" = language === "en" ? "en" : "sr";
   const title = language === "sr" ? event.title : (event.title_en || event.title);
   const slots = eventService.getEventScheduleSlots(event);

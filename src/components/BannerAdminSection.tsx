@@ -4,7 +4,7 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import { GripVertical, ExternalLink, Trash2, X } from 'lucide-react';
 import { BannerUploadCropper } from './BannerUploadCropper';
 import { ConfirmDialog } from './ConfirmDialog';
-import { NotificationDialog } from './NotificationDialog';
+import { toast } from 'sonner@2.0.3';
 import { useT } from '../hooks/useT';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
 
@@ -34,11 +34,6 @@ export function BannerAdminSection() {
   const [destinationUrl, setDestinationUrl] = useState('');
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [notificationDialog, setNotificationDialog] = useState<{ isOpen: boolean; message: string }>({
-    isOpen: false,
-    message: ''
-  });
-
   const MAX_BANNERS = 20; // Maksimalno 20 bannera ukupno
 
   const handleCropComplete = (image: string) => {
@@ -47,15 +42,12 @@ export function BannerAdminSection() {
 
   const handleBannerSubmit = () => {
     if (!croppedImage || !destinationUrl) {
-      setNotificationDialog({ isOpen: true, message: t('bannerUploadError') });
+      toast.error(t('bannerUploadError'));
       return;
     }
 
     if (banners.length >= MAX_BANNERS) {
-      setNotificationDialog({ 
-        isOpen: true, 
-        message: `${t('bannerLimitReached')} ${MAX_BANNERS} ${t('bannerLimitError')}` 
-      });
+      toast.error(`${t('bannerLimitReached')} ${MAX_BANNERS} ${t('bannerLimitError')}`);
       return;
     }
 
@@ -77,7 +69,7 @@ export function BannerAdminSection() {
     // Reset form
     setCroppedImage(null);
     setDestinationUrl('');
-    setNotificationDialog({ isOpen: true, message: t('bannerUploadSuccess') });
+    toast.success(t('bannerUploadSuccess'));
   };
 
   const handleReset = () => {
@@ -438,15 +430,6 @@ export function BannerAdminSection() {
         />
       )}
 
-      {/* Notification Dialog */}
-      {notificationDialog.isOpen && (
-        <NotificationDialog
-          isOpen={true}
-          title={t('dialogNoticeTitle')}
-          message={notificationDialog.message}
-          onClose={() => setNotificationDialog({ isOpen: false, message: '' })}
-        />
-      )}
     </section>
   );
 }

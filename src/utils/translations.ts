@@ -1774,17 +1774,17 @@ export const translations = {
     lat: "kontakt@example.com",
     en: "contact@example.com",
   },
-  searchRegisteredUsers: { 
-    lat: "Pretraži registrovane korisnike", 
-    en: "Search registered users" 
+  searchRegisteredUsers: {
+    lat: "Pretraži registrovane korisnike",
+    en: "Search registered users",
   },
-  searchByEmailOrName: { 
-    lat: "Pretraži po emailu ili imenu...", 
-    en: "Search by email or name..." 
+  searchByEmailOrName: {
+    lat: "Pretraži po emailu ili imenu...",
+    en: "Search by email or name...",
   },
-  assignedTo: { 
-    lat: "Pridruženo korisniku", 
-    en: "Assigned to user" 
+  assignedTo: {
+    lat: "Pridruženo korisniku",
+    en: "Assigned to user",
   },
   mustSelectRegisteredUser: {
     lat: "Morate odabrati registrovanog korisnika iz liste pretrage (klik na rezultat). Nasumički uneseni email nije dozvoljen.",
@@ -2098,8 +2098,14 @@ export const translations = {
   joined: { lat: "Registrovan", en: "Joined" },
   lastSignIn: { lat: "Zadnja aktivnost", en: "Last active" },
   submissions: { lat: "Dodao/la:", en: "Submissions:" },
-  noSubmissionsYet: { lat: "Nema dodanih objekata ili dešavanja", en: "No submissions yet" },
-  noUsersRegistered: { lat: "Nema registrovanih korisnika", en: "No users registered" },
+  noSubmissionsYet: {
+    lat: "Nema dodanih objekata ili dešavanja",
+    en: "No submissions yet",
+  },
+  noUsersRegistered: {
+    lat: "Nema registrovanih korisnika",
+    en: "No users registered",
+  },
   admin: { lat: "Admin", en: "Admin" },
   venuesLabel: { lat: "objekata", en: "venues" },
   eventsLabel: { lat: "događaja", en: "events" },
@@ -2115,19 +2121,43 @@ export const translations = {
   blockUser: { lat: "Blokiraj korisnika", en: "Block User" },
   unblockUser: { lat: "Odblokiraj korisnika", en: "Unblock User" },
   deleteUser: { lat: "Obriši korisnika", en: "Delete User" },
-  confirmBlockUser: { lat: "Da li ste sigurni da želite blokirati ovog korisnika?", en: "Are you sure you want to block this user?" },
-  confirmUnblockUser: { lat: "Da li ste sigurni da želite odblokirati ovog korisnika?", en: "Are you sure you want to unblock this user?" },
-  confirmDeleteUser: { lat: "Da li ste sigurni da želite OBRISATI ovog korisnika? Ova akcija je nepovratna!", en: "Are you sure you want to DELETE this user? This action cannot be undone!" },
+  confirmBlockUser: {
+    lat: "Da li ste sigurni da želite blokirati ovog korisnika?",
+    en: "Are you sure you want to block this user?",
+  },
+  confirmUnblockUser: {
+    lat: "Da li ste sigurni da želite odblokirati ovog korisnika?",
+    en: "Are you sure you want to unblock this user?",
+  },
+  confirmDeleteUser: {
+    lat: "Da li ste sigurni da želite OBRISATI ovog korisnika? Ova akcija je nepovratna!",
+    en: "Are you sure you want to DELETE this user? This action cannot be undone!",
+  },
   userBlocked: { lat: "Korisnik blokiran", en: "User blocked" },
   userUnblocked: { lat: "Korisnik odblokiran", en: "User unblocked" },
   userDeleted: { lat: "Korisnik obrisan", en: "User deleted" },
   makeAdmin: { lat: "Dodijeli admin prava", en: "Make Admin" },
   removeAdmin: { lat: "Ukloni admin prava", en: "Remove Admin" },
-  confirmMakeAdmin: { lat: "Da li ste sigurni da želite dodijeliti admin prava ovom korisniku?", en: "Are you sure you want to grant admin privileges to this user?" },
-  confirmRemoveAdmin: { lat: "Da li ste sigurni da želite ukloniti admin prava ovom korisniku?", en: "Are you sure you want to remove admin privileges from this user?" },
-  adminRoleGranted: { lat: "Admin prava dodijeljena", en: "Admin privileges granted" },
-  adminRoleRemoved: { lat: "Admin prava uklonjena", en: "Admin privileges removed" },
-  cannotRemoveLastAdmin: { lat: "Nije moguće ukloniti prava jedinom admin korisniku!", en: "Cannot remove the only admin user!" },
+  confirmMakeAdmin: {
+    lat: "Da li ste sigurni da želite dodijeliti admin prava ovom korisniku?",
+    en: "Are you sure you want to grant admin privileges to this user?",
+  },
+  confirmRemoveAdmin: {
+    lat: "Da li ste sigurni da želite ukloniti admin prava ovom korisniku?",
+    en: "Are you sure you want to remove admin privileges from this user?",
+  },
+  adminRoleGranted: {
+    lat: "Admin prava dodijeljena",
+    en: "Admin privileges granted",
+  },
+  adminRoleRemoved: {
+    lat: "Admin prava uklonjena",
+    en: "Admin privileges removed",
+  },
+  cannotRemoveLastAdmin: {
+    lat: "Nije moguće ukloniti prava jedinom admin korisniku!",
+    en: "Cannot remove the only admin user!",
+  },
   blocked: { lat: "Blokiran", en: "Blocked" },
   myPanel: { lat: "Moj panel", en: "My Panel" },
   editProfile: { lat: "Izmijeni profil", en: "Edit Profile" },
@@ -2135,27 +2165,57 @@ export const translations = {
   profileEmail: { lat: "Email", en: "Email" },
   profilePhone: { lat: "Telefon", en: "Phone" },
   profileImage: { lat: "Profilna slika", en: "Profile Photo" },
-  profileImagePlaceholder: { lat: "Unesite URL profilne slike", en: "Enter profile photo URL" },
-  profileImageHelper: { lat: "Dodajte link do slike (npr. sa Imgur, Cloudinary, ili Google Drive)", en: "Add a link to your photo (e.g. from Imgur, Cloudinary, or Google Drive)" },
+  profileImagePlaceholder: {
+    lat: "Unesite URL profilne slike",
+    en: "Enter profile photo URL",
+  },
+  profileImageHelper: {
+    lat: "Dodajte link do slike (npr. sa Imgur, Cloudinary, ili Google Drive)",
+    en: "Add a link to your photo (e.g. from Imgur, Cloudinary, or Google Drive)",
+  },
   save: { lat: "Sačuvaj", en: "Save" },
   cancel: { lat: "Otkaži", en: "Cancel" },
   uploadingImage: { lat: "Uploadujem...", en: "Uploading..." },
-  imageUploaded: { lat: "Slika je upload-ovana i profil ažuriran!", en: "Image uploaded and profile updated!" },
-  profileSaved: { lat: "Profil uspješno sačuvan!", en: "Profile saved successfully!" },
-  profileSaveError: { lat: "Greška pri čuvanju profila. Pokušajte ponovo.", en: "Error saving profile. Please try again." },
+  imageUploaded: {
+    lat: "Slika je upload-ovana i profil ažuriran!",
+    en: "Image uploaded and profile updated!",
+  },
+  profileSaved: {
+    lat: "Profil uspješno sačuvan!",
+    en: "Profile saved successfully!",
+  },
+  profileSaveError: {
+    lat: "Greška pri čuvanju profila. Pokušajte ponovo.",
+    en: "Error saving profile. Please try again.",
+  },
   sessionExpiredReLogin: {
     lat: "Sesija je završena. Prijavite se ponovo da nastavite.",
     en: "Your session has ended. Please sign in again to continue.",
   },
-  profileNameRequired: { lat: "Ime je obavezno polje.", en: "Name is required." },
-  profileEmailRequired: { lat: "Email je obavezno polje.", en: "Email is required." },
-  profilePhoneRequired: { lat: "Telefon je obavezno polje.", en: "Phone is required." },
+  profileNameRequired: {
+    lat: "Ime je obavezno polje.",
+    en: "Name is required.",
+  },
+  profileEmailRequired: {
+    lat: "Email je obavezno polje.",
+    en: "Email is required.",
+  },
+  profilePhoneRequired: {
+    lat: "Telefon je obavezno polje.",
+    en: "Phone is required.",
+  },
   totalSubmissions: { lat: "Ukupno objava", en: "Total Submissions" },
   pendingSubmissions: { lat: "Na čekanju", en: "Pending" },
   approvedSubmissions: { lat: "Odobreno", en: "Approved" },
   rejectedSubmissions: { lat: "Odbijeno", en: "Rejected" },
-  noVenuesYet: { lat: "Još nemate objavljenih mjesta. Dodajte restoran, klub ili kafić!", en: "You haven't added any venues yet. Add a restaurant, club or cafe!" },
-  noEventsYet: { lat: "Još nemate objavljenih događaja. Dodajte koncert, festival ili događaj!", en: "You haven't added any events yet. Add a concert, festival or event!" },
+  noVenuesYet: {
+    lat: "Još nemate objavljenih mjesta. Dodajte restoran, klub ili kafić!",
+    en: "You haven't added any venues yet. Add a restaurant, club or cafe!",
+  },
+  noEventsYet: {
+    lat: "Još nemate objavljenih događaja. Dodajte koncert, festival ili događaj!",
+    en: "You haven't added any events yet. Add a concert, festival or event!",
+  },
   accessDenied: {
     lat: "Pristup odbijen",
     en: "Access Denied",
@@ -2222,7 +2282,7 @@ export const translations = {
     lat: "Nema pronađenih objekata.",
     en: "No venues found.",
   },
-  
+
   // Events Management
   eventsList: { lat: "Lista dešavanja", en: "Events List" },
   noEventsFound: {
@@ -4085,17 +4145,26 @@ export const translations = {
   callRestaurant: { lat: "Pozovi", en: "Call" },
   callClub: { lat: "Pozovi", en: "Call" },
   clubNotFound: { lat: "Klub nije pronađen", en: "Club not found" },
-  backToRestaurants: { lat: "Povratak na restorane", en: "Back to Restaurants" },
+  backToRestaurants: {
+    lat: "Povratak na restorane",
+    en: "Back to Restaurants",
+  },
   backToClubs: { lat: "Povratak na klubove", en: "Back to Clubs" },
   noClubsFound: { lat: "Nema pronađenih klubova", en: "No clubs found" },
-  noRestaurantsFound: { lat: "Nema pronađenih restorana", en: "No restaurants found" },
+  noRestaurantsFound: {
+    lat: "Nema pronađenih restorana",
+    en: "No restaurants found",
+  },
 
   // Auth Links
   account: { lat: "Nalog", en: "Account" },
   myAccount: { lat: "Moj nalog", en: "My Account" },
   login: { lat: "Prijava", en: "Login" },
   signup: { lat: "Registracija", en: "Sign Up" },
-  createAdminAccount: { lat: "Kreiraj Admin nalog", en: "Create Admin Account" },
+  createAdminAccount: {
+    lat: "Kreiraj Admin nalog",
+    en: "Create Admin Account",
+  },
   logout: { lat: "Odjava", en: "Logout" },
   addObject: { lat: "Dodaj objekat", en: "Add Venue" },
   addEvent: { lat: "Dodaj dešavanje", en: "Add Event" },
@@ -4103,22 +4172,58 @@ export const translations = {
   deleteAccount: { lat: "Obriši nalog", en: "Delete Account" },
   currentPassword: { lat: "Trenutna lozinka", en: "Current Password" },
   newPassword: { lat: "Nova lozinka", en: "New Password" },
-  confirmNewPassword: { lat: "Potvrdi novu lozinku", en: "Confirm New Password" },
-  passwordChanged: { lat: "Lozinka uspješno promijenjena", en: "Password changed successfully" },
+  confirmNewPassword: {
+    lat: "Potvrdi novu lozinku",
+    en: "Confirm New Password",
+  },
+  passwordChanged: {
+    lat: "Lozinka uspješno promijenjena",
+    en: "Password changed successfully",
+  },
   passwordChangedReLogin: {
     lat: "Lozinka je uspješno promijenjena. Prijavite se ponovo novom lozinkom.",
     en: "Your password was changed successfully. Please sign in again with your new password.",
   },
-  passwordChangeError: { lat: "Greška pri promjeni lozinke", en: "Error changing password" },
-  passwordsDoNotMatch: { lat: "Lozinke se ne poklapaju", en: "Passwords do not match" },
-  passwordTooShort: { lat: "Lozinka mora imati najmanje 6 karaktera", en: "Password must be at least 6 characters" },
-  currentPasswordRequired: { lat: "Trenutna lozinka je obavezna", en: "Current password is required" },
-  currentPasswordWrong: { lat: "Trenutna lozinka nije ispravna", en: "Current password is incorrect" },
-  deleteAccountConfirm: { lat: "Da li ste sigurni da želite obrisati nalog? Ova radnja se ne može poništiti.", en: "Are you sure you want to delete your account? This action cannot be undone." },
-  accountDeleted: { lat: "Nalog uspješno obrisan", en: "Account deleted successfully" },
-  accountDeleteError: { lat: "Greška pri brisanju naloga", en: "Error deleting account" },
-  lastAdminError: { lat: "Ne možete obrisati jedini administratorski nalog. Prvo dodijelite administratorsku ulogu drugom korisniku.", en: "Cannot delete the last admin account. Promote another user to admin first." },
-  typeDeleteToConfirm: { lat: "Ukucajte OBRIŠI za potvrdu", en: "Type DELETE to confirm" },
+  passwordChangeError: {
+    lat: "Greška pri promjeni lozinke",
+    en: "Error changing password",
+  },
+  passwordsDoNotMatch: {
+    lat: "Lozinke se ne poklapaju",
+    en: "Passwords do not match",
+  },
+  passwordTooShort: {
+    lat: "Lozinka mora imati najmanje 6 karaktera",
+    en: "Password must be at least 6 characters",
+  },
+  currentPasswordRequired: {
+    lat: "Trenutna lozinka je obavezna",
+    en: "Current password is required",
+  },
+  currentPasswordWrong: {
+    lat: "Trenutna lozinka nije ispravna",
+    en: "Current password is incorrect",
+  },
+  deleteAccountConfirm: {
+    lat: "Da li ste sigurni da želite obrisati nalog? Ova radnja se ne može poništiti.",
+    en: "Are you sure you want to delete your account? This action cannot be undone.",
+  },
+  accountDeleted: {
+    lat: "Nalog uspješno obrisan",
+    en: "Account deleted successfully",
+  },
+  accountDeleteError: {
+    lat: "Greška pri brisanju naloga",
+    en: "Error deleting account",
+  },
+  lastAdminError: {
+    lat: "Ne možete obrisati jedini administratorski nalog. Prvo dodijelite administratorsku ulogu drugom korisniku.",
+    en: "Cannot delete the last admin account. Promote another user to admin first.",
+  },
+  typeDeleteToConfirm: {
+    lat: "Ukucajte OBRIŠI za potvrdu",
+    en: "Type DELETE to confirm",
+  },
   // name removed - duplicate (already defined at line 1605)
   enterName: { lat: "Unesite ime", en: "Enter your name" },
   enterEmail: { lat: "Unesite email", en: "Enter your email" },
@@ -4132,10 +4237,22 @@ export const translations = {
   forgotPassword: { lat: "Zaboravljena lozinka?", en: "Forgot your password?" },
 
   // Auth Modal
-  authModalTitle: { lat: "Prijavi se ili kreiraj nalog", en: "Sign in or create an account" },
-  authModalSubtitle: { lat: "Odaberi način prijave", en: "Choose a sign-in method" },
-  authModalContinueWithGoogle: { lat: "Nastavi sa Google", en: "Continue with Google" },
-  authModalContinueWithEmail: { lat: "Nastavi sa email adresom", en: "Continue with email address" },
+  authModalTitle: {
+    lat: "Prijavi se ili kreiraj nalog",
+    en: "Sign in or create an account",
+  },
+  authModalSubtitle: {
+    lat: "Odaberi način prijave",
+    en: "Choose a sign-in method",
+  },
+  authModalContinueWithGoogle: {
+    lat: "Nastavi sa Google",
+    en: "Continue with Google",
+  },
+  authModalContinueWithEmail: {
+    lat: "Nastavi sa email adresom",
+    en: "Continue with email address",
+  },
   authModalDividerOr: { lat: "ili", en: "or" },
   authModalConnecting: { lat: "Povezivanje...", en: "Connecting..." },
   authModalLegalPrefix: {
@@ -4145,7 +4262,10 @@ export const translations = {
   authModalLegalAnd: { lat: "i", en: "and" },
   authModalPrivacyPolicy: { lat: "Politiku privatnosti", en: "Privacy Policy" },
   authModalTermsOfUse: { lat: "Uslove korištenja", en: "Terms of Use" },
-  authModalInvalidEmail: { lat: "Unesi validnu email adresu", en: "Enter a valid email address" },
+  authModalInvalidEmail: {
+    lat: "Unesi validnu email adresu",
+    en: "Enter a valid email address",
+  },
   authModalResetEmailRequired: {
     lat: "Unesi email adresu za reset lozinke",
     en: "Enter your email address for password reset",
@@ -4154,14 +4274,17 @@ export const translations = {
     lat: "Link za reset lozinke je poslan na navedeni email",
     en: "Password reset link has been sent to the provided email",
   },
-  authModalGenericError: { lat: "Došlo je do greške", en: "Something went wrong" },
+  authModalGenericError: {
+    lat: "Došlo je do greške",
+    en: "Something went wrong",
+  },
 
   // Event filters
-  pleaseSelectDateAndTime: { 
-    lat: "Molimo izaberite datum i vrijeme početka događaja.", 
-    en: "Please select event date and start time." 
+  pleaseSelectDateAndTime: {
+    lat: "Molimo izaberite datum i vrijeme početka događaja.",
+    en: "Please select event date and start time.",
   },
-  
+
   // My Panel Page
   welcome: { lat: "Dobrodošli", en: "Welcome" },
   profile: { lat: "Profil", en: "Profile" },
@@ -4173,9 +4296,9 @@ export const translations = {
   quickActions: { lat: "Brze akcije", en: "Quick Actions" },
   mySubmissions: { lat: "Moje prijave", en: "My Submissions" },
   comingSoon: { lat: "Uskoro", en: "Coming Soon" },
-  viewYourSubmissionsHere: { 
-    lat: "Ovdje ćete moći vidjeti sve svoje poslate objekte i dešavanja.", 
-    en: "You will be able to view all your submitted venues and events here." 
+  viewYourSubmissionsHere: {
+    lat: "Ovdje ćete moći vidjeti sve svoje poslate objekte i dešavanja.",
+    en: "You will be able to view all your submitted venues and events here.",
   },
 
   // ==== SELECTION & DELETE (MyPanelPage) ====
@@ -4228,17 +4351,9 @@ export function tr(key: string, language: "sr" | "en"): string {
     const typedKey = key as keyof typeof translations;
     // Map 'sr' to 'lat'
     if (language === "sr") {
-      return (
-        translations[typedKey]?.lat ||
-        translations[typedKey]?.en ||
-        key
-      );
+      return translations[typedKey]?.lat || translations[typedKey]?.en || key;
     }
-    return (
-      translations[typedKey]?.en ||
-      translations[typedKey]?.lat ||
-      key
-    );
+    return translations[typedKey]?.en || translations[typedKey]?.lat || key;
   }
 
   return key;

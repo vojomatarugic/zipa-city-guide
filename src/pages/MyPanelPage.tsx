@@ -2,7 +2,7 @@ import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
 import { BACKGROUNDS, BORDERS, TEXT, BRAND } from '../utils/colors';
 import { Link, useNavigate } from 'react-router';
-import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail } from 'lucide-react';
+import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import * as dataService from '../utils/dataService';
@@ -52,6 +52,8 @@ export function MyPanelPage() {
   const [inactiveEventIds, setInactiveEventIds] = useState<Set<string>>(new Set());
   const [togglingVenueActiveId, setTogglingVenueActiveId] = useState<string | null>(null);
   const [togglingEventActiveId, setTogglingEventActiveId] = useState<string | null>(null);
+  const [venuesListExpanded, setVenuesListExpanded] = useState(false);
+  const [eventsListExpanded, setEventsListExpanded] = useState(false);
 
   // ✅ CONFIRM DIALOG STATE (replaces window.confirm)
   const [pendingConfirm, setPendingConfirm] = useState<{
@@ -875,20 +877,27 @@ export function MyPanelPage() {
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}
         >
-          {/* HEADER ROW: Title + Select All + Delete Selected */}
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <h2
-              style={{
-                fontSize: '20px',
-                fontWeight: 600,
-                color: TEXT.primary,
-                margin: 0
-              }}
+          {/* HEADER ROW: Title (accordion) + Select All + Delete Selected when expanded */}
+          <div className={`flex w-full min-w-0 items-center gap-3 flex-wrap ${venuesListExpanded ? 'mb-4' : 'mb-0'}`}>
+            <button
+              type="button"
+              onClick={() => setVenuesListExpanded((v) => !v)}
+              className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
             >
-              {t('myVenues')} ({userVenues.length})
-            </h2>
-            {userVenues.length > 0 && (
-              <div className="flex items-center gap-3">
+              <h2
+                className="m-0 min-w-0"
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  color: TEXT.primary,
+                  margin: 0
+                }}
+              >
+                {t('myVenues')} ({userVenues.length})
+              </h2>
+            </button>
+            {venuesListExpanded && userVenues.length > 0 && (
+              <div className="flex shrink-0 items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer select-none text-[13px]" style={{ color: TEXT.secondary }}>
                   <input
                     type="checkbox"
@@ -974,9 +983,22 @@ export function MyPanelPage() {
                   </button>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => setVenuesListExpanded((v) => !v)}
+              className="flex shrink-0 items-center justify-center rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+              aria-expanded={venuesListExpanded}
+            >
+              {venuesListExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+              )}
+            </button>
           </div>
           
-          {loading ? (
+          {venuesListExpanded && (
+          loading ? (
             <p style={{ color: TEXT.secondary }}>{t('loading')}...</p>
           ) : (
             <>
@@ -1106,6 +1128,7 @@ export function MyPanelPage() {
                 </p>
               )}
             </>
+          )
           )}
         </div>
 
@@ -1118,20 +1141,27 @@ export function MyPanelPage() {
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
           }}
         >
-          {/* HEADER ROW: Title + Select All + Delete Selected */}
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <h2
-              style={{
-                fontSize: '20px',
-                fontWeight: 600,
-                color: TEXT.primary,
-                margin: 0
-              }}
+          {/* HEADER ROW: Title (accordion) + Select All + Delete Selected when expanded */}
+          <div className={`flex w-full min-w-0 items-center gap-3 flex-wrap ${eventsListExpanded ? 'mb-4' : 'mb-0'}`}>
+            <button
+              type="button"
+              onClick={() => setEventsListExpanded((v) => !v)}
+              className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
             >
-              {t('myEvents')} ({userEvents.length})
-            </h2>
-            {userEvents.length > 0 && (
-              <div className="flex items-center gap-3">
+              <h2
+                className="m-0 min-w-0"
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  color: TEXT.primary,
+                  margin: 0
+                }}
+              >
+                {t('myEvents')} ({userEvents.length})
+              </h2>
+            </button>
+            {eventsListExpanded && userEvents.length > 0 && (
+              <div className="flex shrink-0 items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer select-none text-[13px]" style={{ color: TEXT.secondary }}>
                   <input
                     type="checkbox"
@@ -1217,9 +1247,22 @@ export function MyPanelPage() {
                   </button>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => setEventsListExpanded((v) => !v)}
+              className="flex shrink-0 items-center justify-center rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+              aria-expanded={eventsListExpanded}
+            >
+              {eventsListExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400 flex-shrink-0" aria-hidden />
+              )}
+            </button>
           </div>
           
-          {loading ? (
+          {eventsListExpanded && (
+          loading ? (
             <p style={{ color: TEXT.secondary }}>{t('loading')}...</p>
           ) : (
             <>
@@ -1346,6 +1389,7 @@ export function MyPanelPage() {
                 </p>
               )}
             </>
+          )
           )}
         </div>
       </div>

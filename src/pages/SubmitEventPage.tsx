@@ -6,7 +6,6 @@ import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomDropdown } from '../components/CustomDropdown';
-import { NotificationDialog } from '../components/NotificationDialog';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ImageUpload } from '../components/ImageUpload';
 import DatePickerImport from 'react-datepicker';
@@ -19,6 +18,14 @@ import { publicAnonKey } from '../utils/supabase/info';
 import { apiUrl } from '../config/apiBase';
 import * as dataService from '../utils/dataService';
 import { scheduleLocalDayKey, getEventScheduleSlots } from '../utils/eventService';
+import {
+  mapDbRowToFormModel,
+  mapDbRowToUiEvent,
+  mapFormModelToEventApiPayload,
+  type EventDbRow,
+  type EventFormModel,
+} from '../shared/eventSchema';
+import { toast } from 'sonner@2.0.3';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 
@@ -185,23 +192,16 @@ export function SubmitEventPage() {
   const { selectedCity } = useSelectedCity();
   const { user, isAdmin } = useAuth();
 
+  const notifySubmitBlockingError = (message: string) => {
+    toast.error(message);
+  };
+
   useDocumentTitle(listingDocumentTitle(t('submitEvent'), selectedCity));
 
   // 🔥 PREVENT MULTIPLE LOADS - only load once when in edit mode
   const hasLoadedRef = useRef(false);
 
-  // 🔥 SANITIZE legacy event_type values that are no longer valid in DB
-  const VALID_EVENT_TYPES = ['cinema', 'club', 'concert', 'conference', 'exhibition', 'festival', 'gastro', 'kids', 'other', 'sport', 'standup', 'theatre', 'workshop'];
-  const sanitizeEventType = (type: string | undefined | null): string => {
-    if (!type) return '';
-    if (VALID_EVENT_TYPES.includes(type)) return type;
-    // Map legacy types to valid ones
-    if (type === 'nightlife') return 'club';
-    if (type === 'music') return 'concert';
-    return 'other';
-  };
-
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EventFormModel>({
     eventType: '',
     image: '',
     eventName: '',
@@ -218,13 +218,12 @@ export function SubmitEventPage() {
     organizerName: '',
     organizerPhone: '',
     organizerEmail: '',
-    submittedByEmail: ''
+    submittedByEmail: '',
   });
 
   const [scheduleDateBlocks, setScheduleDateBlocks] = useState<ScheduleDateBlock[]>([
     emptyScheduleDateBlock(),
   ]);
-  const [showNotification, setShowNotification] = useState(false);
   const [timeError, setTimeError] = useState<string>('');
   const [addressError, setAddressError] = useState<string>('');
   const [eventNameEnError, setEventNameEnError] = useState<string>('');
@@ -342,6 +341,17 @@ export function SubmitEventPage() {
     setSuggestedUsers([]);
   };
 
+  // Clear stale row / latch when switching create ↔ edit or between event ids (load effect runs next).
+  useEffect(() => {
+    if (!id) {
+      hasLoadedRef.current = false;
+      setExistingEvent(null);
+      return;
+    }
+    hasLoadedRef.current = false;
+    setExistingEvent(null);
+  }, [id]);
+
   // 🔥 LOAD EXISTING EVENT IF IN EDIT MODE
   useEffect(() => {
     if (id && !hasLoadedRef.current) {
@@ -352,51 +362,29 @@ export function SubmitEventPage() {
       const eventFromState = (location.state as any)?.eventData;
       
       // ✅ Helper: extract all fields from event (handles both tables' column naming)
-      const populateFromEvent = (event: any) => {
+      const populateFromEvent = (event: EventDbRow) => {
         console.log('📋 [EDIT] Raw event data keys:', Object.keys(event));
         console.log('📋 [EDIT] Raw event data:', JSON.stringify(event, null, 2));
-        
-        const slots = getEventScheduleSlots(event as dataService.Item);
+
+        const normalizedEvent = mapDbRowToUiEvent(event);
+        const slots = getEventScheduleSlots(normalizedEvent as dataService.Item);
         if (slots.length > 0) {
           setScheduleDateBlocks(groupSlotsIntoDateBlocks(slots));
         } else {
           setScheduleDateBlocks([emptyScheduleDateBlock()]);
         }
 
-        // Venue name — check multiple possible column names
-        const venueName = event.venue_name || (event as any).venue || '';
-        const cityVal = event.city || '';
-        
-        // Address
-        const address = event.address || '';
-        const mapUrl = (event as any).map_url || '';
-        
-        // Ticket link
-        const ticketLink = event.ticket_link || '';
-        
-        setExistingEvent(event);
-        
-        setFormData({
-          eventType: sanitizeEventType(event.event_type || (event as any).venue_type || ''),
-          image: event.image || '',
-          eventName: event.title || '',
-          eventNameEn: event.title_en || '',
-          venue: venueName,
-          city: cityVal,
-          address,
-          mapUrl,
-          description: event.description || '',
-          descriptionEn: event.description_en || '',
-          ticketLink,
-          priceType: event.price === 'Free' || event.price === 'Besplatno' ? 'free' : (event.price ? 'paid' : 'free'),
-          price: event.price && event.price !== 'Free' && event.price !== 'Besplatno' ? event.price : '',
-          organizerName: event.organizer_name || (event as any).contact_name || '',
-          organizerPhone: event.organizer_phone || (event as any).phone || '',
-          organizerEmail: event.organizer_email || (event as any).contact_email || event.submitted_by || '',
-          submittedByEmail: event.submitted_by || ''
-        });
+        setExistingEvent(normalizedEvent as dataService.Item);
+        setFormData(mapDbRowToFormModel(normalizedEvent));
 
-        console.log('✅ [EDIT] Form populated — venue:', venueName, '| city:', cityVal, '| address:', address);
+        console.log(
+          '✅ [EDIT] Form populated — venue:',
+          normalizedEvent.venue_name || '',
+          '| city:',
+          normalizedEvent.city || '',
+          '| address:',
+          normalizedEvent.address || ''
+        );
       };
       
       if (eventFromState) {
@@ -414,34 +402,55 @@ export function SubmitEventPage() {
             populateFromEvent(event);
           } else {
             console.error('❌ ❌ Event not found');
-            setShowNotification(true);
+            toast.error(t('eventNotFound'));
+            navigate(isAdmin ? '/admin' : '/my-panel');
           }
           setLoading(false);
           hasLoadedRef.current = true;
         }).catch((err) => {
           console.error('❌ Error loading event:', err);
-          alert(t('errorLoadingEvent'));
+          toast.error(t('errorLoadingEvent'));
+          navigate(isAdmin ? '/admin' : '/my-panel');
           setLoading(false);
           hasLoadedRef.current = true;
-          navigate(-1);
         });
       }
     }
-  }, [id, navigate, t, location.state]);
+  }, [id, navigate, t, location.state, isAdmin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🔥 HANDLE SUBMIT TRIGGERED");
+    console.log('🟦 [SubmitEventPage] handleSubmit START', {
+      mode: id ? 'edit' : 'create',
+      isEditMode: !!id,
+      id: id ?? null,
+      existingEventId: existingEvent?.id ?? null,
+      loading,
+    });
+    const logSubmitBlock = (reason: string, details?: unknown) => {
+      console.error('⛔ [SubmitEventPage] submit blocked:', reason, details ?? '');
+    };
+    try {
+      console.log("before validation");
+      console.log('🟦 [SubmitEventPage] before validation', {
+        mode: id ? 'edit' : 'create',
+        isEditMode: !!id,
+        id: id ?? null,
+      });
 
-    setEventNameEnError('');
-    setDescriptionEnError('');
-    if (!formData.eventNameEn.trim()) {
-      setEventNameEnError(t('eventNameEnRequired'));
-      return;
-    }
-    if (!formData.descriptionEn.trim()) {
-      setDescriptionEnError(t('eventDescriptionEnRequired'));
-      return;
-    }
+      setEventNameEnError('');
+      setDescriptionEnError('');
+      if (!formData.eventNameEn.trim()) {
+        setEventNameEnError(t('eventNameEnRequired'));
+        logSubmitBlock('eventNameEn missing');
+        return;
+      }
+      if (!formData.descriptionEn.trim()) {
+        setDescriptionEnError(t('eventDescriptionEnRequired'));
+        logSubmitBlock('descriptionEn missing');
+        return;
+      }
 
     // —— Schedule date blocks + times: validate; allow edit fallback to existing start_at ——
     const hasExistingStartAt = !!(existingEvent?.start_at);
@@ -482,6 +491,7 @@ export function SubmitEventPage() {
           ? 'Za svaki datum unesite vrijeme početka (HH:MM) za barem jedan termin; popunite sve započete redove.'
           : 'For each date, add at least one start time (HH:MM); complete every row you started.'
       );
+      logSubmitBlock('partial schedule detected', scheduleDateBlocks);
       return;
     }
 
@@ -495,6 +505,7 @@ export function SubmitEventPage() {
               ? 'Neispravno vrijeme početka (00:00 - 23:59)'
               : 'Invalid start time (00:00 - 23:59)'
           );
+          logSubmitBlock('invalid start time', time);
           return;
         }
         if (time.endTime) {
@@ -504,6 +515,7 @@ export function SubmitEventPage() {
                 ? 'Vrijeme kraja mora biti u formatu HH:MM (npr. 21:00)'
                 : 'End time must be in HH:MM format (e.g. 21:00)'
             );
+            logSubmitBlock('invalid end time format', time);
             return;
           }
           const [eh, em] = time.endTime.split(':').map(Number);
@@ -513,6 +525,7 @@ export function SubmitEventPage() {
                 ? 'Neispravno vrijeme kraja (00:00 - 23:59)'
                 : 'Invalid end time (00:00 - 23:59)'
             );
+            logSubmitBlock('invalid end time value', time);
             return;
           }
         }
@@ -532,25 +545,28 @@ export function SubmitEventPage() {
     );
 
     if (builtSlots.length === 0 && !(id && hasExistingStartAt)) {
-      alert(
+      notifySubmitBlockingError(
         t('pleaseSelectDateAndTime') ||
           'Molimo izaberite datum i vrijeme početka događaja.'
       );
+      logSubmitBlock('no schedule slots and no existing start_at');
       return;
     }
 
     setTimeError('');
 
     if (!formData.venue.trim()) {
-      alert(language === 'sr'
+      notifySubmitBlockingError(language === 'sr'
         ? 'Unesite naziv lokacije / mjesto održavanja.'
         : 'Please enter the location name / venue.');
+      logSubmitBlock('venue missing');
       return;
     }
     if (!formData.city.trim()) {
-      alert(language === 'sr'
+      notifySubmitBlockingError(language === 'sr'
         ? 'Unesite grad.'
         : 'Please enter the city.');
+      logSubmitBlock('city missing');
       return;
     }
 
@@ -559,12 +575,14 @@ export function SubmitEventPage() {
       setAddressError(language === 'sr'
         ? 'Unesite ulicu i kućni broj.'
         : 'Please enter street and number.');
+      logSubmitBlock('address missing');
       return;
     }
     if (!/\d/.test(addressTrimmed)) {
       setAddressError(language === 'sr'
         ? 'Adresa mora sadržavati kućni broj'
         : 'Address must contain a street number');
+      logSubmitBlock('address missing street number', addressTrimmed);
       return;
     }
 
@@ -574,23 +592,26 @@ export function SubmitEventPage() {
       const readOnlyCreator = !!(id && formData.submittedByEmail && !creatorEditMode);
       if (!readOnlyCreator && !selectedUserId) {
         setIsInvalidUserModalOpen(true);
+        logSubmitBlock('admin has no selected user');
         return;
       }
     } else if (!user?.email) {
-      alert(t('loginRequiredSubmit') || 'You must be logged in to submit.');
+      notifySubmitBlockingError(t('loginRequiredSubmit') || 'You must be logged in to submit.');
+      logSubmitBlock('anonymous non-admin submit');
       return;
     }
     
     // Validate mutual dependency: price ↔ ticket link
     if (formData.priceType === 'paid' && !formData.ticketLink.trim()) {
-      alert(language === 'sr'
+      notifySubmitBlockingError(language === 'sr'
         ? 'Ako je događaj plaćen, morate unijeti link za kupovinu karata.'
         : 'If the event has a price, you must provide a ticket purchase link.');
+      logSubmitBlock('paid event without ticket link');
       return;
     }
 
     // ===== CONVERT schedule terms → ISO (first term mirrors legacy start_at / end_at) =====
-    let startAt: string;
+    let startAt: string | null;
     let endAt: string | null = null;
 
     if (builtSlots.length > 0) {
@@ -604,10 +625,11 @@ export function SubmitEventPage() {
         existingEvent?.start_at
       );
     } else {
-      alert(
+      notifySubmitBlockingError(
         t('pleaseSelectDateAndTime') ||
           'Molimo izaberite datum i vrijeme početka događaja.'
       );
+      logSubmitBlock('unable to derive start_at/end_at');
       return;
     }
 
@@ -625,29 +647,24 @@ export function SubmitEventPage() {
       builtSlots.length > 0 ? builtSlots : null;
 
     // Create event submission object
-    const newEvent: Omit<
+      console.log("after validation");
+      console.log('🟦 [SubmitEventPage] after validation', {
+        mode: id ? 'edit' : 'create',
+        isEditMode: !!id,
+        id: id ?? null,
+        builtSlotsCount: builtSlots.length,
+        hasExistingStartAt,
+      });
+
+      const payload = mapFormModelToEventApiPayload(formData);
+      const newEvent: Omit<
       dataService.Item,
       'id' | 'created_at' | 'is_custom' | 'status' | 'page_slug'
     > & {
       assign_user_id?: string;
     } = {
-      title: formData.eventName,
-      title_en: formData.eventNameEn,
-      description: formData.description,
-      description_en: formData.descriptionEn,
+      ...payload,
       date: legacyDateStr,
-      city: formData.city.trim(),
-      image:
-        formData.image.trim() ||
-        'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800',
-      price: formData.priceType === 'free' ? 'Free' : formData.price,
-      venue_name: formData.venue.trim(),
-      ticket_link: formData.ticketLink,
-      organizer_name: formData.organizerName,
-      organizer_phone: formData.organizerPhone,
-      organizer_email: formData.organizerEmail,
-      address: formData.address.trim(),
-      map_url: formData.mapUrl.trim() || undefined,
       // ===== ISO datetime fields =====
       start_at: startAt,
       end_at: endAt,
@@ -656,35 +673,64 @@ export function SubmitEventPage() {
       // ===== Admin assign user =====
       ...(isAdmin && selectedUserId ? { assign_user_id: selectedUserId } : {}),
     };
+      console.log('🟦 [SubmitEventPage] payload ready', {
+        id: id ?? null,
+        mode: id ? 'edit' : 'create',
+        isEditMode: !!id,
+        payload: newEvent,
+      });
 
-    try {
       // 🔥 EDIT MODE - UPDATE EVENT
-      if (id && existingEvent) {
+      if (id) {
+        console.log("CALLING updateEvent");
+        console.log('🟨 [SubmitEventPage] before updateEvent', {
+          id,
+          mode: 'edit',
+          isEditMode: true,
+          payload: newEvent,
+        });
+        console.log("FINAL PAYLOAD", newEvent);
         const result = await dataService.updateEvent(id, newEvent);
+        console.log('🟩 [SubmitEventPage] after updateEvent', {
+          id,
+          success: !!result,
+          result,
+        });
         if (result) {
-          setShowNotification(true);
+          console.log('🟩 [SubmitEventPage] submit success', { id, mode: 'edit' });
+          toast.success(t('eventUpdatedSuccess'), { description: t('eventUpdatedMessage') });
+          navigate(isAdmin ? '/admin' : '/my-panel');
           console.log('✅ Event updated successfully!');
         } else {
-          alert(t('errorUpdatingEvent') || 'Error updating event. Please try again.');
+          notifySubmitBlockingError(t('errorUpdatingEvent') || 'Error updating event. Please try again.');
         }
       } else {
         // CREATE MODE - CREATE NEW EVENT
         const result = await dataService.createItem(newEvent);
         if (result) {
-          setShowNotification(true);
+          console.log('🟩 [SubmitEventPage] submit success', { mode: 'create', resultId: result.id });
+          toast.success(t('dialogNoticeTitle'), { description: t('eventWillBeAdded') });
+          navigate(isAdmin ? '/admin' : '/my-panel');
           console.log('✅ Event created successfully:', result);
         } else {
-          alert(t('errorSubmittingEvent') || 'Greška prilikom kreiranja dešavanja. Pokušajte ponovo.');
+          notifySubmitBlockingError(t('errorSubmittingEvent') || 'Greška prilikom kreiranja dešavanja. Pokušajte ponovo.');
           console.error('❌ createItem returned null — event was NOT created');
         }
       }
     } catch (error) {
+      console.error('🟥 [SubmitEventPage] submit error', error);
       console.error('❌ Error creating event submission:', error);
-      alert(
+      notifySubmitBlockingError(
         error instanceof Error
           ? error.message
           : (t('errorSubmittingEvent') || 'Error submitting event. Please try again.')
       );
+    } finally {
+      console.log('🟦 [SubmitEventPage] handleSubmit END', {
+        mode: id ? 'edit' : 'create',
+        isEditMode: !!id,
+        id: id ?? null,
+      });
     }
   };
 
@@ -757,7 +803,33 @@ export function SubmitEventPage() {
         </section>
 
         {/* FORM */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          onInvalidCapture={(e) => {
+            const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+            console.error('🟥 [SubmitEventPage] native validation blocked submit', {
+              mode: id ? 'edit' : 'create',
+              isEditMode: !!id,
+              id: id ?? null,
+              fieldName: target?.name ?? '(no-name)',
+              fieldType: (target as HTMLInputElement)?.type ?? '(unknown)',
+              value: target?.value ?? '',
+              required: Boolean(target?.required),
+              validity: target?.validity
+                ? {
+                    valueMissing: target.validity.valueMissing,
+                    typeMismatch: target.validity.typeMismatch,
+                    patternMismatch: target.validity.patternMismatch,
+                    tooShort: target.validity.tooShort,
+                    tooLong: target.validity.tooLong,
+                    valid: target.validity.valid,
+                  }
+                : null,
+            });
+          }}
+          className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+        >
           
           {/* PODACI O DEŠAVANJU */}
           <div className="mb-8">
@@ -874,7 +946,8 @@ export function SubmitEventPage() {
                   className="text-[13px] font-semibold uppercase tracking-wide"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  {t('eventScheduleSection')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                  {t('eventScheduleSection')}{' '}
+                  <span style={{ color: 'var(--accent-orange)' }}>*</span>
                 </span>
               </div>
               <div className="flex flex-col gap-4">
@@ -1652,6 +1725,7 @@ export function SubmitEventPage() {
             </button>
             <button
               type="submit"
+              disabled={loading}
               className="px-6 py-3 rounded-lg border-0 text-white cursor-pointer hover:opacity-90 transition-opacity"
               style={{
                 background: 'linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)',
@@ -1659,7 +1733,9 @@ export function SubmitEventPage() {
                 fontWeight: 600,
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                opacity: loading ? 0.55 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
               {id ? t('saveChanges') : t('submitEvent')}
@@ -1667,16 +1743,6 @@ export function SubmitEventPage() {
           </div>
         </form>
       </div>
-
-      <NotificationDialog
-        isOpen={showNotification}
-        title={id ? t('eventUpdatedSuccess') : t('dialogNoticeTitle')}
-        message={id ? t('eventUpdatedMessage') : t('eventWillBeAdded')}
-        onClose={() => {
-          setShowNotification(false);
-          navigate(isAdmin ? '/admin' : '/my-panel');
-        }}
-      />
 
       {isInvalidUserModalOpen && (
         <ConfirmDialog

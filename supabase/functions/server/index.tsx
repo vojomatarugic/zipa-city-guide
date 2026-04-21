@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_correct.tsx";
+import { pickEventApiPayload } from "./eventSchema.ts";
 
 console.log('🚀 Make Server starting... (ylztclwqmfhczklsswrt) - v9.1 CATEGORY_KILLED_v9.1 — ping endpoint live check');
 
@@ -92,6 +93,9 @@ const getSupabaseClient = sbService;
 const VENUE_IMAGES_BUCKET = "make-ee0c365c-venue-images";
 const PROFILE_IMAGES_BUCKET = "profile-images-ee0c365c";
 type OwnedStorageBucket = typeof VENUE_IMAGES_BUCKET | typeof PROFILE_IMAGES_BUCKET;
+
+const normalize = (value: unknown): string =>
+  String(value ?? "").trim().toLowerCase();
 
 function resolveOwnedStorageTarget(
   rawValue: unknown,
@@ -1684,14 +1688,15 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     console.log(`✅ [submissions] Authenticated user: ${authUser.email} (${authUser.id})`);
 
     const body = await c.req.json();
-    
+    const eventBody = pickEventApiPayload(body);
+
     // ✅ SVA polja su snake_case — nema camelCase fallbackova
     // Events: start_at / event_type, or legacy routing via page_slug (never persisted on event rows).
     const EVENT_PAGE_SLUGS = ['events', 'event', 'concerts', 'theatre', 'cinema'];
-    const submittedPageSlug = String(body.page_slug ?? '').toLowerCase().trim();
+    const submittedPageSlug = String(eventBody.page_slug ?? '').toLowerCase().trim();
     const isEvent =
-      !!body.start_at ||
-      !!body.event_type ||
+      !!eventBody.start_at ||
+      !!eventBody.event_type ||
       EVENT_PAGE_SLUGS.includes(submittedPageSlug);
     if (!isEvent && !body.page_slug) {
       return c.json({ error: 'Missing required field: page_slug' }, 400);
@@ -1702,7 +1707,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     if (!body.description) {
       return c.json({ error: 'Missing required field: description' }, 400);
     }
-    const assignUserIdRaw = typeof body.assign_user_id === 'string' ? body.assign_user_id.trim() : '';
+    const assignUserIdRaw = typeof eventBody.assign_user_id === 'string' ? eventBody.assign_user_id.trim() : '';
     // ✅ Use sbService() to bypass broken RLS policy
     const supabase = sbService();
 
@@ -1739,41 +1744,41 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     
     if (isEvent) {
       // ── EVENT CREATION ── snake_case only
-      if (!body.start_at) {
+      if (!eventBody.start_at) {
         return c.json({ error: 'Missing required field: start_at (ISO datetime)' }, 400);
       }
-      const startDate = new Date(body.start_at);
+      const startDate = new Date(eventBody.start_at);
       if (isNaN(startDate.getTime())) {
-        return c.json({ error: 'Invalid start_at datetime format. Use ISO 8601.', received: body.start_at }, 400);
+        return c.json({ error: 'Invalid start_at datetime format. Use ISO 8601.', received: eventBody.start_at }, 400);
       }
-      if (body.end_at) {
-        const endDate = new Date(body.end_at);
+      if (eventBody.end_at) {
+        const endDate = new Date(eventBody.end_at);
         if (isNaN(endDate.getTime())) {
-          return c.json({ error: 'Invalid end_at datetime format. Use ISO 8601.', received: body.end_at }, 400);
+          return c.json({ error: 'Invalid end_at datetime format. Use ISO 8601.', received: eventBody.end_at }, 400);
         }
       }
-      
-      const eventType = body.event_type || null;
+
+      const eventType = eventBody.event_type || null;
       const event = {
         event_type: eventType,
-        title: body.title,
-        title_en: body.title_en || body.title,
-        description: body.description,
-        description_en: body.description_en || body.description,
-        city: body.city || 'Banja Luka',
-        venue_name: body.venue_name || null,
-        address: body.address || null,
-        image: body.image || null,
-        price: body.price || null,
-        date: body.date || null,
-        map_url: body.map_url || null,
-        start_at: body.start_at,
-        end_at: body.end_at || null,
-        event_schedules: normalizeEventSchedulesInput(body.event_schedules),
-        ticket_link: body.ticket_link || null,
-        organizer_name: body.organizer_name || null,
-        organizer_phone: body.organizer_phone || null,
-        organizer_email: body.organizer_email || null,
+        title: eventBody.title,
+        title_en: eventBody.title_en || eventBody.title,
+        description: eventBody.description,
+        description_en: eventBody.description_en || eventBody.description,
+        city: eventBody.city || 'Banja Luka',
+        venue_name: eventBody.venue_name || null,
+        address: eventBody.address || null,
+        image: eventBody.image || null,
+        price: eventBody.price || null,
+        date: eventBody.date || null,
+        map_url: eventBody.map_url || null,
+        start_at: eventBody.start_at,
+        end_at: eventBody.end_at || null,
+        event_schedules: normalizeEventSchedulesInput(eventBody.event_schedules),
+        ticket_link: eventBody.ticket_link || null,
+        organizer_name: eventBody.organizer_name || null,
+        organizer_phone: eventBody.organizer_phone || null,
+        organizer_email: eventBody.organizer_email || null,
         status: isSubmitterAdmin ? 'approved' : 'pending',
         submitted_by_user_id: ownerUserId,
         submitted_by: finalSubmittedBy,
@@ -1845,6 +1850,128 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
   } catch (error) {
     console.error('❌ Error creating submission:', error);
     return c.json({ error: 'Failed to create submission', details: String(error) }, 500);
+  }
+});
+
+// Update submission by ID (event/venue edit flow)
+app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const eventBody = pickEventApiPayload(body);
+    console.log("UPDATE BODY:", body);
+    console.log('🟪 [PUT /submissions/:id] START', { id });
+    console.log('🟪 [PUT /submissions/:id] params', { id });
+    console.log('🟪 [PUT /submissions/:id] request body', body);
+
+    if (!id) {
+      return c.json({ error: 'Submission ID is required' }, 400);
+    }
+
+    const supabase = sbService();
+
+    let resolvedSubmittedBy: string | undefined = undefined;
+    let resolvedSubmittedByUserId: string | undefined = undefined;
+    let resolvedSubmittedByName: string | null | undefined = undefined;
+
+    if (typeof eventBody.assign_user_id === 'string' && eventBody.assign_user_id.trim()) {
+      const assignUserId = eventBody.assign_user_id.trim();
+      const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(assignUserId);
+      if (uidErr || !uidData?.user?.id || !uidData.user.email) {
+        return c.json({ error: 'Invalid assign_user_id.' }, 400);
+      }
+      resolvedSubmittedBy = uidData.user.email.trim();
+      resolvedSubmittedByUserId = uidData.user.id;
+      resolvedSubmittedByName = extractDisplayNameFromAuthUser(uidData.user);
+    } else if (eventBody.submitted_by !== undefined) {
+      const rawSb = String(eventBody.submitted_by ?? '').trim();
+      if (rawSb) {
+        const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
+        if (resolvedSb) resolvedSubmittedBy = resolvedSb;
+      }
+    }
+
+    const eventPayload: Record<string, unknown> = {
+      title: eventBody.title,
+      title_en: eventBody.title_en,
+      description: eventBody.description,
+      description_en: eventBody.description_en,
+      event_type: eventBody.event_type,
+      city: eventBody.city,
+      venue_name: eventBody.venue_name,
+      address: eventBody.address,
+      image: eventBody.image,
+      price: eventBody.price,
+      start_at: eventBody.start_at,
+      end_at: eventBody.end_at,
+      ticket_link: eventBody.ticket_link,
+      organizer_name: eventBody.organizer_name,
+      organizer_phone: eventBody.organizer_phone,
+      organizer_email: eventBody.organizer_email,
+      ...(resolvedSubmittedByUserId !== undefined ? { submitted_by_user_id: resolvedSubmittedByUserId } : {}),
+      ...(resolvedSubmittedBy !== undefined ? { submitted_by: resolvedSubmittedBy } : {}),
+      ...(resolvedSubmittedByName !== undefined ? { submitted_by_name: resolvedSubmittedByName } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    if (eventBody.date !== undefined) eventPayload.date = eventBody.date ?? null;
+    if (eventBody.map_url !== undefined) eventPayload.map_url = eventBody.map_url ?? null;
+    if (eventBody.event_schedules !== undefined) {
+      eventPayload.event_schedules = normalizeEventSchedulesInput(eventBody.event_schedules);
+    }
+
+    const { data: updatedEventRow, error: eventError } = await supabase
+      .from('events_ee0c365c')
+      .update(eventPayload)
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (!eventError && updatedEventRow) {
+      return c.json({ success: true, submission: updatedEventRow, entity: 'event' });
+    }
+
+    const venuePayload: Record<string, unknown> = {
+      title: body.title,
+      title_en: body.title_en,
+      description: body.description,
+      description_en: body.description_en,
+      city: body.city,
+      address: body.address,
+      image: body.image,
+      price: body.price,
+      ...(resolvedSubmittedByUserId !== undefined ? { submitted_by_user_id: resolvedSubmittedByUserId } : {}),
+      ...(resolvedSubmittedBy !== undefined ? { submitted_by: resolvedSubmittedBy } : {}),
+      ...(resolvedSubmittedByName !== undefined ? { submitted_by_name: resolvedSubmittedByName } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    if (body.page_slug !== undefined) venuePayload.page_slug = body.page_slug;
+    if (body.venue_type !== undefined) venuePayload.venue_type = body.venue_type;
+    if (body.website !== undefined) venuePayload.website = body.website;
+    if (body.phone !== undefined) venuePayload.phone = body.phone;
+    if (body.contact_name !== undefined) venuePayload.contact_name = body.contact_name;
+    if (body.contact_phone !== undefined) venuePayload.contact_phone = body.contact_phone;
+    if (body.contact_email !== undefined) venuePayload.contact_email = body.contact_email;
+    if (body.opening_hours !== undefined) venuePayload.opening_hours = body.opening_hours;
+    if (body.opening_hours_en !== undefined) venuePayload.opening_hours_en = body.opening_hours_en;
+    if (body.cuisine !== undefined) venuePayload.cuisine = body.cuisine;
+    if (body.cuisine_en !== undefined) venuePayload.cuisine_en = body.cuisine_en;
+    if (body.tags !== undefined) venuePayload.tags = normalizeVenueTagsInput(body.tags);
+
+    const { data: updatedVenueRows, error: venueError } = await supabase
+      .from('venues_ee0c365c')
+      .update(venuePayload)
+      .eq('id', id)
+      .select();
+
+    if (!venueError && updatedVenueRows && updatedVenueRows.length > 0) {
+      return c.json({ success: true, submission: updatedVenueRows[0], entity: 'venue' });
+    }
+
+    console.error(`❌ Submission ${id} not found in events or venues table`, { eventError, venueError });
+    return c.json({ error: 'Submission not found', details: `No submission with id ${id} in events or venues table` }, 404);
+  } catch (error) {
+    console.error('❌ Error updating submission:', error);
+    return c.json({ error: 'Failed to update submission', details: String(error) }, 500);
   }
 });
 
@@ -2508,6 +2635,11 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const eventBody = pickEventApiPayload(body);
+    console.log("UPDATE BODY:", body);
+    console.log('🟪 [PUT /events/:id] START', { id });
+    console.log('🟪 [PUT /events/:id] params', { id });
+    console.log('🟪 [PUT /events/:id] request body', body);
     
     if (!id) {
       return c.json({ error: 'Event ID is required' }, 400);
@@ -2525,8 +2657,8 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     let resolvedEventSubmittedBy: string | undefined = undefined;
     let resolvedEventSubmittedByUserId: string | undefined = undefined;
     let resolvedEventSubmittedByName: string | null | undefined = undefined;
-    if (typeof body.assign_user_id === 'string' && body.assign_user_id.trim()) {
-      const assignUserId = body.assign_user_id.trim();
+    if (typeof eventBody.assign_user_id === 'string' && eventBody.assign_user_id.trim()) {
+      const assignUserId = eventBody.assign_user_id.trim();
       const { data: uidData, error: uidErr } = await supabase.auth.admin.getUserById(assignUserId);
       if (uidErr || !uidData?.user?.id || !uidData.user.email) {
         return c.json({ error: 'Invalid assign_user_id.' }, 400);
@@ -2535,8 +2667,8 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       resolvedEventSubmittedByUserId = uidData.user.id;
       resolvedEventSubmittedByName = extractDisplayNameFromAuthUser(uidData.user);
       console.log(`🔗 Auto-assigning event to user: ${resolvedEventSubmittedBy} (userId: ${assignUserId})`);
-    } else if (body.submitted_by !== undefined) {
-      const rawSb = String(body.submitted_by ?? '').trim();
+    } else if (eventBody.submitted_by !== undefined) {
+      const rawSb = String(eventBody.submitted_by ?? '').trim();
       if (rawSb) {
         const resolvedSb = await resolveRegisteredSubmitterEmail(supabase, rawSb);
         if (resolvedSb) {
@@ -2547,41 +2679,42 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     
     // ✅ snake_case only — nema camelCase fallbackova
     const updatePayload: Record<string, unknown> = {
-      title: body.title,
-      title_en: body.title_en,
-      description: body.description,
-      description_en: body.description_en,
-      event_type: body.event_type,
-      city: body.city,
-      venue_name: body.venue_name,
-      address: body.address,
-      image: body.image,
-      price: body.price,
-      start_at: body.start_at,
-      end_at: body.end_at,
-      ticket_link: body.ticket_link,
-      organizer_name: body.organizer_name,
-      organizer_phone: body.organizer_phone,
-      organizer_email: body.organizer_email,
+      title: eventBody.title,
+      title_en: eventBody.title_en,
+      description: eventBody.description,
+      description_en: eventBody.description_en,
+      event_type: eventBody.event_type,
+      city: eventBody.city,
+      venue_name: eventBody.venue_name,
+      address: eventBody.address,
+      image: eventBody.image,
+      price: eventBody.price,
+      start_at: eventBody.start_at,
+      end_at: eventBody.end_at,
+      ticket_link: eventBody.ticket_link,
+      organizer_name: eventBody.organizer_name,
+      organizer_phone: eventBody.organizer_phone,
+      organizer_email: eventBody.organizer_email,
       ...(resolvedEventSubmittedByUserId !== undefined ? { submitted_by_user_id: resolvedEventSubmittedByUserId } : {}),
       ...(resolvedEventSubmittedBy !== undefined ? { submitted_by: resolvedEventSubmittedBy } : {}),
       ...(resolvedEventSubmittedByName !== undefined ? { submitted_by_name: resolvedEventSubmittedByName } : {}),
       updated_at: new Date().toISOString(),
     };
-    if (body.date !== undefined) updatePayload.date = body.date ?? null;
-    if (body.map_url !== undefined) updatePayload.map_url = body.map_url ?? null;
-    if (body.event_schedules !== undefined) {
-      updatePayload.event_schedules = normalizeEventSchedulesInput(body.event_schedules);
+    if (eventBody.date !== undefined) updatePayload.date = eventBody.date ?? null;
+    if (eventBody.map_url !== undefined) updatePayload.map_url = eventBody.map_url ?? null;
+    if (eventBody.event_schedules !== undefined) {
+      updatePayload.event_schedules = normalizeEventSchedulesInput(eventBody.event_schedules);
     }
 
     // 1️⃣ Try events table first
-    const { data: eventsRows, error: eventsError } = await supabase
+    const { data: eventsRow, error: eventsError } = await supabase
       .from('events_ee0c365c')
       .update(updatePayload)
       .eq('id', id)
-      .select();
+      .select('*')
+      .single();
     
-    if (!eventsError && eventsRows && eventsRows.length > 0) {
+    if (!eventsError && eventsRow) {
       if (
         body.image !== undefined &&
         previousEventImage &&
@@ -2594,8 +2727,8 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
           "replace-event-image"
         );
       }
-      console.log(`✅ Updated event in events table: ${eventsRows[0].title}`);
-      return c.json({ event: eventsRows[0] });
+      console.log(`✅ Updated event in events table: ${eventsRow.id}`);
+      return c.json({ event: eventsRow });
     }
 
     // 2️⃣ Fallback: event might be stuck in venues table (legacy bug)
@@ -2628,7 +2761,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         start_at: updatePayload.start_at || venueCheck.start_at,
         end_at: updatePayload.end_at || venueCheck.end_at,
         event_schedules:
-          body.event_schedules !== undefined
+          eventBody.event_schedules !== undefined
             ? updatePayload.event_schedules
             : (venueCheck as { event_schedules?: unknown }).event_schedules ?? null,
         ticket_link: updatePayload.ticket_link ?? venueCheck.ticket_link,

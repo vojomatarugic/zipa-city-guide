@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { Calendar, MapPin, Star } from "lucide-react";
+import { Building2, Calendar, Clapperboard, Clock, MapPin } from "lucide-react";
 import { EventCardSkeleton } from "../components/EventCard";
 import { UnderConstruction } from "../components/UnderConstruction";
-import { Clapperboard } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
@@ -33,25 +32,32 @@ function CinemaCard({
   showEventCity?: boolean;
 }) {
   const lang = language === "en" ? "en" : "sr";
-  const title = lang === "sr" ? event.title : (event.title_en || event.title);
-  const isFree = /^(free|besplatn|gratis)/i.test(event.price || '');
-  const eventType = eventService.translateEventType(event.event_type || '', lang);
-  const dateLabel = event.start_at ? eventService.getRelativeDateLabel(event.start_at, lang) : '';
-  const timeLabel = event.start_at ? eventService.formatEventTime(event.start_at, event.end_at, lang) : '';
+  const title = lang === "sr" ? event.title : event.title_en || event.title;
+  const isFree = /^(free|besplatn|gratis)/i.test(event.price || "");
+  const eventType = eventService.translateEventType(
+    event.event_type || "",
+    lang,
+  );
+  const dateLabel = event.start_at
+    ? eventService.getRelativeDateLabel(event.start_at, lang)
+    : "";
+  const timeLabel = event.start_at
+    ? eventService.formatEventTime(event.start_at, event.end_at, lang)
+    : "";
   const venue =
     showEventCity && event.city
       ? event.venue_name || event.address || ""
       : event.venue_name || event.address || event.city || "";
 
-  const showCalendarRow =
-    Boolean(dateLabel) || (showEventCity && Boolean(event.city));
-  let metaCalendarText = "";
-  if (dateLabel) {
-    metaCalendarText = dateLabel + (timeLabel ? ` • ${timeLabel}` : "");
-    if (showEventCity && event.city) metaCalendarText += ` • ${event.city}`;
-  } else if (showEventCity && event.city) {
-    metaCalendarText = event.city;
-  }
+  const otherCityVenueLine = (event.venue_name || event.address || "").trim();
+  const showOtherCityMetaBlock =
+    showEventCity &&
+    Boolean(
+      (event.city && String(event.city).trim()) ||
+      otherCityVenueLine ||
+      dateLabel ||
+      timeLabel,
+    );
 
   return (
     <Link
@@ -60,7 +66,10 @@ function CinemaCard({
       style={{ textDecoration: "none" }}
     >
       <img
-        src={event.image || "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600"}
+        src={
+          event.image ||
+          "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600"
+        }
         alt={title}
         className="w-full object-cover rounded-md"
         style={{ height: imageHeight }}
@@ -84,33 +93,94 @@ function CinemaCard({
             </span>
           )}
         </div>
-        <h3 className="text-base font-semibold mb-2" style={{ color: "#1a1a1a" }}>
+        <h3
+          className="text-base font-semibold mb-2"
+          style={{ color: "#1a1a1a" }}
+        >
           {title}
         </h3>
-        {showCalendarRow && (
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar size={14} style={{ color: "#6B7280" }} />
-            <span className="text-sm" style={{ color: "#6B7280" }}>
-              {metaCalendarText}
-            </span>
-          </div>
-        )}
-        {venue && (
-          <div className="flex items-center gap-2">
-            <MapPin size={14} style={{ color: "#6B7280" }} />
-            <span className="text-sm" style={{ color: "#6B7280" }}>{venue}</span>
-          </div>
+        {showEventCity ? (
+          showOtherCityMetaBlock && (
+            <div className="flex flex-col gap-1">
+              {event.city && String(event.city).trim() ? (
+                <div className="flex items-center gap-2">
+                  <Building2 size={14} style={{ color: "#6B7280" }} />
+                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                    {event.city}
+                  </span>
+                </div>
+              ) : null}
+              {otherCityVenueLine ? (
+                <div className="flex items-center gap-2">
+                  <MapPin size={14} style={{ color: "#6B7280" }} />
+                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                    {otherCityVenueLine}
+                  </span>
+                </div>
+              ) : null}
+              {dateLabel ? (
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} style={{ color: "#6B7280" }} />
+                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                    {dateLabel}
+                  </span>
+                </div>
+              ) : null}
+              {timeLabel ? (
+                <div className="flex items-center gap-2">
+                  <Clock size={14} style={{ color: "#6B7280" }} />
+                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                    {timeLabel}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          )
+        ) : (
+          <>
+            {venue || dateLabel || timeLabel ? (
+              <div className="flex flex-col gap-1">
+                {venue ? (
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} style={{ color: "#6B7280" }} />
+                    <span className="text-sm" style={{ color: "#6B7280" }}>
+                      {venue}
+                    </span>
+                  </div>
+                ) : null}
+                {dateLabel ? (
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} style={{ color: "#6B7280" }} />
+                    <span className="text-sm" style={{ color: "#6B7280" }}>
+                      {dateLabel}
+                    </span>
+                  </div>
+                ) : null}
+                {timeLabel ? (
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} style={{ color: "#6B7280" }} />
+                    <span className="text-sm" style={{ color: "#6B7280" }}>
+                      {timeLabel}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </Link>
   );
 }
 
-function isApprovedCinemaBySlug(e: Item): boolean {
-  return (
-    e.status === "approved" &&
-    String(e.page_slug || "").toLowerCase().trim() === "cinema"
-  );
+function normalizedPageSlug(e: Item): string {
+  return String(e.page_slug || "")
+    .toLowerCase()
+    .trim();
+}
+
+function isApprovedCinemaPageEvent(e: Item): boolean {
+  return e.status === "approved" && normalizedPageSlug(e) === "cinema";
 }
 
 function sortByStartAtAsc(events: Item[]): Item[] {
@@ -121,11 +191,15 @@ function sortByStartAtAsc(events: Item[]): Item[] {
   );
 }
 
-function isActiveThroughNow(e: Item, now: Date): boolean {
-  if (!e.start_at) return false;
-  const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
-  return end >= now;
+/** Other-cities section: not ended — end_at >= now if end_at exists, else start_at >= now */
+function isNotEndedForOtherCitiesRepertoire(e: Item, now: Date): boolean {
+  if (e.end_at) return new Date(e.end_at) >= now;
+  if (e.start_at) return new Date(e.start_at) >= now;
+  return false;
 }
+
+const USKORO_MAX_CARDS = 8;
+const OTHER_CITIES_MAX_CARDS = 4;
 
 export function CinemaPage() {
   const { t } = useT();
@@ -137,45 +211,56 @@ export function CinemaPage() {
   useEffect(() => {
     async function fetchCinema() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents(
-        "all",
-        undefined,
-        undefined,
-        "cinema",
-      );
-      setCinemaEvents(fetched.filter(isApprovedCinemaBySlug));
+      const [bySlug, byType] = await Promise.all([
+        eventService.getEvents("all", undefined, undefined, "cinema"),
+        eventService.getEvents("all", undefined, "cinema"),
+      ]);
+      const byId = new Map<string, Item>();
+      for (const e of [...bySlug, ...byType]) {
+        if (isApprovedCinemaPageEvent(e)) byId.set(e.id, e);
+      }
+      setCinemaEvents([...byId.values()]);
       setIsLoading(false);
     }
     fetchCinema();
   }, []);
 
-  const { nowShowing, comingSoon, otherCities } = useMemo(() => {
+  const { nowShowing, moreFromRepertoire, otherCities } = useMemo(() => {
     const now = new Date();
-    const inSelectedCity = cinemaEvents.filter((e) => e.city === selectedCity);
-    const activeInCity = sortByStartAtAsc(
-      inSelectedCity.filter((e) => isActiveThroughNow(e, now)),
-    );
-    const nowShowing = activeInCity.slice(0, 5);
-    const repertoireIds = new Set(nowShowing.map((e) => e.id));
+    const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const upcomingInCity = sortByStartAtAsc(
-      inSelectedCity.filter(
-        (e) =>
-          e.start_at &&
-          new Date(e.start_at) > now &&
-          !repertoireIds.has(e.id),
-      ),
-    );
-    const comingSoon = upcomingInCity.slice(0, 8);
+    const repertoire = cinemaEvents.filter((e) => {
+      if (!isApprovedCinemaPageEvent(e)) return false;
+      if (e.city !== selectedCity) return false;
+      if (!e.start_at) return false;
+      const start = new Date(e.start_at);
+      return start >= now && start <= weekEnd;
+    });
+    const nowShowing = sortByStartAtAsc(repertoire).slice(0, 5);
 
-    const otherPool = sortByStartAtAsc(
-      cinemaEvents.filter(
-        (e) => e.city && e.city !== selectedCity && isActiveThroughNow(e, now),
-      ),
+    const comingSoon = cinemaEvents.filter((e) => {
+      if (!isApprovedCinemaPageEvent(e)) return false;
+      if (e.city !== selectedCity) return false;
+      if (!e.start_at) return false;
+      const start = new Date(e.start_at);
+      return start > weekEnd;
+    });
+    const moreFromRepertoire = sortByStartAtAsc(comingSoon).slice(
+      0,
+      USKORO_MAX_CARDS,
     );
-    const otherCities = otherPool.slice(0, 4);
 
-    return { nowShowing, comingSoon, otherCities };
+    const otherPool = cinemaEvents.filter((e) => {
+      if (!isApprovedCinemaPageEvent(e)) return false;
+      if (!e.city || e.city === selectedCity) return false;
+      return isNotEndedForOtherCitiesRepertoire(e, now);
+    });
+    const otherCities = sortByStartAtAsc(otherPool).slice(
+      0,
+      OTHER_CITIES_MAX_CARDS,
+    );
+
+    return { nowShowing, moreFromRepertoire, otherCities };
   }, [cinemaEvents, selectedCity]);
 
   useDocumentTitle(listingDocumentTitle(DOC_TITLE_CINEMA, selectedCity));
@@ -201,7 +286,10 @@ export function CinemaPage() {
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
-      <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
+      <section
+        className="relative w-full"
+        style={{ height: "420px", marginTop: 0 }}
+      >
         <img
           src={cinemaHeroImage}
           alt={t("cinema")}
@@ -209,7 +297,10 @@ export function CinemaPage() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(rgba(0, 137, 123, 0.5), rgba(0, 0, 0, 0.7))" }}
+          style={{
+            background:
+              "linear-gradient(rgba(0, 137, 123, 0.5), rgba(0, 0, 0, 0.7))",
+          }}
         />
         <div className="relative z-10 h-full flex flex-col justify-center items-center px-8 lg:px-24">
           <h1
@@ -218,7 +309,8 @@ export function CinemaPage() {
               fontSize: "42px",
               fontWeight: 700,
               color: "#FFFFFF",
-              textShadow: "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
             }}
           >
             {t("cinemaPageHero")}
@@ -228,7 +320,8 @@ export function CinemaPage() {
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
-              textShadow: "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
             }}
           >
             {language === "sr"
@@ -239,11 +332,19 @@ export function CinemaPage() {
       </section>
 
       {/* NOW SHOWING */}
-      <section className="py-16 overflow-hidden" style={{ background: "#FFFFFF" }}>
+      <section
+        className="py-16 overflow-hidden"
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left"
-            style={{ fontSize: "24px", fontWeight: 600, color: "#00897B", marginBottom: "24px" }}
+            style={{
+              fontSize: "24px",
+              fontWeight: 600,
+              color: "#00897B",
+              marginBottom: "24px",
+            }}
           >
             {language === "sr" ? "Repertoar" : "Now Showing"}
           </h2>
@@ -253,16 +354,31 @@ export function CinemaPage() {
               <EventCardSkeleton count={5} imageHeight="300px" />
             ) : nowShowing.length > 0 ? (
               nowShowing.map((event) => (
-                <CinemaCard key={event.id} event={event} language={language} imageHeight="300px" />
+                <CinemaCard
+                  key={event.id}
+                  event={event}
+                  language={language}
+                  imageHeight="300px"
+                />
               ))
             ) : (
               <div className="col-span-5">
-                <UnderConstruction language={language} accentColor="#00897B" icon={Clapperboard} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#00897B"
+                  icon={Clapperboard}
+                />
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "40px",
+            }}
+          >
             <Link
               to="/cinema/all"
               style={{
@@ -284,23 +400,39 @@ export function CinemaPage() {
         </div>
       </section>
 
-      {/* COMING SOON */}
+      {/* UPCOMING EVENTS */}
       <section className="py-16" style={{ background: "#E0F2F1" }}>
         <div className="w-[60vw] mx-auto">
           <h2
-            style={{ fontSize: "24px", fontWeight: 600, color: "#00897B", marginBottom: "24px" }}
+            style={{
+              fontSize: "24px",
+              fontWeight: 600,
+              color: "#00897B",
+              marginBottom: "24px",
+            }}
           >
             {language === "sr" ? "Uskoro u bioskopu" : "Coming Soon"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {comingSoon.length > 0 ? (
-              comingSoon.map((event) => (
-                <CinemaCard key={event.id} event={event} language={language} imageHeight="400px" />
+            {isLoading ? (
+              <EventCardSkeleton count={4} imageHeight="400px" />
+            ) : moreFromRepertoire.length > 0 ? (
+              moreFromRepertoire.map((event) => (
+                <CinemaCard
+                  key={event.id}
+                  event={event}
+                  language={language}
+                  imageHeight="400px"
+                />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor="#00897B" icon={Clapperboard} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#00897B"
+                  icon={Clapperboard}
+                />
               </div>
             )}
           </div>
@@ -312,7 +444,12 @@ export function CinemaPage() {
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left"
-            style={{ fontSize: "24px", fontWeight: 600, color: "#00897B", marginBottom: "24px" }}
+            style={{
+              fontSize: "24px",
+              fontWeight: 600,
+              color: "#00897B",
+              marginBottom: "24px",
+            }}
           >
             {language === "sr"
               ? "Bioskopski repertoar iz drugih gradova"
@@ -332,7 +469,11 @@ export function CinemaPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor="#00897B" icon={Clapperboard} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#00897B"
+                  icon={Clapperboard}
+                />
               </div>
             )}
           </div>
