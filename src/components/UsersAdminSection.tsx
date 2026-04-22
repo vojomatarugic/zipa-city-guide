@@ -10,7 +10,9 @@ import { apiUrl } from '../config/apiBase';
 import { supabase } from '../utils/authService';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
+import { adminAccordionCountBadgeClass } from '../utils/adminAccordionBadgeClasses';
 import { formatDate as formatAppDate, formatDateTime as formatAppDateTime } from '../utils/dateFormat';
+import * as eventService from '../utils/eventService';
 type ProfileRole = 'user' | 'admin' | 'master_admin';
 
 interface User {
@@ -36,6 +38,8 @@ interface UserSubmission {
   status: string;
   created_at: string;
   start_at?: string;
+  end_at?: string | null;
+  event_schedules?: unknown;
   image?: string;
   address?: string;
   city?: string;
@@ -89,6 +93,9 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
 
   // Sort state for regular users
   const [regularUserSort, setRegularUserSort] = useState<'created_desc' | 'created_asc' | 'active_desc' | 'active_asc' | 'name_asc' | 'name_desc'>('active_desc');
+
+  /** Collapsible section (default closed), same pattern as Admin “Lista objekata”. */
+  const [usersSectionExpanded, setUsersSectionExpanded] = useState(false);
 
   // ConfirmDialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -296,13 +303,17 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
 
   const getSubmissionActive = (submission: UserSubmission) => {
     if (submission.status !== 'approved') return false;
-    if (submission._kind === 'event') return !inactiveEventIds.has(submission.id);
+    if (submission._kind === 'event') {
+      return !inactiveEventIds.has(submission.id) && !eventService.isEventExpired(submission);
+    }
     if (submission._kind === 'venue') return !inactiveVenueIds.has(submission.id);
     const normalized = (submission.page_slug || '').toLowerCase();
     const looksEvent =
       !!submission.event_type ||
       ['events', 'event', 'exhibition', 'concerts', 'cinema', 'theatre'].includes(normalized);
-    return looksEvent ? !inactiveEventIds.has(submission.id) : !inactiveVenueIds.has(submission.id);
+    return looksEvent
+      ? !inactiveEventIds.has(submission.id) && !eventService.isEventExpired(submission)
+      : !inactiveVenueIds.has(submission.id);
   };
 
   const getStatusLabel = (status: string) => {
@@ -546,101 +557,109 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-4">
-          <Users className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-          <h2 className="text-xl font-semibold">{t('users')}</h2>
-        </div>
-        <p className="text-gray-500">{t('loading')}...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-4">
-          <Users className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-          <h2 className="text-xl font-semibold">{t('users')}</h2>
-        </div>
-        <p className="text-red-600">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <div className="flex items-center gap-3 mb-4">
-        <Users className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-        <h2 className="text-xl font-semibold">{t('users')}</h2>
-        <span className="text-sm font-medium px-3 py-1 rounded-full bg-blue-50 text-blue-700">
-          {users.length}
-        </span>
+      <div className={`flex w-full min-w-0 items-center gap-3 flex-wrap ${usersSectionExpanded ? 'mb-4' : 'mb-0'}`}>
+        <button
+          type="button"
+          onClick={() => setUsersSectionExpanded((v) => !v)}
+          className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Users className="w-6 h-6 shrink-0" style={{ color: 'var(--primary)' }} aria-hidden />
+            <h2 className="m-0 min-w-0 text-xl font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+              {t('users')}
+            </h2>
+            {!isLoading && (
+              <span className={adminAccordionCountBadgeClass('blue')}>{users.length}</span>
+            )}
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setUsersSectionExpanded((v) => !v)}
+          className="flex shrink-0 items-center justify-center rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
+          aria-expanded={usersSectionExpanded}
+        >
+          {usersSectionExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400 shrink-0" aria-hidden />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400 shrink-0" aria-hidden />
+          )}
+        </button>
       </div>
 
-      {/* ===== ADMIN GROUP ===== */}
-      {adminUsers.length > 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Crown className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-bold text-amber-700 uppercase tracking-wider">
-              {language === 'sr' ? 'Administratori' : 'Administrators'}
-            </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-              {adminUsers.length}
-            </span>
-            <div className="flex-1 h-px bg-amber-200 ml-2"></div>
-          </div>
-          <div className="space-y-3">
-            {adminUsers.map((user) => renderUserCard(user))}
-          </div>
-        </div>
+      {usersSectionExpanded && (
+        <>
+          {isLoading ? (
+            <p className="text-gray-500">{t('loading')}...</p>
+          ) : error ? (
+            <p className="text-red-600">{error}</p>
+          ) : (
+            <>
+              {/* ===== ADMIN GROUP ===== */}
+              {adminUsers.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <Crown className="w-4 h-4 shrink-0 text-[#C9A227]" strokeWidth={2} aria-hidden />
+                    <span className="text-sm font-bold text-neutral-900 uppercase tracking-wider">
+                      {language === 'sr' ? 'Administratori' : 'Administrators'}
+                    </span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-900 text-[#E8C547] border border-[#C9A227]/70 tabular-nums">
+                      {adminUsers.length}
+                    </span>
+                    <div className="flex-1 h-px bg-gradient-to-r from-[#C9A227] via-[#C9A227]/40 to-transparent ml-2" />
+                  </div>
+                  <div className="space-y-3">
+                    {adminUsers.map((user) => renderUserCard(user))}
+                  </div>
+                </div>
+              )}
+
+              {/* ===== REGULAR USERS GROUP ===== */}
+              {regularUsers.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <Users className="w-4 h-4 text-gray-500" aria-hidden />
+                    <span className="text-sm font-bold text-gray-600 uppercase tracking-wider">
+                      {language === 'sr' ? 'Korisnici' : 'Users'}
+                    </span>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                      {regularUsers.length}
+                    </span>
+                    <div className="flex-1 h-px bg-gray-200 ml-2" />
+                    <div className="flex items-center gap-1 ml-2">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" aria-hidden />
+                      <select
+                        value={regularUserSort}
+                        onChange={(e) => setRegularUserSort(e.target.value as typeof regularUserSort)}
+                        className="text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300"
+                      >
+                        <option value="created_desc">{language === 'sr' ? 'Najnoviji prvo' : 'Newest first'}</option>
+                        <option value="created_asc">{language === 'sr' ? 'Najstariji prvo' : 'Oldest first'}</option>
+                        <option value="active_desc">{language === 'sr' ? 'Zadnja aktivnost ↓' : 'Last active ↓'}</option>
+                        <option value="active_asc">{language === 'sr' ? 'Zadnja aktivnost ↑' : 'Last active ↑'}</option>
+                        <option value="name_asc">{language === 'sr' ? 'Ime A-Z' : 'Name A-Z'}</option>
+                        <option value="name_desc">{language === 'sr' ? 'Ime Z-A' : 'Name Z-A'}</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {regularUsers.map((user) => renderUserCard(user))}
+                  </div>
+                </div>
+              )}
+
+              {users.length === 0 && (
+                <p className="text-center text-gray-500 py-8">
+                  {t('noUsersRegistered')}
+                </p>
+              )}
+            </>
+          )}
+        </>
       )}
 
-      {/* ===== REGULAR USERS GROUP ===== */}
-      {regularUsers.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Users className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-bold text-gray-600 uppercase tracking-wider">
-              {language === 'sr' ? 'Korisnici' : 'Users'}
-            </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-              {regularUsers.length}
-            </span>
-            <div className="flex-1 h-px bg-gray-200 ml-2"></div>
-            {/* Sort controls */}
-            <div className="flex items-center gap-1 ml-2">
-              <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
-              <select
-                value={regularUserSort}
-                onChange={(e) => setRegularUserSort(e.target.value as typeof regularUserSort)}
-                className="text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300"
-              >
-                <option value="created_desc">{language === 'sr' ? 'Najnoviji prvo' : 'Newest first'}</option>
-                <option value="created_asc">{language === 'sr' ? 'Najstariji prvo' : 'Oldest first'}</option>
-                <option value="active_desc">{language === 'sr' ? 'Zadnja aktivnost ↓' : 'Last active ↓'}</option>
-                <option value="active_asc">{language === 'sr' ? 'Zadnja aktivnost ↑' : 'Last active ↑'}</option>
-                <option value="name_asc">{language === 'sr' ? 'Ime A-Z' : 'Name A-Z'}</option>
-                <option value="name_desc">{language === 'sr' ? 'Ime Z-A' : 'Name Z-A'}</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {regularUsers.map((user) => renderUserCard(user))}
-          </div>
-        </div>
-      )}
-
-      {users.length === 0 && (
-        <p className="text-center text-gray-500 py-8">
-          {t('noUsersRegistered')}
-        </p>
-      )}
-
-      {/* Confirm Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
@@ -665,9 +684,11 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-semibold text-lg">{getUserDisplayName(user)}</h3>
+                <div className="font-semibold text-lg" style={{ color: '#DC2626' }}>
+                  {getUserDisplayName(user)}
+                </div>
                 {user.role === 'master_admin' ? (
-                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-neutral-900 text-[#E8C547] border border-[#C9A227]/70">
                     Master Admin
                   </span>
                 ) : user.role === 'admin' ? (
@@ -725,8 +746,8 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
             <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b border-gray-200">
               {!isSelf &&
                 (user.role === 'master_admin' ? (
-                  <span className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm font-medium">
-                    <ShieldCheck className="w-4 h-4" />
+                  <span className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-neutral-900 text-[#E8C547] border border-[#C9A227]/60">
+                    <ShieldCheck className="w-4 h-4 text-[#C9A227]" aria-hidden />
                     Master Admin
                   </span>
                 ) : (

@@ -20,6 +20,7 @@ import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminDocumentTitle } from '../utils/documentTitle';
 import { pluralize } from '../utils/pluralize';
+import { adminAccordionCountBadgeClass } from '../utils/adminAccordionBadgeClasses';
 
 const PLURAL_OBJEKAT_VENUE = {
   sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
@@ -275,6 +276,13 @@ export function AdminPage() {
     const currentlyInactive = inactiveEventIds.has(id);
     if (makeActive && !currentlyInactive) return;
     if (!makeActive && currentlyInactive) return;
+    if (makeActive) {
+      const target = events.find(e => e.id === id);
+      if (target && eventService.isEventExpired(target)) {
+        toast.error(language === 'sr' ? 'Istekao događaj ne može biti aktivan.' : 'Expired event cannot be active.');
+        return;
+      }
+    }
     
     setTogglingEventActive(id);
     try {
@@ -372,6 +380,11 @@ export function AdminPage() {
     if (filter === 'inactive') return submission.status === 'approved' && inactiveVenueIds.has(submission.id);
     return submission.status === filter;
   });
+
+  /** Approved venues marked inactive (kv_store), same as Neaktivni tab. */
+  const inactiveVenuesCount = submissions.filter(
+    (v) => v.status === 'approved' && inactiveVenueIds.has(v.id)
+  ).length;
 
   // Calculate submissions created this week
   const getSubmissionsThisWeek = () => {
@@ -502,9 +515,10 @@ export function AdminPage() {
   };
 
   const filteredEvents = events.filter(event => {
+    const isInactive = inactiveEventIds.has(event.id) || eventService.isEventExpired(event);
     if (eventFilter === 'all') return true;
-    if (eventFilter === 'active') return event.status === 'approved' && !inactiveEventIds.has(event.id);
-    if (eventFilter === 'inactive') return event.status === 'approved' && inactiveEventIds.has(event.id);
+    if (eventFilter === 'active') return event.status === 'approved' && !isInactive;
+    if (eventFilter === 'inactive') return event.status === 'approved' && isInactive;
     return event.status === eventFilter;
   });
 
@@ -512,8 +526,8 @@ export function AdminPage() {
     all: events.length,
     pending: events.filter(e => e.status === 'pending').length,
     approved: events.filter(e => e.status === 'approved').length,
-    active: events.filter(e => e.status === 'approved' && !inactiveEventIds.has(e.id)).length,
-    inactive: events.filter(e => e.status === 'approved' && inactiveEventIds.has(e.id)).length,
+    active: events.filter(e => e.status === 'approved' && !(inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length,
+    inactive: events.filter(e => e.status === 'approved' && (inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length,
   };
 
   useEffect(() => {
@@ -1228,9 +1242,22 @@ export function AdminPage() {
                 onClick={() => setVenuesListExpanded((v) => !v)}
                 className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
               >
-                <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                  {t('venuesList')}
-                </h2>
+                <div className="flex items-center gap-3 min-w-0">
+                  <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                    {t('venuesList')}
+                  </h2>
+                  {!isLoadingData && (
+                    <>
+                      <span className={adminAccordionCountBadgeClass('blue')}>{submissions.length}</span>
+                      <span
+                        className={adminAccordionCountBadgeClass('red')}
+                        title={language === 'sr' ? 'Neaktivni objekti (odobreni)' : 'Inactive venues (approved)'}
+                      >
+                        {inactiveVenuesCount}
+                      </span>
+                    </>
+                  )}
+                </div>
               </button>
               {venuesListExpanded && filteredSubmissions.length > 0 && (
                 <div className="flex shrink-0 items-center gap-3">
@@ -1440,7 +1467,7 @@ export function AdminPage() {
                               <Link
                                 to={detailHref}
                                 className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
-                                style={{ color: 'inherit', textDecorationColor: '#0E3DC5', textUnderlineOffset: '2px' }}
+                                style={{ color: '#DC2626', textDecorationColor: '#DC2626', textUnderlineOffset: '2px' }}
                               >
                                 {submissionTitle}
                               </Link>
@@ -1602,9 +1629,22 @@ export function AdminPage() {
                 onClick={() => setEventsListExpanded((v) => !v)}
                 className="flex min-w-0 flex-1 items-center text-left rounded-lg px-1 py-1 -mx-1 hover:bg-gray-50 cursor-pointer transition-colors border-0 bg-transparent"
               >
-                <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                  {t('eventsList')}
-                </h2>
+                <div className="flex items-center gap-3 min-w-0">
+                  <h2 className="m-0 min-w-0 font-bold" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                    {t('eventsList')}
+                  </h2>
+                  {!eventsLoading && (
+                    <>
+                      <span className={adminAccordionCountBadgeClass('blue')}>{events.length}</span>
+                      <span
+                        className={adminAccordionCountBadgeClass('red')}
+                        title={language === 'sr' ? 'Neaktivna dešavanja (odobrena)' : 'Inactive events (approved)'}
+                      >
+                        {eventTabCounts.inactive}
+                      </span>
+                    </>
+                  )}
+                </div>
               </button>
               {eventsListExpanded && filteredEvents.length > 0 && (
                 <div className="flex shrink-0 items-center gap-3">
@@ -1753,7 +1793,7 @@ export function AdminPage() {
                   color: eventFilter === 'active' ? '#16A34A' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Aktivni' : 'Active'} ({events.filter(e => e.status === 'approved' && !inactiveEventIds.has(e.id)).length})
+                {language === 'sr' ? 'Aktivni' : 'Active'} ({events.filter(e => e.status === 'approved' && !(inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length})
               </button>
               <button
                 onClick={() => setEventFilter('inactive')}
@@ -1764,7 +1804,7 @@ export function AdminPage() {
                   color: eventFilter === 'inactive' ? '#DC2626' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({events.filter(e => e.status === 'approved' && inactiveEventIds.has(e.id)).length})
+                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({events.filter(e => e.status === 'approved' && (inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length})
               </button>
             </div>
 
@@ -1813,7 +1853,7 @@ export function AdminPage() {
                               <Link
                                 to={detailHref}
                                 className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
-                                style={{ color: 'inherit', textDecorationColor: '#0E3DC5', textUnderlineOffset: '2px' }}
+                                style={{ color: '#DC2626', textDecorationColor: '#DC2626', textUnderlineOffset: '2px' }}
                               >
                                 {eventTitle}
                               </Link>
@@ -1823,11 +1863,10 @@ export function AdminPage() {
                             </span>
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if expired/inactive) */}
                             {(() => {
-                              const isExpired =
-                                event.start_at &&
-                                new Date(event.end_at || event.start_at) < new Date();
-                              const isEventActive = !inactiveEventIds.has(event.id);
-                              const isFullyActive = isEventActive && !isExpired;
+                              const isExpired = eventService.isEventExpired(event);
+                              const isManuallyInactive = inactiveEventIds.has(event.id);
+                              const isEventInactive = isManuallyInactive || isExpired;
+                              const isFullyActive = !isEventInactive;
                               const isPendingInAllTab = eventFilter === 'all' && event.status === 'pending';
                               return (
                                 <>
@@ -1851,14 +1890,15 @@ export function AdminPage() {
                                     <div className="inline-flex">
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleToggleEventActive(event.id, true); }}
-                                        disabled={togglingEventActive === event.id}
+                                        disabled={togglingEventActive === event.id || isExpired}
                                         className={`${topBadgeBaseClass} rounded-r-none border`}
+                                        title={isExpired ? (language === 'sr' ? 'Istekao događaj ne može biti aktivan' : 'Expired event cannot be active') : undefined}
                                         style={{
-                                          background: isEventActive ? '#F0FDF4' : '#F3F4F6',
-                                          borderColor: isEventActive ? '#86EFAC' : '#D1D5DB',
-                                          color: isEventActive ? '#16A34A' : '#9CA3AF',
-                                          opacity: togglingEventActive === event.id ? 0.5 : 1,
-                                          cursor: togglingEventActive === event.id ? 'not-allowed' : 'pointer',
+                                          background: !isEventInactive ? '#F0FDF4' : '#F3F4F6',
+                                          borderColor: !isEventInactive ? '#86EFAC' : '#D1D5DB',
+                                          color: !isEventInactive ? '#16A34A' : '#9CA3AF',
+                                          opacity: (togglingEventActive === event.id || isExpired) ? 0.5 : 1,
+                                          cursor: (togglingEventActive === event.id || isExpired) ? 'not-allowed' : 'pointer',
                                         }}
                                       >
                                         {language === 'sr' ? 'Aktivan' : 'Active'}
@@ -1868,9 +1908,9 @@ export function AdminPage() {
                                         disabled={togglingEventActive === event.id}
                                         className={`${topBadgeBaseClass} rounded-l-none border border-l-0`}
                                         style={{
-                                          background: !isEventActive ? '#FEF2F2' : '#F3F4F6',
-                                          borderColor: !isEventActive ? '#FCA5A5' : '#D1D5DB',
-                                          color: !isEventActive ? '#DC2626' : '#9CA3AF',
+                                          background: isEventInactive ? '#FEF2F2' : '#F3F4F6',
+                                          borderColor: isEventInactive ? '#FCA5A5' : '#D1D5DB',
+                                          color: isEventInactive ? '#DC2626' : '#9CA3AF',
                                           opacity: togglingEventActive === event.id ? 0.5 : 1,
                                           cursor: togglingEventActive === event.id ? 'not-allowed' : 'pointer',
                                         }}

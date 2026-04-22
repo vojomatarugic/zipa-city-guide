@@ -21,6 +21,8 @@ type Props = {
   className?: string;
   /** Hero / dark backgrounds */
   variant?: 'default' | 'onDark';
+  /** Optional custom text color for default badges. */
+  textColor?: string;
   /**
    * Venue detail heroes: cuisine + oznaka only; render venue_type separately via {@link VenueHeroVenueTypeLabel}.
    */
@@ -79,6 +81,7 @@ export function VenueBadgeRow({
   className,
   variant = 'default',
   cuisineOnly = false,
+  textColor,
 }: Props) {
   const labels = cuisineOnly
     ? buildVenueHeroSecondaryBadgeLabels({ cuisine, cuisine_en, tags, lang: language })
@@ -106,7 +109,13 @@ export function VenueBadgeRow({
                   : CLASS_CUISINE
                 : 'text-xs font-medium px-2 py-1 rounded'
             }
-            style={variant === 'onDark' ? BADGE_ON_DARK : undefined}
+            style={
+              variant === 'onDark'
+                ? BADGE_ON_DARK
+                : textColor
+                  ? { color: textColor }
+                  : undefined
+            }
           >
             {text}
           </span>
