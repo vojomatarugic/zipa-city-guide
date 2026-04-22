@@ -8,6 +8,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": false,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "vaul@1.1.2": ["./node_modules/vaul"],

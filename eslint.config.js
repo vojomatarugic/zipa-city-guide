@@ -3,6 +3,9 @@ import globals from 'globals';
 import react from 'eslint-plugin-react';
 
 export default [
+  {
+    ignores: ['build/**'],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx}'],

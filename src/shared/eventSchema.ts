@@ -201,7 +201,7 @@ export function mapFormModelToEventApiPayload(form: EventFormModel): EventApiPay
 
 export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
   const rowPrice = row.price || '';
-  const ext = row as Record<string, unknown>;
+  const ext = row as unknown as Record<string, unknown>;
   const categoryStr = normalizeEventCategoryValue(ext['category'] ?? ext['Category']) ?? '';
   return {
     eventType: sanitizeEventType(row.event_type || ''),
@@ -226,12 +226,12 @@ export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
 }
 
 export function mapDbRowToUiEvent(row: EventDbRow): EventDbRow {
-  const ext = row as Record<string, unknown>;
+  const ext = row as unknown as Record<string, unknown>;
   const category = normalizeEventCategoryValue(ext['category'] ?? ext['Category']);
   const { Category: _legacyCategory, ...rowWithoutLegacyCategory } = ext;
 
   return {
-    ...(rowWithoutLegacyCategory as EventDbRow),
+    ...(rowWithoutLegacyCategory as unknown as EventDbRow),
     event_schedules: normalizeEventSchedulesInput(row.event_schedules),
     category,
   };

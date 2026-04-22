@@ -1026,7 +1026,7 @@ export function MyPanelPage() {
                     const typeLabel =
                       (typeKey ? t(typeKey) : '') ||
                       typeSource ||
-                      t('categoryFoodAndDrink');
+                      t('foodAndDrink');
                     return (
                       <div
                         key={venue.id}
@@ -1373,7 +1373,7 @@ export function MyPanelPage() {
                             {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
                             {eventLocation && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{eventLocation}</span>}
                             {eventDateLabel && <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{eventDateLabel}</span>}
-                            {(event.organizerName || event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{(event as any).organizerName || event.organizer_name || event.contact_name}</span>}
+                            {(((event as unknown as Record<string, unknown>).organizerName as string | undefined) || event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{((event as unknown as Record<string, unknown>).organizerName as string | undefined) || event.organizer_name || event.contact_name}</span>}
                             {event.organizer_phone && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{event.organizer_phone}</span>}
                             {event.organizer_email && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{event.organizer_email}</span>}
                           </div>

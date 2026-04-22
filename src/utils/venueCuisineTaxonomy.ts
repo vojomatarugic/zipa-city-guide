@@ -23,7 +23,7 @@ export const VENUE_CUISINE_ROWS = [
   { sr: 'Veganska', en: 'Vegan' },
 ] as const;
 
-const SR_SET = new Set(VENUE_CUISINE_ROWS.map((r) => r.sr));
+const SR_SET: Set<string> = new Set(VENUE_CUISINE_ROWS.map((r) => r.sr));
 
 const SR_BY_NORMAL = new Map<string, string>();
 const EN_BY_NORMAL = new Map<string, string>();
