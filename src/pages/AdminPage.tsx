@@ -21,6 +21,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminDocumentTitle } from '../utils/documentTitle';
 import { pluralize } from '../utils/pluralize';
 import { adminAccordionCountBadgeClass } from '../utils/adminAccordionBadgeClasses';
+import { getLocalizedEventCategory } from '../config/eventCategories';
+import { EVENT_DETAIL_THEMES, EVENTS_CATEGORY_THEME } from '../utils/categoryThemes';
 
 const PLURAL_OBJEKAT_VENUE = {
   sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
@@ -61,6 +63,7 @@ interface Event {
   title: string;
   title_en?: string;
   event_type?: string;
+  category?: string | null;
   venue_name?: string;
   start_at?: string | null;
   end_at?: string | null;
@@ -119,6 +122,7 @@ export function AdminPage() {
 
   // Venues state
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'active' | 'inactive'>('all');
+  const [venueTypeFilter, setVenueTypeFilter] = useState<string>('all');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -130,6 +134,7 @@ export function AdminPage() {
   
   // Events state
   const [eventFilter, setEventFilter] = useState<'all' | 'pending' | 'approved' | 'active' | 'inactive'>('all');
+  const [eventCategoryFilter, setEventCategoryFilter] = useState<'all' | 'other' | 'theatre' | 'cinema' | 'concerts'>('all');
   const [events, setEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [deleteEventConfirmId, setDeleteEventConfirmId] = useState<string | null>(null);
@@ -374,12 +379,41 @@ export function AdminPage() {
     }
   };
 
-  const filteredSubmissions = submissions.filter(submission => {
+  const statusFilteredSubmissions = submissions.filter(submission => {
     if (filter === 'all') return true;
     if (filter === 'active') return submission.status === 'approved' && !inactiveVenueIds.has(submission.id);
     if (filter === 'inactive') return submission.status === 'approved' && inactiveVenueIds.has(submission.id);
     return submission.status === filter;
   });
+
+  const getSubmissionVenueTypeValue = (submission: Submission): string => {
+    const raw = (submission.venue_type || submission.page_slug || '').toString().trim().toLowerCase();
+    return raw || 'other';
+  };
+
+  const venueTypeFilterOptions = Array.from(
+    new Set(statusFilteredSubmissions.map(getSubmissionVenueTypeValue))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const filteredSubmissions = statusFilteredSubmissions.filter((submission) => {
+    if (venueTypeFilter === 'all') return true;
+    return getSubmissionVenueTypeValue(submission) === venueTypeFilter;
+  });
+
+  const venueStatusTabCounts = {
+    all: submissions.length,
+    pending: submissions.filter((v) => v.status === 'pending').length,
+    approved: submissions.filter((v) => v.status === 'approved').length,
+    active: submissions.filter((v) => v.status === 'approved' && !inactiveVenueIds.has(v.id)).length,
+    inactive: submissions.filter((v) => v.status === 'approved' && inactiveVenueIds.has(v.id)).length,
+  };
+
+  const eventCategoryAccent = {
+    other: EVENTS_CATEGORY_THEME.accentColor,
+    theatre: EVENT_DETAIL_THEMES.theatre.primary,
+    cinema: EVENT_DETAIL_THEMES.cinema.primary,
+    concerts: EVENT_DETAIL_THEMES.concerts.primary,
+  } as const;
 
   /** Approved venues marked inactive (kv_store), same as Neaktivni tab. */
   const inactiveVenuesCount = submissions.filter(
@@ -399,6 +433,10 @@ export function AdminPage() {
   // Format date based on language
   const formatDate = (dateStr: string) => {
     return formatAppDate(dateStr, language === 'en' ? 'en' : 'sr');
+  };
+
+  const getVenueTypeLabel = (venueTypeLike: string) => {
+    return t(('venueType' + venueTypeLike.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')) as any);
   };
 
   const getVenueDetailHref = (submission: Submission): string => {
@@ -514,12 +552,23 @@ export function AdminPage() {
     }
   };
 
-  const filteredEvents = events.filter(event => {
+  const getEventCategoryGroup = (event: Pick<Event, 'event_type' | 'page_slug'>): 'other' | 'theatre' | 'cinema' | 'concerts' => {
+    const slug = getCanonicalEventPageSlug(event.event_type, event.page_slug);
+    if (slug === 'theatre' || slug === 'cinema' || slug === 'concerts') return slug;
+    return 'other';
+  };
+
+  const statusFilteredEvents = events.filter(event => {
     const isInactive = inactiveEventIds.has(event.id) || eventService.isEventExpired(event);
     if (eventFilter === 'all') return true;
     if (eventFilter === 'active') return event.status === 'approved' && !isInactive;
     if (eventFilter === 'inactive') return event.status === 'approved' && isInactive;
     return event.status === eventFilter;
+  });
+
+  const filteredEvents = statusFilteredEvents.filter((event) => {
+    if (eventCategoryFilter === 'all') return true;
+    return getEventCategoryGroup(event) === eventCategoryFilter;
   });
 
   const eventTabCounts = {
@@ -530,12 +579,20 @@ export function AdminPage() {
     inactive: events.filter(e => e.status === 'approved' && (inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length,
   };
 
+  const eventCategoryTabCounts = {
+    all: statusFilteredEvents.length,
+    other: statusFilteredEvents.filter((e) => getEventCategoryGroup(e) === 'other').length,
+    theatre: statusFilteredEvents.filter((e) => getEventCategoryGroup(e) === 'theatre').length,
+    cinema: statusFilteredEvents.filter((e) => getEventCategoryGroup(e) === 'cinema').length,
+    concerts: statusFilteredEvents.filter((e) => getEventCategoryGroup(e) === 'concerts').length,
+  };
+
   useEffect(() => {
     // Focused regression debug: track where list size changes.
     console.log(
       `[Admin][EventsDebug] raw=${events.length} mapped=${events.length} tabCounts=${JSON.stringify(eventTabCounts)} currentFilter=${eventFilter} filteredVisible=${filteredEvents.length}`
     );
-  }, [events, eventFilter, inactiveEventIds, filteredEvents.length, eventTabCounts.active, eventTabCounts.all, eventTabCounts.approved, eventTabCounts.inactive, eventTabCounts.pending]);
+  }, [events, eventFilter, eventCategoryFilter, inactiveEventIds, filteredEvents.length, eventTabCounts.active, eventTabCounts.all, eventTabCounts.approved, eventTabCounts.inactive, eventTabCounts.pending]);
 
   // Calculate events created this week
   const getEventsThisWeek = () => {
@@ -1363,6 +1420,34 @@ export function AdminPage() {
             {venuesListExpanded && (
             <>
             {/* Filteri za objekte */}
+            <div className="flex flex-wrap gap-3 mb-3">
+              <button
+                onClick={() => setVenueTypeFilter('all')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  venueTypeFilter === 'all' ? 'border-blue-400 bg-blue-50' : 'bg-white'
+                }`}
+                style={{
+                  color: venueTypeFilter === 'all' ? 'var(--blue-primary)' : 'var(--text-primary)'
+                }}
+              >
+                {language === 'sr' ? 'Svi tipovi' : 'All types'} ({statusFilteredSubmissions.length})
+              </button>
+              {venueTypeFilterOptions.map((venueType) => (
+                <button
+                  key={venueType}
+                  onClick={() => setVenueTypeFilter(venueType)}
+                  className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                    venueTypeFilter === venueType ? 'border-indigo-400 bg-indigo-50' : 'bg-white'
+                  }`}
+                  style={{
+                    color: venueTypeFilter === venueType ? '#4F46E5' : 'var(--text-primary)'
+                  }}
+                >
+                  {getVenueTypeLabel(venueType)} ({statusFilteredSubmissions.filter((v) => getSubmissionVenueTypeValue(v) === venueType).length})
+                </button>
+              ))}
+            </div>
+
             <div className="flex flex-wrap gap-3 mb-5">
               <button
                 onClick={() => setFilter('all')}
@@ -1373,7 +1458,7 @@ export function AdminPage() {
                   color: filter === 'all' ? 'var(--blue-primary)' : 'var(--text-primary)'
                 }}
               >
-                {t('all')} ({submissions.length})
+                {t('all')} ({venueStatusTabCounts.all})
               </button>
               <button
                 onClick={() => setFilter('pending')}
@@ -1384,7 +1469,7 @@ export function AdminPage() {
                   color: filter === 'pending' ? 'var(--accent-orange)' : 'var(--text-primary)'
                 }}
               >
-                {t('pending')} ({submissions.filter(v => v.status === 'pending').length})
+                {t('pending')} ({venueStatusTabCounts.pending})
               </button>
               <button
                 onClick={() => setFilter('approved')}
@@ -1395,7 +1480,7 @@ export function AdminPage() {
                   color: filter === 'approved' ? '#059669' : 'var(--text-primary)'
                 }}
               >
-                {t('approved')} ({submissions.filter(v => v.status === 'approved').length})
+                {t('approved')} ({venueStatusTabCounts.approved})
               </button>
               <button
                 onClick={() => setFilter('active')}
@@ -1406,7 +1491,7 @@ export function AdminPage() {
                   color: filter === 'active' ? '#16A34A' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Aktivni' : 'Active'} ({submissions.filter(v => v.status === 'approved' && !inactiveVenueIds.has(v.id)).length})
+                {language === 'sr' ? 'Aktivni' : 'Active'} ({venueStatusTabCounts.active})
               </button>
               <button
                 onClick={() => setFilter('inactive')}
@@ -1417,7 +1502,7 @@ export function AdminPage() {
                   color: filter === 'inactive' ? '#DC2626' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({submissions.filter(v => v.status === 'approved' && inactiveVenueIds.has(v.id)).length})
+                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({venueStatusTabCounts.inactive})
               </button>
             </div>
 
@@ -1473,7 +1558,7 @@ export function AdminPage() {
                               </Link>
                             </h3>
                             <span className={`${topBadgeBaseClass} bg-gray-100`}>
-                              {t(('venueType' + (submission.venue_type || submission.page_slug || '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')) as any)}
+                              {getVenueTypeLabel((submission.venue_type || submission.page_slug || '').toString())}
                             </span>
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if inactive) */}
                             {(() => {
@@ -1750,6 +1835,72 @@ export function AdminPage() {
             {eventsListExpanded && (
             <>
             {/* Filteri za događaje */}
+            <div className="flex flex-wrap gap-3 mb-3">
+              <button
+                onClick={() => setEventCategoryFilter('all')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  eventCategoryFilter === 'all' ? 'border-blue-400 bg-blue-50' : 'bg-white'
+                }`}
+                style={{
+                  color: eventCategoryFilter === 'all' ? 'var(--blue-primary)' : 'var(--text-primary)'
+                }}
+              >
+                {language === 'sr' ? 'Svi tipovi' : 'All types'} ({eventCategoryTabCounts.all})
+              </button>
+              <button
+                onClick={() => setEventCategoryFilter('other')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  eventCategoryFilter === 'other' ? '' : 'bg-white'
+                }`}
+                style={{
+                  background: eventCategoryFilter === 'other' ? `${eventCategoryAccent.other}14` : '#FFFFFF',
+                  borderColor: eventCategoryFilter === 'other' ? `${eventCategoryAccent.other}66` : '#F3F4F6',
+                  color: eventCategoryFilter === 'other' ? eventCategoryAccent.other : 'var(--text-primary)',
+                }}
+              >
+                {language === 'sr' ? 'Ostala dešavanja' : 'Other events'} ({eventCategoryTabCounts.other})
+              </button>
+              <button
+                onClick={() => setEventCategoryFilter('theatre')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  eventCategoryFilter === 'theatre' ? '' : 'bg-white'
+                }`}
+                style={{
+                  background: eventCategoryFilter === 'theatre' ? `${eventCategoryAccent.theatre}14` : '#FFFFFF',
+                  borderColor: eventCategoryFilter === 'theatre' ? `${eventCategoryAccent.theatre}66` : '#F3F4F6',
+                  color: eventCategoryFilter === 'theatre' ? eventCategoryAccent.theatre : 'var(--text-primary)',
+                }}
+              >
+                {language === 'sr' ? 'Pozorište' : 'Theatre'} ({eventCategoryTabCounts.theatre})
+              </button>
+              <button
+                onClick={() => setEventCategoryFilter('cinema')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  eventCategoryFilter === 'cinema' ? '' : 'bg-white'
+                }`}
+                style={{
+                  background: eventCategoryFilter === 'cinema' ? `${eventCategoryAccent.cinema}14` : '#FFFFFF',
+                  borderColor: eventCategoryFilter === 'cinema' ? `${eventCategoryAccent.cinema}66` : '#F3F4F6',
+                  color: eventCategoryFilter === 'cinema' ? eventCategoryAccent.cinema : 'var(--text-primary)',
+                }}
+              >
+                {language === 'sr' ? 'Bioskop' : 'Cinema'} ({eventCategoryTabCounts.cinema})
+              </button>
+              <button
+                onClick={() => setEventCategoryFilter('concerts')}
+                className={`px-4 py-2 rounded-xl border border-gray-100 text-[14px] cursor-pointer transition-all ${
+                  eventCategoryFilter === 'concerts' ? '' : 'bg-white'
+                }`}
+                style={{
+                  background: eventCategoryFilter === 'concerts' ? `${eventCategoryAccent.concerts}14` : '#FFFFFF',
+                  borderColor: eventCategoryFilter === 'concerts' ? `${eventCategoryAccent.concerts}66` : '#F3F4F6',
+                  color: eventCategoryFilter === 'concerts' ? eventCategoryAccent.concerts : 'var(--text-primary)',
+                }}
+              >
+                {language === 'sr' ? 'Koncerti' : 'Concerts'} ({eventCategoryTabCounts.concerts})
+              </button>
+            </div>
+
             <div className="flex flex-wrap gap-3 mb-5">
               <button
                 onClick={() => setEventFilter('all')}
@@ -1760,7 +1911,7 @@ export function AdminPage() {
                   color: eventFilter === 'all' ? 'var(--blue-primary)' : 'var(--text-primary)'
                 }}
               >
-                {t('all')} ({events.length})
+                {t('all')} ({eventTabCounts.all})
               </button>
               <button
                 onClick={() => setEventFilter('pending')}
@@ -1771,7 +1922,7 @@ export function AdminPage() {
                   color: eventFilter === 'pending' ? 'var(--accent-orange)' : 'var(--text-primary)'
                 }}
               >
-                {t('pending')} ({events.filter(e => e.status === 'pending').length})
+                {t('pending')} ({eventTabCounts.pending})
               </button>
               <button
                 onClick={() => setEventFilter('approved')}
@@ -1782,7 +1933,7 @@ export function AdminPage() {
                   color: eventFilter === 'approved' ? '#059669' : 'var(--text-primary)'
                 }}
               >
-                {t('approved')} ({events.filter(e => e.status === 'approved').length})
+                {t('approved')} ({eventTabCounts.approved})
               </button>
               <button
                 onClick={() => setEventFilter('active')}
@@ -1793,7 +1944,7 @@ export function AdminPage() {
                   color: eventFilter === 'active' ? '#16A34A' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Aktivni' : 'Active'} ({events.filter(e => e.status === 'approved' && !(inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length})
+                {language === 'sr' ? 'Aktivni' : 'Active'} ({eventTabCounts.active})
               </button>
               <button
                 onClick={() => setEventFilter('inactive')}
@@ -1804,7 +1955,7 @@ export function AdminPage() {
                   color: eventFilter === 'inactive' ? '#DC2626' : 'var(--text-primary)'
                 }}
               >
-                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({events.filter(e => e.status === 'approved' && (inactiveEventIds.has(e.id) || eventService.isEventExpired(e))).length})
+                {language === 'sr' ? 'Neaktivni' : 'Inactive'} ({eventTabCounts.inactive})
               </button>
             </div>
 
@@ -1817,7 +1968,23 @@ export function AdminPage() {
                 filteredEvents.map((event) => {
                   const isSelected = selectedEventIds.has(event.id);
                   const eventTitle = language === 'en' ? (event.title_en || event.title) : event.title;
-                  const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
+                  const eventScheduleSlots = eventService.getEventScheduleSlots(event as unknown as dataService.Item);
+                  const nowTs = Date.now();
+                  const nextUpcomingSlot = eventScheduleSlots.find((slot) => {
+                    const effectiveTs = new Date(slot.end_at || slot.start_at).getTime();
+                    return !Number.isNaN(effectiveTs) && effectiveTs >= nowTs;
+                  });
+                  const displayStartAt =
+                    nextUpcomingSlot?.start_at ||
+                    eventScheduleSlots[0]?.start_at ||
+                    event.start_at ||
+                    null;
+                  const eventTypeBadgeLabel = (() => {
+                    const category = (event.category || '').trim();
+                    if (category) return getLocalizedEventCategory(category, language);
+                    return t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
+                  })();
+                  const eventVenueBadgeLabel = (event.venue_name || event.address || '').trim();
                   const detailHref = getEventDetailHref(event as { id: string; event_type?: string; page_slug?: string });
                   return (
                   <div
@@ -1858,9 +2025,16 @@ export function AdminPage() {
                                 {eventTitle}
                               </Link>
                             </h3>
-                            <span className={`${topBadgeBaseClass} bg-gray-100`}>
-                              {eventTypeLabel}
-                            </span>
+                            {eventTypeBadgeLabel && (
+                              <span className={`${topBadgeBaseClass} bg-gray-100`}>
+                                {eventTypeBadgeLabel}
+                              </span>
+                            )}
+                            {eventVenueBadgeLabel && (
+                              <span className={`${topBadgeBaseClass} bg-gray-100`}>
+                                {eventVenueBadgeLabel}
+                              </span>
+                            )}
                             {/* Status badge: Pending (orange) / Approved (blue, grays out if expired/inactive) */}
                             {(() => {
                               const isExpired = eventService.isEventExpired(event);
@@ -1932,10 +2106,10 @@ export function AdminPage() {
                           <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
                             {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
                             {event.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{event.address}</span>}
-                            {event.start_at && (
+                            {displayStartAt && (
                               <span className="inline-flex items-center gap-1.5">
                                 <Calendar size={14} />
-                                {formatDate(event.start_at)}
+                                {formatDate(displayStartAt)}
                               </span>
                             )}
                             {(event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{event.organizer_name || event.contact_name}</span>}

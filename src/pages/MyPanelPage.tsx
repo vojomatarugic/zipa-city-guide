@@ -18,6 +18,7 @@ import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 import { pluralize } from '../utils/pluralize';
+import { getLocalizedEventCategory } from '../config/eventCategories';
 
 const PLURAL_OBJEKAT_VENUE = {
   sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
@@ -1290,7 +1291,12 @@ export function MyPanelPage() {
                       ? formatAppDate(event.start_at as string, language === 'en' ? 'en' : 'sr')
                       : formatAppDate(event.date || '', language === 'en' ? 'en' : 'sr');
                     const eventLocation = event.address || event.venue_name || '';
-                    const eventTypeLabel = t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
+                    const eventVenueBadgeLabel = (event.venue_name || event.address || '').trim();
+                    const eventTypeBadgeLabel = (() => {
+                      const category = (event.category || '').trim();
+                      if (category) return getLocalizedEventCategory(category, language);
+                      return t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
+                    })();
                     return (
                       <div
                         key={event.id}
@@ -1322,9 +1328,16 @@ export function MyPanelPage() {
                                 {eventTitle}
                               </Link>
                             </h4>
-                            <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
-                              {eventTypeLabel}
-                            </span>
+                            {eventTypeBadgeLabel && (
+                              <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
+                                {eventTypeBadgeLabel}
+                              </span>
+                            )}
+                            {eventVenueBadgeLabel && (
+                              <span className={`${topBadgeBaseClass} bg-gray-100`} style={{ color: TEXT.secondary }}>
+                                {eventVenueBadgeLabel}
+                              </span>
+                            )}
                             <span
                               className={topBadgeBaseClass}
                               style={{ background: statusBg, color: statusColor, border: `1px solid ${statusColor}30` }}
