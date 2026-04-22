@@ -6,6 +6,7 @@ import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyR
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import * as dataService from '../utils/dataService';
+import * as eventService from '../utils/eventService';
 import { ProfileUpdateSessionLostError, deleteUserAccount } from '../utils/authService';
 import { panelProfileDisplayName } from '../utils/userDisplay';
 import { toast } from 'sonner@2.0.3';
@@ -101,9 +102,15 @@ export function MyPanelPage() {
   };
 
   const handleToggleEventActive = async (id: string, makeActive: boolean) => {
-    const currentlyInactive = inactiveEventIds.has(id);
+    const target = userEvents.find(e => e.id === id);
+    const autoInactive = target ? eventService.isEventExpired(target) : false;
+    const currentlyInactive = inactiveEventIds.has(id) || autoInactive;
     if (makeActive && !currentlyInactive) return;
     if (!makeActive && currentlyInactive) return;
+    if (makeActive && autoInactive) {
+      toast.error(language === 'sr' ? 'Istekao događaj ne može biti aktivan.' : 'Expired event cannot be active.');
+      return;
+    }
     setTogglingEventActiveId(id);
     try {
       const result = await dataService.toggleEventActive(id);
@@ -1042,8 +1049,12 @@ export function MyPanelPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
-                              <Link to={venueDetailHref} style={{ color: 'inherit', textDecoration: 'none' }}>
+                            <h4 className="m-0 leading-tight" style={{ fontSize: '15px', fontWeight: 600 }}>
+                              <Link
+                                to={venueDetailHref}
+                                className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
+                                style={{ color: '#DC2626', textDecorationColor: '#DC2626', textUnderlineOffset: '2px' }}
+                              >
                                 {venueTitle}
                               </Link>
                             </h4>
@@ -1270,7 +1281,7 @@ export function MyPanelPage() {
                 <div className="space-y-3">
                   {userEvents.map(event => {
                     const isSelected = selectedEventIds.has(event.id);
-                    const isActive = !inactiveEventIds.has(event.id);
+                    const isActive = !(inactiveEventIds.has(event.id) || eventService.isEventExpired(event));
                     const eventTitle = language === 'en' ? (event.title_en || event.title) : event.title;
                     const statusColor = event.status === 'approved' ? '#16A34A' : event.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = event.status === 'approved' ? '#F0FDF4' : event.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
@@ -1302,8 +1313,12 @@ export function MyPanelPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <h4 style={{ fontSize: '15px', fontWeight: 600, color: TEXT.primary, margin: 0 }}>
-                              <Link to={`/events/${event.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                            <h4 className="m-0 leading-tight" style={{ fontSize: '15px', fontWeight: 600 }}>
+                              <Link
+                                to={`/events/${event.id}`}
+                                className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
+                                style={{ color: '#DC2626', textDecorationColor: '#DC2626', textUnderlineOffset: '2px' }}
+                              >
                                 {eventTitle}
                               </Link>
                             </h4>

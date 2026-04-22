@@ -139,6 +139,8 @@ export interface Item {
   organizer_phone?: string;
   organizer_email?: string;
   event_type?: string;
+  /** Genre / show type / music type (see EVENT_CATEGORY_CONFIG). */
+  category?: string | null;
 
   // ISO datetime fields for events
   start_at?: string | null;
@@ -356,8 +358,7 @@ export async function createItem(
     | 'submitted_by'
     | 'submitted_by_user_id'
     | 'submitted_by_name'
-    | 'page_slug'
-  > & { page_slug?: ItemCategory } &
+  > &
     Record<string, unknown>
 ): Promise<Item | null> {
   try {
@@ -388,7 +389,15 @@ export async function createItem(
     }
 
     const data = await response.json();
-    return data.submission || null;
+    const submission = (data.submission || null) as EventDbRow | null;
+    if (!submission) return null;
+    const submissionExt = submission as unknown as Record<string, unknown>;
+    const isEventLike =
+      submission.start_at !== undefined ||
+      submission.event_type !== undefined ||
+      submissionExt.category !== undefined ||
+      submissionExt.Category !== undefined;
+    return isEventLike ? (mapDbRowToUiEvent(submission) as Item) : (submission as Item);
   } catch (error) {
     console.error('[createItem] Error:', error);
     if (error instanceof Error) throw error;
@@ -446,7 +455,7 @@ export async function updateEvent(
   try {
     console.log('[updateEvent] START', { id });
     const accessToken = await getAccessToken();
-    const { page_slug: _omitPageSlug, ...eventPayload } = eventData;
+    const eventPayload = { ...eventData };
     const attemptUrls = [
       `${getApiBase()}/events/${id}`, // canonical event update route
       `${getApiBase()}/submissions/${id}`, // compatibility fallback for older deployments

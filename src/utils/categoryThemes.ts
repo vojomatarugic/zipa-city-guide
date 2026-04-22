@@ -86,6 +86,13 @@ export const EVENT_DETAIL_THEMES: Record<string, EventDetailTheme> = {
 
 export const EVENT_DETAIL_DEFAULT_SLUG = "events" as const;
 
+const BADGE_TEXT_COLOR_BY_PAGE_SLUG: Record<string, string> = {
+  cinema: "#00897B",
+  theatre: "#8E24AA",
+  concerts: "#C0CA33",
+  "food-and-drink": "#8B6F47",
+};
+
 /** Pass top-level category from {@link getTopLevelPageCategory} (theatre | cinema | concerts | events), or legacy keys like `clubs`. */
 export function getEventDetailTheme(
   topLevelCategoryOrSlug: string | undefined
@@ -95,4 +102,9 @@ export function getEventDetailTheme(
     EVENT_DETAIL_THEMES[topLevelCategoryOrSlug] ??
     EVENT_DETAIL_THEMES[EVENT_DETAIL_DEFAULT_SLUG]
   );
+}
+
+export function getBadgeTextColorForPageSlug(pageSlug?: string): string {
+  if (!pageSlug) return "#6B7280";
+  return BADGE_TEXT_COLOR_BY_PAGE_SLUG[pageSlug] || "#6B7280";
 }

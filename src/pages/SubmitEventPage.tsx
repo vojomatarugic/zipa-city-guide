@@ -28,6 +28,8 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
+import { getEventCategoryUiConfig, resolveEventCategoryForPayload } from '../config/eventCategories';
+import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 
 // Custom srpski latinica locale
 const srLatn = {
@@ -203,6 +205,7 @@ export function SubmitEventPage() {
 
   const [formData, setFormData] = useState<EventFormModel>({
     eventType: '',
+    category: '',
     image: '',
     eventName: '',
     eventNameEn: '',
@@ -229,6 +232,8 @@ export function SubmitEventPage() {
   const [eventNameEnError, setEventNameEnError] = useState<string>('');
   const [descriptionEnError, setDescriptionEnError] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const categoryWrapRef = useRef<HTMLDivElement>(null);
   const [existingEvent, setExistingEvent] = useState<dataService.Item | null>(null);
   const [isInvalidUserModalOpen, setIsInvalidUserModalOpen] = useState(false);
 
@@ -332,6 +337,17 @@ export function SubmitEventPage() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!categoryMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (categoryWrapRef.current && !categoryWrapRef.current.contains(e.target as Node)) {
+        setCategoryMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [categoryMenuOpen]);
 
   const handleSelectUser = (u: SuggestedUser) => {
     setEmailSearchQuery(u.email);
@@ -452,91 +468,99 @@ export function SubmitEventPage() {
         return;
       }
 
+      const categoryUiConfig = getEventCategoryUiConfig(formData.eventType);
+      if (categoryUiConfig && !formData.category.trim()) {
+        notifySubmitBlockingError(
+          language === 'sr'
+            ? `Polje "${categoryUiConfig.label}" je obavezno.`
+            : `"${categoryUiConfig.label}" is required.`
+        );
+        logSubmitBlock('category required for event type');
+        return;
+      }
+
     // —— Schedule date blocks + times: validate; allow edit fallback to existing start_at ——
     const hasExistingStartAt = !!(existingEvent?.start_at);
-    const partialSchedule = scheduleDateBlocks.some((block) => {
-      const anyStart = block.times.some((t) => !!t.startTime);
-      const incompleteStart = block.times.some(
-        (t) => !!t.startTime && t.startTime.length !== 5
-      );
-      const incompleteEnd = block.times.some(
-        (t) => !!t.endTime && t.endTime.length !== 5
-      );
-      const endWithoutStart = block.times.some(
-        (t) =>
-          t.endTime?.length === 5 &&
-          (!t.startTime || t.startTime.length !== 5)
-      );
-      const timeWithoutDate = !block.selectedDate && anyStart;
-      const dateButNoCompleteTime =
-        !!block.selectedDate &&
-        !block.times.some((t) => t.startTime.length === 5) &&
-        anyStart;
-      const dateButAllTimesEmpty =
-        !!block.selectedDate &&
-        !block.times.some((t) => t.startTime.length === 5) &&
-        !anyStart;
-      return (
-        timeWithoutDate ||
-        incompleteStart ||
-        incompleteEnd ||
-        endWithoutStart ||
-        dateButNoCompleteTime ||
-        dateButAllTimesEmpty
-      );
-    });
-    if (partialSchedule) {
-      setTimeError(
-        language === 'sr'
-          ? 'Za svaki datum unesite vrijeme početka (HH:MM) za barem jedan termin; popunite sve započete redove.'
-          : 'For each date, add at least one start time (HH:MM); complete every row you started.'
-      );
-      logSubmitBlock('partial schedule detected', scheduleDateBlocks);
-      return;
-    }
-
+    const builtSlots: { start_at: string; end_at: string | null }[] = [];
     for (const block of scheduleDateBlocks) {
+      const hasDate = !!block.selectedDate;
+      let hasAnyTimeInput = false;
+      let hasAtLeastOneCompleteStart = false;
+
       for (const time of block.times) {
-        if (!time.startTime || time.startTime.length !== 5) continue;
-        const [sh, sm] = time.startTime.split(':').map(Number);
+        const start = time.startTime.trim();
+        const end = time.endTime.trim();
+        const touched = !!start || !!end;
+
+        if (!touched) continue;
+        hasAnyTimeInput = true;
+
+        if (!hasDate) {
+          setTimeError(
+            language === 'sr'
+              ? 'Za uneseno vrijeme morate izabrati datum.'
+              : 'Please select a date for entered time.'
+          );
+          logSubmitBlock('time entered without date', { block, time });
+          return;
+        }
+
+        if (!start || start.length !== 5) {
+          setTimeError(
+            language === 'sr'
+              ? 'Za svaki uneseni termin popunite vrijeme početka u formatu HH:MM.'
+              : 'For each entered slot, provide start time in HH:MM format.'
+          );
+          logSubmitBlock('invalid or missing start time', { block, time });
+          return;
+        }
+
+        const [sh, sm] = start.split(':').map(Number);
         if (sh > 23 || sm > 59) {
           setTimeError(
             language === 'sr'
               ? 'Neispravno vrijeme početka (00:00 - 23:59)'
               : 'Invalid start time (00:00 - 23:59)'
           );
-          logSubmitBlock('invalid start time', time);
+          logSubmitBlock('invalid start time value', { block, time });
           return;
         }
-        if (time.endTime) {
-          if (time.endTime.length !== 5) {
+
+        if (end) {
+          if (end.length !== 5) {
             setTimeError(
               language === 'sr'
                 ? 'Vrijeme kraja mora biti u formatu HH:MM (npr. 21:00)'
                 : 'End time must be in HH:MM format (e.g. 21:00)'
             );
-            logSubmitBlock('invalid end time format', time);
+            logSubmitBlock('invalid end time format', { block, time });
             return;
           }
-          const [eh, em] = time.endTime.split(':').map(Number);
+          const [eh, em] = end.split(':').map(Number);
           if (eh > 23 || em > 59) {
             setTimeError(
               language === 'sr'
                 ? 'Neispravno vrijeme kraja (00:00 - 23:59)'
                 : 'Invalid end time (00:00 - 23:59)'
             );
-            logSubmitBlock('invalid end time value', time);
+            logSubmitBlock('invalid end time value', { block, time });
             return;
           }
         }
-      }
-    }
 
-    const builtSlots: { start_at: string; end_at: string | null }[] = [];
-    for (const block of scheduleDateBlocks) {
-      for (const time of block.times) {
+        hasAtLeastOneCompleteStart = true;
         const slot = buildScheduleIsoFromParts(block.selectedDate, time);
         if (slot) builtSlots.push(slot);
+      }
+
+      if (hasDate && hasAnyTimeInput && !hasAtLeastOneCompleteStart) {
+        setTimeError(
+          language === 'sr'
+            ? 'Za svaki datum unesite barem jedno vrijeme početka (HH:MM).'
+            : 'For each date, enter at least one start time (HH:MM).'
+        );
+        logSubmitBlock('date has no complete start time', block);
+        return;
       }
     }
     builtSlots.sort(
@@ -573,16 +597,17 @@ export function SubmitEventPage() {
     const addressTrimmed = formData.address.trim();
     if (!addressTrimmed) {
       setAddressError(language === 'sr'
-        ? 'Unesite ulicu i kućni broj.'
-        : 'Please enter street and number.');
+        ? 'Unesite ulicu i kućni broj ili bb.'
+        : 'Please enter street and number or bb.');
       logSubmitBlock('address missing');
       return;
     }
-    if (!/\d/.test(addressTrimmed)) {
+    const hasStreetNumberOrBb = /\d|\bbb\b/i.test(addressTrimmed);
+    if (!hasStreetNumberOrBb) {
       setAddressError(language === 'sr'
-        ? 'Adresa mora sadržavati kućni broj'
-        : 'Address must contain a street number');
-      logSubmitBlock('address missing street number', addressTrimmed);
+        ? 'Adresa mora sadržavati kućni broj ili bb'
+        : 'Address must contain a street number or bb');
+      logSubmitBlock('address missing street number or bb', addressTrimmed);
       return;
     }
 
@@ -657,21 +682,65 @@ export function SubmitEventPage() {
       });
 
       const payload = mapFormModelToEventApiPayload(formData);
+      const categoryForSave = resolveEventCategoryForPayload(formData.eventType, formData.category);
+      const page_slug = getCanonicalEventPageSlug(formData.eventType, null);
+      const {
+        title,
+        title_en,
+        description,
+        description_en,
+        city,
+        venue_name,
+        address,
+        image,
+        price,
+        map_url,
+        ticket_link,
+        organizer_name,
+        organizer_phone,
+        organizer_email,
+      } = payload;
       const newEvent: Omit<
       dataService.Item,
-      'id' | 'created_at' | 'is_custom' | 'status' | 'page_slug'
+      'id' | 'created_at' | 'is_custom' | 'status'
     > & {
       assign_user_id?: string;
+      submitted_by?: string;
     } = {
-      ...payload,
+      title,
+      title_en,
+      description,
+      description_en,
+      city,
+      venue_name,
+      address,
+      image,
+      price,
+      map_url,
+      ticket_link,
+      organizer_name,
+      organizer_phone,
+      organizer_email,
+      category: categoryForSave,
+      page_slug,
       date: legacyDateStr,
       // ===== ISO datetime fields =====
       start_at: startAt,
       end_at: endAt,
       event_type: formData.eventType,
       event_schedules: event_schedules_value,
-      // ===== Admin assign user =====
-      ...(isAdmin && selectedUserId ? { assign_user_id: selectedUserId } : {}),
+      // ===== Submitter: DB + validators expect `submitted_by` = registered user's email.
+      // Admin path still sends `assign_user_id` (auth UUID) for server-side resolution.
+      ...(isAdmin && selectedUserId
+        ? {
+            assign_user_id: selectedUserId,
+            ...(formData.submittedByEmail.trim()
+              ? { submitted_by: formData.submittedByEmail.trim() }
+              : {}),
+          }
+        : !isAdmin && user?.email?.trim()
+          ? { submitted_by: user.email.trim() }
+          : {}),
     };
       console.log('🟦 [SubmitEventPage] payload ready', {
         id: id ?? null,
@@ -853,7 +922,10 @@ export function SubmitEventPage() {
               </label>
               <CustomDropdown
                 value={formData.eventType}
-                onChange={(value) => setFormData({ ...formData, eventType: value })}
+                onChange={(value) => {
+                  setCategoryMenuOpen(false);
+                  setFormData((prev) => ({ ...prev, eventType: value, category: '' }));
+                }}
                 placeholder={t('selectEventType')}
                 required
                 options={[
@@ -937,6 +1009,79 @@ export function SubmitEventPage() {
                 </p>
               )}
             </div>
+
+            {(() => {
+              const categoryConfig = getEventCategoryUiConfig(formData.eventType);
+              if (!categoryConfig) return null;
+              return (
+                <div className="mb-4" ref={categoryWrapRef}>
+                  <label
+                    className="block text-[13px] mb-2"
+                    style={{
+                      color: 'var(--text-primary)',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                    }}
+                  >
+                    {categoryConfig.label}{' '}
+                    <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 rounded-lg border transition-all flex flex-wrap gap-2 items-center min-h-[48px] text-left cursor-pointer"
+                      style={{ borderColor: '#E5E9F0', background: 'white' }}
+                      onClick={() => setCategoryMenuOpen((o) => !o)}
+                    >
+                      {!formData.category ? (
+                        <span style={{ fontSize: '14px', color: '#9CA3AF' }}>
+                          {categoryConfig.placeholder}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
+                          {formData.category}
+                        </span>
+                      )}
+                    </button>
+                    {categoryMenuOpen && (
+                      <div
+                        className="absolute left-0 right-0 z-50 mt-1 max-h-[240px] overflow-y-auto rounded-lg border bg-white shadow-lg"
+                        style={{
+                          borderColor: '#E5E9F0',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        {categoryConfig.options.map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            className="w-full text-left px-4 py-2.5 border-0 text-[14px] cursor-pointer"
+                            style={{
+                              color: 'var(--text-primary)',
+                              background: 'white',
+                              borderBottom: '1px solid #F3F4F6',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#F0F4FF';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'white';
+                            }}
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, category: opt }));
+                              setCategoryMenuOpen(false);
+                            }}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Datumi i vremena: više datuma, više vremena po datumu */}
             <div className="mb-4 rounded-xl border border-[#E5E9F0] bg-[#FAFBFC] p-4">

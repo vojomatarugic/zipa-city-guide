@@ -12,6 +12,10 @@ import { Item } from "../utils/dataService";
 import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
+import { Badge } from "../components/ui/badge";
+import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 
 export function CinemaAllPage() {
   const { t } = useT();
@@ -32,6 +36,10 @@ export function CinemaAllPage() {
           "cinema",
         );
         const now = new Date();
+        const nextUpcomingSlot = (e: Item): { start_at: string; end_at?: string | null } | null => {
+          const slots = eventService.getEventScheduleSlots(e);
+          return slots.find((s) => new Date(s.start_at) >= now) ?? null;
+        };
         const active = fetched
           .filter(
             (e) =>
@@ -42,9 +50,23 @@ export function CinemaAllPage() {
               e.city === selectedCity,
           )
           .filter((e) => {
+            const slots = eventService.getEventScheduleSlots(e);
+            if (slots.length > 0) {
+              return slots.some((s) => new Date(s.end_at || s.start_at) >= now);
+            }
             if (!e.start_at) return false;
             const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
             return end >= now;
+          })
+          .map((e) => {
+            const next = nextUpcomingSlot(e);
+            return next
+              ? {
+                  ...e,
+                  start_at: next.start_at,
+                  end_at: next.end_at ?? null,
+                }
+              : e;
           })
           .sort(
             (a, b) =>
@@ -131,6 +153,14 @@ export function CinemaAllPage() {
               en: { one: "screening", many: "screenings" },
             }}
             renderCard={(event) => (
+              (() => {
+                const categoryLabel = event.category
+                  ? getLocalizedEventCategory(event.category, language)
+                  : "";
+                const categoryTextColor = getBadgeTextColorForPageSlug(
+                  getTopLevelPageCategory(event),
+                );
+                return (
               <Link
                 key={event.id}
                 to={`/events/${event.id}`}
@@ -151,26 +181,21 @@ export function CinemaAllPage() {
                 />
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span
-                      className="text-xs font-medium px-2 py-1 rounded"
-                      style={{ background: "#F3F4F6", color: "#00897B" }}
-                    >
-                      {event.event_type
-                        ? eventService.translateEventType(
-                            event.event_type,
-                            language,
-                          )
-                        : language === "sr"
-                          ? "Bioskop"
-                          : "Cinema"}
-                    </span>
+                    {categoryLabel && (
+                      <Badge
+                        className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                        style={{ color: categoryTextColor }}
+                      >
+                        {categoryLabel}
+                      </Badge>
+                    )}
                     {event.price && (
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{ background: "#F3F4F6", color: "#6B7280" }}
+                      <Badge
+                        className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                        style={{ color: categoryTextColor }}
                       >
                         {eventService.formatPrice(event.price, language)}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <h3
@@ -214,6 +239,8 @@ export function CinemaAllPage() {
                   )}
                 </div>
               </Link>
+                );
+              })()
             )}
           />
         )}

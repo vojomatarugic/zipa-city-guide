@@ -61,6 +61,7 @@ export async function getEvents(filter?: EventFilter, city?: string, type?: stri
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${publicAnonKey}`,
+        'apikey': publicAnonKey,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
@@ -109,6 +110,7 @@ export async function getEventById(id: string): Promise<Item | null> {
     
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${publicAnonKey}`,
+      'apikey': publicAnonKey,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
@@ -216,6 +218,37 @@ export function getEventScheduleSlots(event: Item): EventScheduleSlot[] {
     deduped.push(s);
   }
   return deduped;
+}
+
+/**
+ * True when all known schedule slots are in the past.
+ * Uses `event_schedules` first; falls back to legacy `start_at`/`end_at`.
+ */
+export function isEventExpired(
+  event: Pick<Item, 'start_at' | 'end_at'> & {
+    event_schedules?: unknown;
+    eventSchedules?: unknown;
+  },
+  now: Date = new Date()
+): boolean {
+  try {
+    const parsed =
+      parseEventSchedulesField(event.event_schedules) ??
+      parseEventSchedulesField(event.eventSchedules);
+    const slots = mergeScheduleSources(parsed, event.start_at ?? null, event.end_at ?? null);
+    if (slots.length > 0) {
+      return slots.every((slot) => {
+        const effective = new Date(slot.end_at || slot.start_at);
+        return !isNaN(effective.getTime()) && effective < now;
+      });
+    }
+    if (!event.start_at) return false;
+    const fallback = new Date(event.end_at || event.start_at);
+    if (isNaN(fallback.getTime())) return false;
+    return fallback < now;
+  } catch {
+    return false;
+  }
 }
 
 /** Local calendar day key for grouping screenings (YYYY-MM-DD). */
@@ -375,14 +408,7 @@ export function isEventPast(startAt: string): boolean {
  * Get relative date label (Today, Tomorrow, date)
  */
 export function getRelativeDateLabel(startAt: string, language: 'sr' | 'en' = 'sr'): string {
-  if (isEventToday(startAt)) {
-    return language === 'sr' ? 'Danas' : 'Today';
-  }
-  
-  if (isEventTomorrow(startAt)) {
-    return language === 'sr' ? 'Sutra' : 'Tomorrow';
-  }
-  
+  // UX rule: cards should always show calendar date, never relative labels.
   return formatEventDate(startAt, language);
 }
 

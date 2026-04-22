@@ -6,7 +6,6 @@ import {
   Users,
   Phone,
   Mail,
-  MapPin,
 } from "lucide-react";
 import { useParams } from "react-router";
 import { useT } from "../hooks/useT";
@@ -15,15 +14,20 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { useState, useEffect, useMemo } from "react";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import { getEventDetailTheme } from "../utils/categoryThemes";
+import {
+  getBadgeTextColorForPageSlug,
+  getEventDetailTheme,
+} from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import { getGoogleMapsHref } from "../components/VenueDetailLayout";
+import { VenueDetailAddressCard } from "../components/VenueDetailLayout";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import {
   detailDocumentTitle,
   detailLoadingDocumentTitle,
 } from "../utils/documentTitle";
+import { Badge } from "../components/ui/badge";
+import { getLocalizedEventCategory } from "../config/eventCategories";
 
 // Heart pulse animation keyframes (injected once)
 const heartAnimStyle = document.createElement('style');
@@ -56,9 +60,11 @@ export function EventDetailPage() {
   const [interestCount, setInterestCount] = useState(0);
   const [hasClicked, setHasClicked] = useState(false);
   const [heartAnimating, setHeartAnimating] = useState(false);
+  const topLevelCategory = event ? getTopLevelPageCategory(event) : undefined;
+  const pageBackground = "#FAFBFC";
 
   const theme = getEventDetailTheme(
-    event ? getTopLevelPageCategory(event) : undefined
+    topLevelCategory
   );
 
   const documentTitle = useMemo(() => {
@@ -101,7 +107,7 @@ export function EventDetailPage() {
 
   if (loading) {
     return (
-      <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
+      <div style={{ background: pageBackground, minHeight: "100vh" }}>
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600"></div>
           <p className="mt-4 text-gray-600">
@@ -114,7 +120,7 @@ export function EventDetailPage() {
 
   if (!event) {
     return (
-      <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
+      <div style={{ background: pageBackground, minHeight: "100vh" }}>
         <div className="max-w-7xl mx-auto px-4 py-16 text-center">
           <p className="text-gray-600 text-lg">
             {language === 'sr' ? 'Događaj nije pronađen' : 'Event not found'}
@@ -126,6 +132,13 @@ export function EventDetailPage() {
 
   const title =
     language === 'sr' ? event.title : (event.title_en || event.title);
+  const categoryLabel = event.category
+    ? getLocalizedEventCategory(event.category, language)
+    : "";
+  const categoryTextColor = getBadgeTextColorForPageSlug(
+    getTopLevelPageCategory(event),
+  );
+  const venueTextColor = categoryTextColor;
   const description =
     language === "sr"
       ? event.description
@@ -140,17 +153,9 @@ export function EventDetailPage() {
   const emailDisplay =
     (event.organizer_email || event.contact_email || "").trim();
   const mailtoHref = emailDisplay ? `mailto:${emailDisplay}` : "";
-  const addressForMap =
-    addressLine && cityLine
-      ? `${addressLine}, ${cityLine}`
-      : addressLine || cityLine || "";
-  const mapHref = getGoogleMapsHref(
-    addressForMap.trim() || undefined,
-    event.map_url
-  );
 
   return (
-    <div key={language} style={{ background: "#FAFBFC", minHeight: "100vh" }}>
+    <div key={language} style={{ background: pageBackground, minHeight: "100vh" }}>
       {/* Top image — main visual anchor */}
       <div
         className="mx-auto w-full max-w-[1280px] px-5 pt-8"
@@ -190,18 +195,14 @@ export function EventDetailPage() {
           <div className="col-span-1 flex h-full min-h-0 min-w-0 flex-col lg:col-span-2">
             <div className="flex min-h-0 flex-1 flex-col">
               {venueLine ? (
-                <p
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    letterSpacing: "0.1em",
-                    color: theme.accent,
-                    margin: 0,
-                    marginBottom: "10px",
-                  }}
-                >
-                  {venueLine}
-                </p>
+                <div className="mb-2 flex items-center gap-2 flex-wrap">
+                  <Badge
+                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                    style={{ color: venueTextColor }}
+                  >
+                    {venueLine}
+                  </Badge>
+                </div>
               ) : null}
               <h1
                 className="m-0 tracking-tight"
@@ -215,6 +216,17 @@ export function EventDetailPage() {
               >
                 {title}
               </h1>
+
+              {categoryLabel && (
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <Badge
+                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                    style={{ color: categoryTextColor }}
+                  >
+                    {categoryLabel}
+                  </Badge>
+                </div>
+              )}
 
               <div
                 className="max-w-[52rem]"
@@ -231,7 +243,7 @@ export function EventDetailPage() {
                 {description}
               </div>
 
-              <div className="mt-auto max-w-[52rem]">
+              <div className="mt-auto grid grid-cols-1 gap-6 md:grid-cols-2 max-w-[52rem]">
                 <div
                   className="flex h-full min-h-0 min-w-0 flex-col"
                   style={{
@@ -274,7 +286,7 @@ export function EventDetailPage() {
                         {groupedSchedule.map((row, idx) => (
                           <li
                             key={row.dayKey}
-                            className="flex flex-col gap-2 md:flex-row md:items-baseline md:gap-6"
+                            className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,3fr)_minmax(0,1fr)] md:items-center md:gap-4"
                             style={{
                               paddingTop: idx > 0 ? "14px" : 0,
                               marginTop: idx > 0 ? "14px" : 0,
@@ -282,7 +294,7 @@ export function EventDetailPage() {
                                 idx > 0 ? "1px solid #E5E9F0" : undefined,
                             }}
                           >
-                            <div className="min-w-0 shrink-0 md:max-w-[min(22rem,46%)] md:flex-[0_1_auto]">
+                            <div className="min-w-0">
                               <p
                                 style={{
                                   fontSize: "16px",
@@ -295,9 +307,9 @@ export function EventDetailPage() {
                                 {row.weekdayDateLabel}
                               </p>
                             </div>
-                            <div className="min-w-0 flex-1">
+                            <div className="min-w-0">
                               <div
-                                className="flex flex-wrap gap-x-5 gap-y-2"
+                                className="flex flex-col gap-1 md:items-end"
                                 style={{
                                   fontSize: "16px",
                                   color: "#4B5563",
@@ -322,6 +334,13 @@ export function EventDetailPage() {
                     )}
                   </div>
                 </div>
+                <VenueDetailAddressCard
+                  address={event.address}
+                  city={event.city}
+                  mapUrl={event.map_url}
+                  t={t}
+                  accentColor={theme.accent}
+                />
               </div>
             </div>
           </div>
@@ -534,102 +553,6 @@ export function EventDetailPage() {
                 )}
               </div>
 
-              <div style={{ height: "1px", background: "#E5E9F0" }} />
-
-              <div>
-                <MapPin
-                  size={18}
-                  style={{ color: theme.accent, marginBottom: "8px" }}
-                />
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "#6B7280",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {t("address")}
-                </p>
-                {(() => {
-                  const hasAddrText = Boolean(addressLine || cityLine);
-                  if (!hasAddrText) {
-                    return (
-                      <p
-                        style={{
-                          fontSize: "16px",
-                          color: "#4B5563",
-                          margin: 0,
-                        }}
-                      >
-                        -
-                      </p>
-                    );
-                  }
-                  if (mapHref) {
-                    return (
-                      <a
-                        href={mapHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "4px",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                          color: theme.accent,
-                          textDecoration: "none",
-                          wordBreak: "break-word",
-                          outline: "none",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.textDecoration = "underline";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.textDecoration = "none";
-                        }}
-                      >
-                        {addressLine ? <span>{addressLine}</span> : null}
-                        {cityLine ? <span>{cityLine}</span> : null}
-                      </a>
-                    );
-                  }
-                  return (
-                    <div
-                      style={{ display: "flex", flexDirection: "column", gap: "4px" }}
-                    >
-                      {addressLine ? (
-                        <p
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            color: "#1A1D29",
-                            margin: 0,
-                            lineHeight: 1.35,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {addressLine}
-                        </p>
-                      ) : null}
-                      {cityLine ? (
-                        <p
-                          style={{
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            color: "#1A1D29",
-                            margin: 0,
-                            lineHeight: 1.35,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {cityLine}
-                        </p>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-              </div>
             </div>
 
             {isEventFree(event) ? (

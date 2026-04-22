@@ -5,8 +5,12 @@
 import React from "react";
 import { Link } from "react-router";
 import { Heart } from "lucide-react";
+import { Badge } from "./ui/badge";
 import { Item } from "../utils/dataService";
 import * as eventService from "../utils/eventService";
+import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 
 interface EventCardProps {
   event: Item;
@@ -31,6 +35,8 @@ export function EventCard({
   const timeLabel = firstSlot ? eventService.formatEventTime(firstSlot.start_at, firstSlot.end_at, locale) : "";
   const extraSlotCount = slots.length > 1 ? slots.length - 1 : 0;
   const venue = event.venue_name || event.address || event.city || "";
+  const categoryLabel = event.category ? getLocalizedEventCategory(event.category, language) : "";
+  const categoryBadgeTextColor = getBadgeTextColorForPageSlug(getTopLevelPageCategory(event));
 
   return (
     <Link
@@ -46,6 +52,14 @@ export function EventCard({
       />
 
       <div className="p-4 space-y-1">
+        {event.category && (
+          <Badge
+            className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+            style={{ color: categoryBadgeTextColor || "#6B7280" }}
+          >
+            {categoryLabel}
+          </Badge>
+        )}
         <h3 className="text-base font-semibold" style={{ color: "#1a1a1a" }}>
           {title}
         </h3>

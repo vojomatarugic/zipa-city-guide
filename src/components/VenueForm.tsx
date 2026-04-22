@@ -58,6 +58,7 @@ interface VenueFormProps {
 
 export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data, is_admin, is_submitting, user_email }: VenueFormProps) {
   const { t, language } = useT();
+  const [address_error, set_address_error] = useLocalState('');
 
   const roleLabels: Record<string, string> = {
     user: t('user'),
@@ -263,6 +264,25 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
 
   const handle_submit = (e: React.FormEvent) => {
     e.preventDefault();
+    const address_trimmed = form_data.address.trim();
+    if (!address_trimmed) {
+      set_address_error(
+        language === 'sr'
+          ? 'Unesite ulicu i kućni broj ili bb.'
+          : 'Please enter street and number or bb.'
+      );
+      return;
+    }
+    if (!/\d|\bbb\b/i.test(address_trimmed)) {
+      set_address_error(
+        language === 'sr'
+          ? 'Adresa mora sadržavati kućni broj ili bb'
+          : 'Address must contain a street number or bb'
+      );
+      return;
+    }
+    set_address_error('');
+
     if (is_admin) {
       const read_only_creator = !!(initial_data?.submitted_by_email && !creator_edit_mode);
       if (!read_only_creator && !selected_user_id) {
@@ -277,6 +297,10 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
   };
 
   const handle_change = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    if (e.target.name === 'address') {
+      const next = e.target.value.trim();
+      if (!next || /\d|\bbb\b/i.test(next)) set_address_error('');
+    }
     set_form_data({
       ...form_data,
       [e.target.name]: e.target.value,
@@ -422,8 +446,13 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
             required
             placeholder={t('addressPlaceholder')}
             className="w-full px-4 py-3 rounded-lg border transition-all"
-            style={{ borderColor: '#E5E9F0', fontSize: '14px', color: 'var(--text-primary)' }}
+            style={{ borderColor: address_error ? '#DC2626' : '#E5E9F0', fontSize: '14px', color: 'var(--text-primary)' }}
           />
+          {address_error && (
+            <p className="mt-2 m-0 text-sm" style={{ color: '#DC2626' }}>
+              ⚠️ {address_error}
+            </p>
+          )}
           {/* map_url — Google Maps ili drugi link koji se prikazuje kao klikabilna adresa na kartici */}
           <div className="mt-2">
             <input

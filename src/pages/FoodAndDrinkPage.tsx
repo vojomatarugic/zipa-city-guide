@@ -9,6 +9,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_FOOD, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
+import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import { VenueBadgeRow } from "../components/VenueBadgeRow";
@@ -26,6 +27,7 @@ function VenueCard({
   language: string;
   t: (key: string) => string;
 }) {
+  const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
   return (
     <Link
       to={`/food-and-drink/${item.id}`}
@@ -45,6 +47,7 @@ function VenueCard({
             tags={item.tags}
             language={language === 'en' ? 'en' : 'sr'}
             t={t}
+            textColor={badgeTextColor}
           />
           <h3 className="text-base font-semibold mb-2" style={{ color: "#1a1a1a" }}>
             {language === 'en' && item.title_en ? item.title_en : item.title}
@@ -132,6 +135,7 @@ export function FoodAndDrinkPage() {
   const [allRestaurants, setAllRestaurants] = useState<Item[]>([]);
   const [featuredRestaurants, setFeaturedRestaurants] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
 
   useEffect(() => {
     async function fetchRestaurants() {
@@ -301,6 +305,7 @@ export function FoodAndDrinkPage() {
                         tags={restaurant.tags}
                         language={language === 'en' ? 'en' : 'sr'}
                         t={t}
+                        textColor={badgeTextColor}
                       />
                       <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
                         {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
@@ -443,6 +448,7 @@ export function FoodAndDrinkPage() {
                         tags={restaurant.tags}
                         language={language === 'en' ? 'en' : 'sr'}
                         t={t}
+                        textColor={badgeTextColor}
                       />
                       <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
                         {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}

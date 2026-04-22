@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { Building2, Calendar, Clapperboard, Clock, MapPin } from "lucide-react";
 import { EventCardSkeleton } from "../components/EventCard";
+import { Badge } from "../components/ui/badge";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -11,6 +12,9 @@ import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
+import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
@@ -34,20 +38,25 @@ function CinemaCard({
   const lang = language === "en" ? "en" : "sr";
   const title = lang === "sr" ? event.title : event.title_en || event.title;
   const isFree = /^(free|besplatn|gratis)/i.test(event.price || "");
-  const eventType = eventService.translateEventType(
-    event.event_type || "",
-    lang,
-  );
-  const dateLabel = event.start_at
-    ? eventService.getRelativeDateLabel(event.start_at, lang)
-    : "";
-  const timeLabel = event.start_at
-    ? eventService.formatEventTime(event.start_at, event.end_at, lang)
-    : "";
+  const now = new Date();
+  const slots = eventService.getEventScheduleSlots(event);
+  const nextSlot = slots.find((s) => new Date(s.start_at) >= now) ?? slots[0] ?? null;
+  const dateLabel = nextSlot
+    ? eventService.getRelativeDateLabel(nextSlot.start_at, lang)
+    : event.start_at
+      ? eventService.getRelativeDateLabel(event.start_at, lang)
+      : "";
+  const timeLabel = nextSlot
+    ? eventService.formatEventTime(nextSlot.start_at, nextSlot.end_at, lang)
+    : event.start_at
+      ? eventService.formatEventTime(event.start_at, event.end_at, lang)
+      : "";
   const venue =
     showEventCity && event.city
       ? event.venue_name || event.address || ""
       : event.venue_name || event.address || event.city || "";
+  const categoryLabel = event.category ? getLocalizedEventCategory(event.category, language) : "";
+  const badgeTextColor = getBadgeTextColorForPageSlug(getTopLevelPageCategory(event));
 
   const otherCityVenueLine = (event.venue_name || event.address || "").trim();
   const showOtherCityMetaBlock =
@@ -76,21 +85,21 @@ function CinemaCard({
       />
       <div className="p-4">
         <div className="flex items-center gap-2 mb-2 flex-wrap">
-          {eventType && (
-            <span
-              className="text-xs font-medium px-2 py-1 rounded"
-              style={{ background: "#F3F4F6", color: "#00897B" }}
+          {event.category && (
+            <Badge
+              className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+              style={{ color: badgeTextColor }}
             >
-              {eventType}
-            </span>
+              {categoryLabel}
+            </Badge>
           )}
           {isFree && (
-            <span
-              className="text-xs font-medium px-2 py-1 rounded"
-              style={{ background: "#F3F4F6", color: "#6B7280" }}
+            <Badge
+              className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+              style={{ color: badgeTextColor }}
             >
               {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
-            </span>
+            </Badge>
           )}
         </div>
         <h3
@@ -184,22 +193,30 @@ function isApprovedCinemaPageEvent(e: Item): boolean {
 }
 
 function sortByStartAtAsc(events: Item[]): Item[] {
-  return [...events].sort(
-    (a, b) =>
-      (a.start_at ? new Date(a.start_at).getTime() : 0) -
-      (b.start_at ? new Date(b.start_at).getTime() : 0),
-  );
+  const nextStart = (e: Item, now: Date): number => {
+    const slots = eventService.getEventScheduleSlots(e);
+    const next = slots.find((s) => new Date(s.start_at) >= now) ?? slots[0];
+    if (next) return new Date(next.start_at).getTime();
+    return e.start_at ? new Date(e.start_at).getTime() : 0;
+  };
+  const now = new Date();
+  return [...events].sort((a, b) => nextStart(a, now) - nextStart(b, now));
 }
 
-/** Other-cities section: not ended — end_at >= now if end_at exists, else start_at >= now */
+/** Other-cities section: not ended — at least one slot is active/upcoming. */
 function isNotEndedForOtherCitiesRepertoire(e: Item, now: Date): boolean {
+  const slots = eventService.getEventScheduleSlots(e);
+  if (slots.length > 0) {
+    return slots.some((s) => new Date(s.end_at || s.start_at) >= now);
+  }
   if (e.end_at) return new Date(e.end_at) >= now;
   if (e.start_at) return new Date(e.start_at) >= now;
   return false;
 }
 
-const USKORO_MAX_CARDS = 8;
+const USKORO_MAX_CARDS = 4;
 const OTHER_CITIES_MAX_CARDS = 4;
+const REPERTOIRE_MAX_CARDS = 5;
 
 export function CinemaPage() {
   const { t } = useT();
@@ -228,21 +245,27 @@ export function CinemaPage() {
   const { nowShowing, moreFromRepertoire, otherCities } = useMemo(() => {
     const now = new Date();
     const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const nextStartAtOrNull = (e: Item): Date | null => {
+      const slots = eventService.getEventScheduleSlots(e);
+      const next = slots.find((s) => new Date(s.start_at) >= now);
+      if (next) return new Date(next.start_at);
+      return null;
+    };
 
     const repertoire = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;
       if (e.city !== selectedCity) return false;
-      if (!e.start_at) return false;
-      const start = new Date(e.start_at);
+      const start = nextStartAtOrNull(e);
+      if (!start) return false;
       return start >= now && start <= weekEnd;
     });
-    const nowShowing = sortByStartAtAsc(repertoire).slice(0, 5);
+    const nowShowing = sortByStartAtAsc(repertoire).slice(0, REPERTOIRE_MAX_CARDS);
 
     const comingSoon = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;
       if (e.city !== selectedCity) return false;
-      if (!e.start_at) return false;
-      const start = new Date(e.start_at);
+      const start = nextStartAtOrNull(e);
+      if (!start) return false;
       return start > weekEnd;
     });
     const moreFromRepertoire = sortByStartAtAsc(comingSoon).slice(
