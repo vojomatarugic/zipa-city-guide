@@ -1,5 +1,15 @@
 export type EventScheduleSlot = { start_at: string; end_at?: string | null };
 
+function normalizeCategoryValue(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed ? trimmed : null;
+  }
+  const serialized = String(raw).trim();
+  return serialized ? serialized : null;
+}
+
 export interface EventApiPayload {
   title?: string;
   title_en?: string;
@@ -17,6 +27,7 @@ export interface EventApiPayload {
   organizer_phone?: string;
   organizer_email?: string;
   event_type?: string;
+  category?: string | null;
   start_at?: string;
   end_at?: string | null;
   event_schedules?: EventScheduleSlot[] | string | null;
@@ -65,6 +76,59 @@ export function pickEventApiPayload(body: unknown): EventApiPayload {
   if ('event_schedules' in source) {
     payload.event_schedules = source.event_schedules as EventApiPayload['event_schedules'];
   }
+  const catRaw =
+    source['category'] !== undefined
+      ? source['category']
+      : source['Category'] !== undefined
+        ? source['Category']
+        : undefined;
+  if (catRaw !== undefined) {
+    if (catRaw === null) payload.category = null;
+    else if (typeof catRaw === 'string') payload.category = catRaw.trim() || null;
+  }
 
   return payload;
+}
+
+/** DB column `category` (text). Prefer snake_case body key; accept PascalCase; fall back to picked payload. */
+export function normalizeEventCategoryFromRequest(
+  body: unknown,
+  eventBody: EventApiPayload
+): string | null {
+  const source = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  const raw =
+    source['category'] !== undefined
+      ? source['category']
+      : source['Category'] !== undefined
+        ? source['Category']
+        : eventBody.category;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'string') return null;
+  return raw.trim() || null;
+}
+
+export function requestSpecifiesCategory(body: unknown, eventBody: EventApiPayload): boolean {
+  const source = body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  return (
+    'category' in source ||
+    'Category' in source ||
+    eventBody.category !== undefined
+  );
+}
+
+export function normalizeEventResponseRow(
+  row: Record<string, unknown>
+): Record<string, unknown> & { category: string | null } {
+  const { Category: _legacyCategory, ...rest } = row;
+  const category = normalizeCategoryValue(row['category'] ?? row['Category']);
+  return {
+    ...rest,
+    category,
+  };
+}
+
+export function normalizeEventResponseRows(
+  rows: Record<string, unknown>[]
+): Array<Record<string, unknown> & { category: string | null }> {
+  return rows.map((row) => normalizeEventResponseRow(row));
 }

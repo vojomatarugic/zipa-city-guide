@@ -1,3 +1,5 @@
+import { resolveEventCategoryForPayload } from '../config/eventCategories';
+
 export type EventScheduleSlot = { start_at: string; end_at?: string | null };
 
 export interface EventDbRow {
@@ -20,6 +22,8 @@ export interface EventDbRow {
   organizer_phone?: string | null;
   organizer_email?: string | null;
   event_type?: string | null;
+  /** User-selected genre / show type / music type (cinema, theatre, concert). */
+  category?: string | null;
   start_at?: string | null;
   end_at?: string | null;
   event_schedules?: EventScheduleSlot[] | null;
@@ -28,6 +32,16 @@ export interface EventDbRow {
   submitted_by_name?: string | null;
   created_at?: string;
   updated_at?: string | null;
+}
+
+function normalizeEventCategoryValue(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed ? trimmed : null;
+  }
+  const serialized = String(raw).trim();
+  return serialized ? serialized : null;
 }
 
 export interface EventApiPayload {
@@ -47,6 +61,9 @@ export interface EventApiPayload {
   organizer_phone?: string;
   organizer_email?: string;
   event_type?: string;
+  /** Listing bucket (concerts, theatre, cinema, events) — derived client-side from event_type. */
+  page_slug?: string;
+  category?: string | null;
   start_at?: string | null;
   end_at?: string | null;
   event_schedules?: EventScheduleSlot[] | null;
@@ -56,6 +73,8 @@ export interface EventApiPayload {
 
 export interface EventFormModel {
   eventType: string;
+  /** Set when event type uses EVENT_CATEGORY_CONFIG; otherwise empty. */
+  category: string;
   image: string;
   eventName: string;
   eventNameEn: string;
@@ -119,12 +138,42 @@ export function normalizeEventSchedulesInput(raw: unknown): EventScheduleSlot[] 
     if (!row || typeof row !== 'object') continue;
     const source = row as Record<string, unknown>;
     const startRaw = source.start_at ?? source.startAt;
-    if (typeof startRaw !== 'string' || !startRaw.trim()) continue;
     const endRaw = source.end_at ?? source.endAt;
-    out.push({
-      start_at: startRaw.trim(),
-      end_at: typeof endRaw === 'string' && endRaw.trim() ? endRaw.trim() : null,
-    });
+
+    // Canonical shape: { start_at, end_at }
+    if (typeof startRaw === 'string' && startRaw.trim()) {
+      out.push({
+        start_at: startRaw.trim(),
+        end_at: typeof endRaw === 'string' && endRaw.trim() ? endRaw.trim() : null,
+      });
+      continue;
+    }
+
+    // Legacy shape compatibility: { date: "YYYY-MM-DD", startTime: "HH:mm", endTime?: "HH:mm" }.
+    const dateRaw = source.date;
+    const startTimeRaw = source.startTime;
+    const endTimeRaw = source.endTime;
+    if (
+      typeof dateRaw === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(dateRaw.trim()) &&
+      typeof startTimeRaw === 'string' &&
+      /^\d{2}:\d{2}$/.test(startTimeRaw.trim())
+    ) {
+      const [y, m, d] = dateRaw.trim().split('-').map(Number);
+      const [sh, sm] = startTimeRaw.trim().split(':').map(Number);
+      const startDate = new Date(y, m - 1, d, sh, sm, 0, 0);
+      if (isNaN(startDate.getTime())) continue;
+      const start_at = startDate.toISOString();
+
+      let end_at: string | null = null;
+      if (typeof endTimeRaw === 'string' && /^\d{2}:\d{2}$/.test(endTimeRaw.trim())) {
+        const [eh, em] = endTimeRaw.trim().split(':').map(Number);
+        const endDate = new Date(y, m - 1, d, eh, em, 0, 0);
+        if (!isNaN(endDate.getTime())) end_at = endDate.toISOString();
+      }
+
+      out.push({ start_at, end_at });
+    }
   }
   return out.length ? out : null;
 }
@@ -146,13 +195,17 @@ export function mapFormModelToEventApiPayload(form: EventFormModel): EventApiPay
     organizer_phone: form.organizerPhone || undefined,
     organizer_email: form.organizerEmail || undefined,
     event_type: form.eventType || undefined,
+    category: resolveEventCategoryForPayload(form.eventType, form.category),
   };
 }
 
 export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
   const rowPrice = row.price || '';
+  const ext = row as Record<string, unknown>;
+  const categoryStr = normalizeEventCategoryValue(ext['category'] ?? ext['Category']) ?? '';
   return {
     eventType: sanitizeEventType(row.event_type || ''),
+    category: categoryStr,
     image: row.image || '',
     eventName: row.title || '',
     eventNameEn: row.title_en || '',
@@ -173,8 +226,13 @@ export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
 }
 
 export function mapDbRowToUiEvent(row: EventDbRow): EventDbRow {
+  const ext = row as Record<string, unknown>;
+  const category = normalizeEventCategoryValue(ext['category'] ?? ext['Category']);
+  const { Category: _legacyCategory, ...rowWithoutLegacyCategory } = ext;
+
   return {
-    ...row,
+    ...(rowWithoutLegacyCategory as EventDbRow),
     event_schedules: normalizeEventSchedulesInput(row.event_schedules),
+    category,
   };
 }
