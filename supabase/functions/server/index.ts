@@ -3,7 +3,13 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_correct.tsx";
-import { pickEventApiPayload } from "./eventSchema.ts";
+import {
+  normalizeEventResponseRow,
+  normalizeEventResponseRows,
+  normalizeEventCategoryFromRequest,
+  pickEventApiPayload,
+  requestSpecifiesCategory,
+} from "./eventSchema.ts";
 
 console.log('🚀 Make Server starting... (ylztclwqmfhczklsswrt) - v9.1 CATEGORY_KILLED_v9.1 — ping endpoint live check');
 
@@ -179,31 +185,76 @@ async function bestEffortDeleteOwnedStorageObject(
 
 type EventScheduleRow = { start_at: string; end_at?: string | null };
 
-/** Client/DB → JSON array for `events_ee0c365c.event_schedules` (jsonb). */
-function normalizeEventSchedulesInput(raw: unknown): EventScheduleRow[] | null {
-  if (raw === undefined || raw === null) return null;
+type EventScheduleParseResult = {
+  ok: boolean;
+  value: EventScheduleRow[] | null;
+  error: string | null;
+};
+
+/**
+ * Strict write validator for `event_schedules`.
+ * Accepts ONLY canonical shape: [{ start_at: ISO, end_at?: ISO|null }]
+ */
+function parseCanonicalEventSchedulesInput(raw: unknown): EventScheduleParseResult {
+  if (raw === undefined || raw === null) return { ok: true, value: null, error: null };
+
+  let parsed: unknown = raw;
   if (typeof raw === "string") {
     const t = raw.trim();
-    if (!t) return null;
+    if (!t) return { ok: true, value: null, error: null };
     try {
-      return normalizeEventSchedulesInput(JSON.parse(t));
+      parsed = JSON.parse(t);
     } catch {
-      return null;
+      return { ok: false, value: null, error: "event_schedules must be valid JSON array." };
     }
   }
-  if (!Array.isArray(raw)) return null;
-  const out: EventScheduleRow[] = [];
-  for (const row of raw) {
-    if (!row || typeof row !== "object") continue;
-    const o = row as Record<string, unknown>;
-    const start = o.start_at ?? o.startAt;
-    if (typeof start !== "string" || !start.trim()) continue;
-    const endRaw = o.end_at ?? o.endAt;
-    const end_at =
-      typeof endRaw === "string" && endRaw.trim() ? endRaw.trim() : null;
-    out.push({ start_at: start.trim(), end_at });
+
+  if (!Array.isArray(parsed)) {
+    return { ok: false, value: null, error: "event_schedules must be an array." };
   }
-  return out.length ? out : null;
+
+  const out: EventScheduleRow[] = [];
+  for (let i = 0; i < parsed.length; i++) {
+    const row = parsed[i];
+    if (!row || typeof row !== "object") {
+      return { ok: false, value: null, error: `event_schedules[${i}] must be an object.` };
+    }
+
+    const o = row as Record<string, unknown>;
+
+    if ("date" in o || "startTime" in o || "endTime" in o || "startAt" in o || "endAt" in o) {
+      return {
+        ok: false,
+        value: null,
+        error:
+          `event_schedules[${i}] uses legacy keys. Use only {start_at,end_at}.`,
+      };
+    }
+
+    const startRaw = o.start_at;
+    if (typeof startRaw !== "string" || !startRaw.trim()) {
+      return { ok: false, value: null, error: `event_schedules[${i}].start_at is required.` };
+    }
+    const start_at = startRaw.trim();
+    if (isNaN(new Date(start_at).getTime())) {
+      return { ok: false, value: null, error: `event_schedules[${i}].start_at must be valid ISO datetime.` };
+    }
+
+    let end_at: string | null = null;
+    if ("end_at" in o && o.end_at !== null && o.end_at !== undefined) {
+      if (typeof o.end_at !== "string" || !o.end_at.trim()) {
+        return { ok: false, value: null, error: `event_schedules[${i}].end_at must be string or null.` };
+      }
+      end_at = o.end_at.trim();
+      if (isNaN(new Date(end_at).getTime())) {
+        return { ok: false, value: null, error: `event_schedules[${i}].end_at must be valid ISO datetime.` };
+      }
+    }
+
+    out.push({ start_at, end_at });
+  }
+
+  return { ok: true, value: out.length ? out : null, error: null };
 }
 
 /** Canonical email from Supabase Auth if registered; otherwise null. Paginates listUsers. */
@@ -1628,7 +1679,16 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
       console.warn('⚠️ Could not enrich submissions with user names:', enrichErr);
     }
     
-    return c.json({ submissions: allSubmissions });
+    const normalizedSubmissions = allSubmissions.map((item) => {
+      const candidate = item as Record<string, unknown>;
+      const looksLikeEvent =
+        'start_at' in candidate ||
+        'event_type' in candidate ||
+        'category' in candidate ||
+        'Category' in candidate;
+      return looksLikeEvent ? normalizeEventResponseRow(candidate) : item;
+    });
+    return c.json({ submissions: normalizedSubmissions });
   } catch (error) {
     console.error('❌ Error fetching submissions:', error);
     return c.json({ error: 'Failed to fetch submissions', details: String(error) }, 500);
@@ -1649,7 +1709,7 @@ app.get("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       .single();
     
     if (event) {
-      return c.json({ submission: event });
+      return c.json({ submission: normalizeEventResponseRow(event as Record<string, unknown>) });
     }
     
     // Try venues table
@@ -1757,9 +1817,23 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
           return c.json({ error: 'Invalid end_at datetime format. Use ISO 8601.', received: eventBody.end_at }, 400);
         }
       }
+      const parsedSchedules = parseCanonicalEventSchedulesInput(eventBody.event_schedules);
+      const parsedSchedulesError = parsedSchedules.ok ? null : parsedSchedules.error;
+      if (parsedSchedulesError) {
+        return c.json(
+          {
+            error:
+              'Invalid event_schedules format. Expected array of {start_at,end_at?} with ISO datetime strings.',
+            details: parsedSchedulesError,
+          },
+          400
+        );
+      }
 
       const eventType = eventBody.event_type || null;
+      const categoryInsert = normalizeEventCategoryFromRequest(body, eventBody);
       const event = {
+        page_slug: eventBody.page_slug || null,
         event_type: eventType,
         title: eventBody.title,
         title_en: eventBody.title_en || eventBody.title,
@@ -1774,11 +1848,12 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         map_url: eventBody.map_url || null,
         start_at: eventBody.start_at,
         end_at: eventBody.end_at || null,
-        event_schedules: normalizeEventSchedulesInput(eventBody.event_schedules),
+        event_schedules: parsedSchedules.value,
         ticket_link: eventBody.ticket_link || null,
         organizer_name: eventBody.organizer_name || null,
         organizer_phone: eventBody.organizer_phone || null,
         organizer_email: eventBody.organizer_email || null,
+        category: categoryInsert,
         status: isSubmitterAdmin ? 'approved' : 'pending',
         submitted_by_user_id: ownerUserId,
         submitted_by: finalSubmittedBy,
@@ -1799,7 +1874,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       }
       
       console.log(`✅ New event created: ${data.id} (status: ${data.status})`);
-      return c.json({ success: true, submission: data }, 201);
+      return c.json({ success: true, submission: normalizeEventResponseRow(data as Record<string, unknown>) }, 201);
       
     } else {
       // ── VENUE CREATION ── snake_case only
@@ -1913,10 +1988,26 @@ app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       ...(resolvedSubmittedByName !== undefined ? { submitted_by_name: resolvedSubmittedByName } : {}),
       updated_at: new Date().toISOString(),
     };
+    if (eventBody.page_slug !== undefined) eventPayload.page_slug = eventBody.page_slug ?? null;
     if (eventBody.date !== undefined) eventPayload.date = eventBody.date ?? null;
     if (eventBody.map_url !== undefined) eventPayload.map_url = eventBody.map_url ?? null;
     if (eventBody.event_schedules !== undefined) {
-      eventPayload.event_schedules = normalizeEventSchedulesInput(eventBody.event_schedules);
+      const parsedSchedules = parseCanonicalEventSchedulesInput(eventBody.event_schedules);
+      const parsedSchedulesError = parsedSchedules.ok ? null : parsedSchedules.error;
+      if (parsedSchedulesError) {
+        return c.json(
+          {
+            error:
+              'Invalid event_schedules format. Expected array of {start_at,end_at?} with ISO datetime strings.',
+            details: parsedSchedulesError,
+          },
+          400
+        );
+      }
+      eventPayload.event_schedules = parsedSchedules.value;
+    }
+    if (requestSpecifiesCategory(body, eventBody)) {
+      eventPayload.category = normalizeEventCategoryFromRequest(body, eventBody);
     }
 
     const { data: updatedEventRow, error: eventError } = await supabase
@@ -1927,7 +2018,11 @@ app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       .single();
 
     if (!eventError && updatedEventRow) {
-      return c.json({ success: true, submission: updatedEventRow, entity: 'event' });
+      return c.json({
+        success: true,
+        submission: normalizeEventResponseRow(updatedEventRow as Record<string, unknown>),
+        entity: 'event',
+      });
     }
 
     const venuePayload: Record<string, unknown> = {
@@ -2249,7 +2344,7 @@ app.get("/make-server-a0e1e9cb/my-events", async (c) => {
     ];
     
     console.log(`✅ Found ${events?.length || 0} events + ${venueEvents?.length || 0} legacy venue-events for ${userEmail}`);
-    return c.json({ events: allEvents });
+    return c.json({ events: normalizeEventResponseRows(allEvents as Record<string, unknown>[]) });
   } catch (error) {
     console.error('❌ Error fetching user events:', error);
     return c.json({ error: 'Failed to fetch events', details: String(error) }, 500);
@@ -2411,6 +2506,54 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
     let events = allEvents || [];
     
     // Filter by date/time (client-side filtering for complex date logic)
+    // IMPORTANT: use full event_schedules (all slots), not just legacy start_at.
+    const getEventSlots = (item: any): Array<{ start: Date; end: Date | null }> => {
+      const slots: Array<{ start: Date; end: Date | null }> = [];
+      const rawSchedules = item?.event_schedules;
+      if (Array.isArray(rawSchedules)) {
+        for (const row of rawSchedules) {
+          if (!row || typeof row !== 'object') continue;
+          const startRaw = (row as Record<string, unknown>).start_at;
+          const endRaw = (row as Record<string, unknown>).end_at;
+          if (typeof startRaw !== 'string' || !startRaw.trim()) continue;
+          const start = new Date(startRaw);
+          if (isNaN(start.getTime())) continue;
+          let end: Date | null = null;
+          if (typeof endRaw === 'string' && endRaw.trim()) {
+            const parsedEnd = new Date(endRaw);
+            if (!isNaN(parsedEnd.getTime())) end = parsedEnd;
+          }
+          slots.push({ start, end });
+        }
+      }
+      if (slots.length === 0 && item?.start_at) {
+        const start = new Date(item.start_at);
+        if (!isNaN(start.getTime())) {
+          let end: Date | null = null;
+          if (item?.end_at) {
+            const parsedEnd = new Date(item.end_at);
+            if (!isNaN(parsedEnd.getTime())) end = parsedEnd;
+          }
+          slots.push({ start, end });
+        }
+      }
+      slots.sort((a, b) => a.start.getTime() - b.start.getTime());
+      return slots;
+    };
+    const getNextUpcomingStart = (item: any, nowRef: Date): Date | null => {
+      const slots = getEventSlots(item);
+      const next = slots.find((s) => s.start >= nowRef);
+      return next ? next.start : null;
+    };
+    const getLastEffectiveDate = (item: any): Date | null => {
+      const slots = getEventSlots(item);
+      if (slots.length === 0) return null;
+      return slots.reduce((max, s) => {
+        const effective = s.end ?? s.start;
+        return effective > max ? effective : max;
+      }, slots[0].end ?? slots[0].start);
+    };
+
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart);
@@ -2422,21 +2565,17 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
     
     if (filter === 'upcoming') {
       events = events.filter((item) => {
-        if (!item.start_at) return false;
-        const eventDate = new Date(item.start_at);
-        return eventDate >= now;
+        return getNextUpcomingStart(item, now) !== null;
       });
     } else if (filter === 'today') {
       events = events.filter((item) => {
-        if (!item.start_at) return false;
-        const eventDate = new Date(item.start_at);
-        return eventDate >= todayStart && eventDate < todayEnd;
+        const slots = getEventSlots(item);
+        return slots.some((s) => s.start >= todayStart && s.start < todayEnd);
       });
     } else if (filter === 'tomorrow') {
       events = events.filter((item) => {
-        if (!item.start_at) return false;
-        const eventDate = new Date(item.start_at);
-        return eventDate >= tomorrowStart && eventDate < tomorrowEnd;
+        const slots = getEventSlots(item);
+        return slots.some((s) => s.start >= tomorrowStart && s.start < tomorrowEnd);
       });
     } else if (filter === 'weekend') {
       // Get next weekend (Saturday + Sunday)
@@ -2447,22 +2586,31 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
       sundayEnd.setDate(sundayEnd.getDate() + 2);
       
       events = events.filter((item) => {
-        if (!item.start_at) return false;
-        const eventDate = new Date(item.start_at);
-        return eventDate >= saturdayStart && eventDate < sundayEnd;
+        const slots = getEventSlots(item);
+        return slots.some((s) => s.start >= saturdayStart && s.start < sundayEnd);
       });
     } else if (filter === 'past') {
       events = events.filter((item) => {
-        if (!item.start_at) return false;
-        const eventDate = new Date(item.start_at);
-        return eventDate < now;
+        const slots = getEventSlots(item);
+        if (slots.length === 0) return false;
+        return slots.every((s) => (s.end ?? s.start) < now);
       });
     }
     
-    // Sort by start_at ascending (earliest first) for upcoming events
+    // Sort by relevant schedule point (next upcoming for current/future lists).
     events.sort((a, b) => {
-      const dateA = a.start_at ? new Date(a.start_at).getTime() : 0;
-      const dateB = b.start_at ? new Date(b.start_at).getTime() : 0;
+      const dateA =
+        filter === 'past'
+          ? (getLastEffectiveDate(a)?.getTime() ?? 0)
+          : (getNextUpcomingStart(a, now)?.getTime() ??
+            getEventSlots(a)[0]?.start.getTime() ??
+            0);
+      const dateB =
+        filter === 'past'
+          ? (getLastEffectiveDate(b)?.getTime() ?? 0)
+          : (getNextUpcomingStart(b, now)?.getTime() ??
+            getEventSlots(b)[0]?.start.getTime() ??
+            0);
       return dateA - dateB;
     });
     
@@ -2503,7 +2651,7 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
       }
     }
     
-    return c.json({ events });
+    return c.json({ events: normalizeEventResponseRows(events as Record<string, unknown>[]) });
   } catch (error) {
     console.error('❌ Error fetching events:', error);
     return c.json({ error: 'Failed to fetch events', details: String(error) }, 500);
@@ -2554,7 +2702,7 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
       
       if (venueEvent) {
         console.log(`🔄 Found legacy event "${venueEvent.title}" in venues table`);
-        return c.json({ event: venueEvent, legacy_venue: true });
+        return c.json({ event: normalizeEventResponseRow(venueEvent as Record<string, unknown>), legacy_venue: true });
       }
       
       console.log('❌ Event not found in events or venues table');
@@ -2564,7 +2712,7 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
     // ✅ If event is approved, return it (public access)
     if (event.status === 'approved') {
       console.log('✅ Event is approved - returning to everyone');
-      return c.json({ event });
+      return c.json({ event: normalizeEventResponseRow(event as Record<string, unknown>) });
     }
     
     // If event is NOT approved, check if user is the owner
@@ -2596,7 +2744,7 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
           // 🔥 ADMIN / MASTER_ADMIN can access ALL events
           if (isPrivileged) {
             console.log('✅ Privileged user (profiles.role) - granting access to all events');
-            return c.json({ event });
+            return c.json({ event: normalizeEventResponseRow(event as Record<string, unknown>) });
           }
           
           // Check if user owns this event
@@ -2606,7 +2754,7 @@ app.get("/make-server-a0e1e9cb/events/:id", async (c) => {
             event.organizer_email === userEmail
           ) {
             console.log(`✅ User ${userEmail} has access to their own event (status: ${event.status})`);
-            return c.json({ event });
+            return c.json({ event: normalizeEventResponseRow(event as Record<string, unknown>) });
           }
           
           console.log('❌ User does not own this event');
@@ -2700,10 +2848,26 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       ...(resolvedEventSubmittedByName !== undefined ? { submitted_by_name: resolvedEventSubmittedByName } : {}),
       updated_at: new Date().toISOString(),
     };
+    if (eventBody.page_slug !== undefined) updatePayload.page_slug = eventBody.page_slug ?? null;
     if (eventBody.date !== undefined) updatePayload.date = eventBody.date ?? null;
     if (eventBody.map_url !== undefined) updatePayload.map_url = eventBody.map_url ?? null;
     if (eventBody.event_schedules !== undefined) {
-      updatePayload.event_schedules = normalizeEventSchedulesInput(eventBody.event_schedules);
+      const parsedSchedules = parseCanonicalEventSchedulesInput(eventBody.event_schedules);
+      const parsedSchedulesError = parsedSchedules.ok ? null : parsedSchedules.error;
+      if (parsedSchedulesError) {
+        return c.json(
+          {
+            error:
+              'Invalid event_schedules format. Expected array of {start_at,end_at?} with ISO datetime strings.',
+            details: parsedSchedulesError,
+          },
+          400
+        );
+      }
+      updatePayload.event_schedules = parsedSchedules.value;
+    }
+    if (requestSpecifiesCategory(body, eventBody)) {
+      updatePayload.category = normalizeEventCategoryFromRequest(body, eventBody);
     }
 
     // 1️⃣ Try events table first
@@ -2728,7 +2892,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         );
       }
       console.log(`✅ Updated event in events table: ${eventsRow.id}`);
-      return c.json({ event: eventsRow });
+      return c.json({ event: normalizeEventResponseRow(eventsRow as Record<string, unknown>) });
     }
 
     // 2️⃣ Fallback: event might be stuck in venues table (legacy bug)
@@ -2746,6 +2910,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
       // Build clean event object for events table (no venue-only columns)
       const migratedEvent: Record<string, any> = {
         id: venueCheck.id,
+        page_slug: updatePayload.page_slug ?? venueCheck.page_slug ?? null,
         title: updatePayload.title ?? venueCheck.title,
         title_en: updatePayload.title_en ?? venueCheck.title_en,
         description: updatePayload.description ?? venueCheck.description,
@@ -2768,6 +2933,9 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         organizer_name: updatePayload.organizer_name ?? venueCheck.organizer_name,
         organizer_phone: updatePayload.organizer_phone ?? venueCheck.organizer_phone,
         organizer_email: updatePayload.organizer_email ?? venueCheck.organizer_email,
+        category: requestSpecifiesCategory(body, eventBody)
+          ? normalizeEventCategoryFromRequest(body, eventBody)
+          : null,
         status: venueCheck.status || 'approved',
         submitted_by:
           resolvedEventSubmittedBy !== undefined ? resolvedEventSubmittedBy : venueCheck.submitted_by,
@@ -2819,7 +2987,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
           "replace-legacy-event-image"
         );
       }
-      return c.json({ event: insertedEvent, migrated: true });
+      return c.json({ event: normalizeEventResponseRow(insertedEvent as Record<string, unknown>), migrated: true });
     }
     
     // 3️⃣ Not found anywhere
