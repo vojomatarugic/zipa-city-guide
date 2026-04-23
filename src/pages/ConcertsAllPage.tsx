@@ -5,7 +5,7 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -16,6 +16,7 @@ import {
   DOC_TITLE_CONCERTS,
   listingDocumentTitle,
 } from "../utils/documentTitle";
+import { cityEquals } from "../utils/city";
 
 export function ConcertsAllPage() {
   const { t } = useT();
@@ -30,15 +31,39 @@ export function ConcertsAllPage() {
       setIsLoading(true);
       try {
         const fetched = await eventService.getEvents("all", selectedCity);
-        const concertOnly = fetched.filter(
-          (e) => getTopLevelPageCategory(e) === "concerts",
-        );
         const now = new Date();
-        const active = concertOnly
+        const nextUpcomingSlot = (
+          e: Item,
+        ): { start_at: string; end_at?: string | null } | null => {
+          const slots = eventService.getEventScheduleSlots(e);
+          return slots.find((s) => new Date(s.start_at) >= now) ?? null;
+        };
+        const active = fetched
           .filter((e) => {
+            return (
+              e.status === "approved" &&
+              getTopLevelPageCategory(e) === "concerts" &&
+              cityEquals(e.city, selectedCity)
+            );
+          })
+          .filter((e) => {
+            const slots = eventService.getEventScheduleSlots(e);
+            if (slots.length > 0) {
+              return slots.some((s) => new Date(s.end_at || s.start_at) >= now);
+            }
             if (!e.start_at) return false;
             const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
             return end >= now;
+          })
+          .map((e) => {
+            const next = nextUpcomingSlot(e);
+            return next
+              ? {
+                  ...e,
+                  start_at: next.start_at,
+                  end_at: next.end_at ?? null,
+                }
+              : e;
           })
           .sort(
             (a, b) =>
@@ -132,10 +157,10 @@ export function ConcertsAllPage() {
         )}
 
         {!isLoading && events.length === 0 && (
-          <UnderConstruction
-            language={language}
-            accentColor="#C0CA33"
+          <SectionEmptyState
             icon={Music}
+            accentColor="#C0CA33"
+            message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
           />
         )}
 

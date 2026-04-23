@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { CalendarDays } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -20,6 +20,49 @@ import {
   EVENTS_HERO_OVERLAY_GRADIENT,
 } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { cityEquals } from "../utils/city";
+
+const CURRENT_MAX_CARDS = 4;
+const FEATURED_MAX_CARDS = 6;
+const OTHER_CITIES_MAX_CARDS = 4;
+
+function nextStartAtOrNull(event: Item, now: Date): Date | null {
+  const slots = eventService.getEventScheduleSlots(event);
+  const nextSlot = slots.find((slot) => new Date(slot.start_at) >= now);
+  if (nextSlot) return new Date(nextSlot.start_at);
+  return event.start_at && new Date(event.start_at) >= now
+    ? new Date(event.start_at)
+    : null;
+}
+
+function isNotFinished(event: Item, now: Date): boolean {
+  const slots = eventService.getEventScheduleSlots(event);
+  if (slots.length > 0) {
+    return slots.some((slot) => new Date(slot.end_at || slot.start_at) >= now);
+  }
+  if (event.end_at) return new Date(event.end_at) >= now;
+  if (event.start_at) return new Date(event.start_at) >= now;
+  return false;
+}
+
+function sortByStartAtAsc(events: Item[], now: Date): Item[] {
+  return [...events].sort((a, b) => {
+    const aTime =
+      nextStartAtOrNull(a, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const bTime =
+      nextStartAtOrNull(b, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    return aTime - bTime;
+  });
+}
+
+function isFeaturedEvent(event: Item): boolean {
+  const featured = event as Item & {
+    is_featured?: boolean;
+    featured?: boolean;
+    starred?: boolean;
+  };
+  return Boolean(featured.is_featured || featured.featured || featured.starred);
+}
 
 export function EventsPage() {
   const { t } = useT();
@@ -35,10 +78,7 @@ export function EventsPage() {
   useEffect(() => {
     async function fetchEvents() {
       setIsLoading(true);
-      const fetchedEvents = await eventService.getEvents(
-        "upcoming",
-        selectedCity,
-      );
+      const fetchedEvents = await eventService.getEvents("all");
       const eventsBucket = fetchedEvents.filter(
         (e) => getTopLevelPageCategory(e) === "events",
       );
@@ -84,18 +124,67 @@ export function EventsPage() {
     },
   });
 
-  // Split events into sections
-  const featuredEvents = events.slice(0, 4);
-  const upcomingEvents = events.slice(4, 10);
-  const nearbyEvents = events
-    .filter((e) => e.city && e.city !== "Banja Luka")
-    .slice(0, 4);
+  const { currentEvents, featuredEvents, otherCitiesEvents } = useMemo(() => {
+    const now = new Date();
+
+    const baseEvents = events.filter(
+      (event) =>
+        event.status === "approved" &&
+        getTopLevelPageCategory(event) === "events" &&
+        isNotFinished(event, now),
+    );
+
+    const localEvents = baseEvents.filter((event) =>
+      cityEquals(event.city, selectedCity),
+    );
+
+    const eligibleCurrentEvents = sortByStartAtAsc(
+      localEvents.filter((event) => {
+        const nextStart = nextStartAtOrNull(event, now);
+        return Boolean(nextStart && nextStart >= now);
+      }),
+      now,
+    );
+
+    const starredEvents = sortByStartAtAsc(
+      eligibleCurrentEvents.filter((event) => isFeaturedEvent(event)),
+      now,
+    );
+    const featuredSelected = starredEvents.slice(0, FEATURED_MAX_CARDS);
+    const featuredIds = new Set(featuredSelected.map((event) => event.id));
+
+    const featuredFallback = eligibleCurrentEvents.filter(
+      (event) => !featuredIds.has(event.id),
+    );
+    const finalFeaturedEvents = [...featuredSelected].concat(
+      featuredFallback.slice(
+        0,
+        Math.max(FEATURED_MAX_CARDS - featuredSelected.length, 0),
+      ),
+    );
+    const usedFeaturedIds = new Set(finalFeaturedEvents.map((event) => event.id));
+
+    const currentEvents = eligibleCurrentEvents
+      .filter((event) => !usedFeaturedIds.has(event.id))
+      .slice(0, CURRENT_MAX_CARDS);
+
+    const otherCitiesEvents = sortByStartAtAsc(
+      baseEvents.filter((event) => !cityEquals(event.city, selectedCity)),
+      now,
+    ).slice(0, OTHER_CITIES_MAX_CARDS);
+
+    return {
+      currentEvents,
+      featuredEvents: finalFeaturedEvents,
+      otherCitiesEvents,
+    };
+  }, [events, selectedCity]);
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{
           height: "420px",
           background: `${EVENTS_HERO_OVERLAY_GRADIENT}, url('${eventsHeroImage}') center/cover`,
@@ -131,8 +220,8 @@ export function EventsPage() {
         </div>
       </section>
 
-      {/* FEATURED EVENTS */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      {/* CURRENT EVENTS */}
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -143,14 +232,14 @@ export function EventsPage() {
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {language === "sr" ? "Aktuelna dešavanja" : "Featured Events"}
+            {language === "sr" ? "Aktuelna dešavanja" : "Current Events"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             {isLoading ? (
               <EventCardSkeleton count={4} imageHeight="350px" />
-            ) : featuredEvents.length > 0 ? (
-              featuredEvents.map((event) => (
+            ) : currentEvents.length > 0 ? (
+              currentEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -162,10 +251,10 @@ export function EventsPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                <SectionEmptyState
                   icon={CalendarDays}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -200,8 +289,8 @@ export function EventsPage() {
         </div>
       </section>
 
-      {/* UPCOMING EVENTS */}
-      <section className="py-16" style={{ background: "#FFF5E6" }}>
+      {/* FEATURED EVENTS */}
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFF5E6" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -212,14 +301,14 @@ export function EventsPage() {
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {language === "sr" ? "Predstojeća dešavanja" : "Upcoming Events"}
+            {language === "sr" ? "Istaknuta dešavanja" : "Featured Events"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
               <EventCardSkeleton count={6} imageHeight="200px" />
-            ) : upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => (
+            ) : featuredEvents.length > 0 ? (
+              featuredEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -231,10 +320,10 @@ export function EventsPage() {
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                <SectionEmptyState
                   icon={CalendarDays}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -242,8 +331,8 @@ export function EventsPage() {
         </div>
       </section>
 
-      {/* NEARBY EVENTS */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      {/* EVENTS FROM OTHER CITIES */}
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -254,12 +343,16 @@ export function EventsPage() {
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {language === "sr" ? "Dešavanja u okolini" : "Nearby Events"}
+            {language === "sr"
+              ? "Dešavanja u ostalim gradovima"
+              : "Events from other cities"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {nearbyEvents.length > 0 ? (
-              nearbyEvents.map((event) => (
+            {isLoading ? (
+              <EventCardSkeleton count={4} imageHeight="200px" />
+            ) : otherCitiesEvents.length > 0 ? (
+              otherCitiesEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -267,14 +360,19 @@ export function EventsPage() {
                   accentColor={EVENTS_CATEGORY_THEME.accentColor}
                   imageHeight="200px"
                   interestCount={interestCounts[event.id]}
+                  showCity
+                  showVenue
+                  showDate
+                  showTime
+                  metadataOrder={["city", "venue", "date", "time"]}
                 />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                <SectionEmptyState
                   icon={CalendarDays}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}

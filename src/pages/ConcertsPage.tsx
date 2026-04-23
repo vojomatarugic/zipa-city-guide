@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { EventCard, EventCardSkeleton } from "../components/EventCard";
-import { UnderConstruction } from "../components/UnderConstruction";
 import { Music } from "lucide-react";
+import { EventCard, EventCardSkeleton } from "../components/EventCard";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
@@ -19,6 +19,49 @@ import { Item } from "../utils/dataService";
 const ogImage = "/zipa-city-guide-OG.png";
 import concertsHeroImage from "../assets/concerts-hero.png";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { cityEquals, normalizeCityForCompare } from "../utils/city";
+
+const UPCOMING_MAX_CARDS = 4;
+const FEATURED_MAX_CARDS = 3;
+const OTHER_CITIES_MAX_CARDS = 4;
+
+function nextStartAtOrNull(event: Item, now: Date): Date | null {
+  const slots = eventService.getEventScheduleSlots(event);
+  const nextSlot = slots.find((slot) => new Date(slot.start_at) >= now);
+  if (nextSlot) return new Date(nextSlot.start_at);
+  return event.start_at && new Date(event.start_at) >= now
+    ? new Date(event.start_at)
+    : null;
+}
+
+function isNotFinished(event: Item, now: Date): boolean {
+  const slots = eventService.getEventScheduleSlots(event);
+  if (slots.length > 0) {
+    return slots.some((slot) => new Date(slot.end_at || slot.start_at) >= now);
+  }
+  if (event.end_at) return new Date(event.end_at) >= now;
+  if (event.start_at) return new Date(event.start_at) >= now;
+  return false;
+}
+
+function sortByStartAtAsc(events: Item[], now: Date): Item[] {
+  return [...events].sort((a, b) => {
+    const aTime =
+      nextStartAtOrNull(a, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const bTime =
+      nextStartAtOrNull(b, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    return aTime - bTime;
+  });
+}
+
+function isFeaturedEvent(event: Item): boolean {
+  const featured = event as Item & {
+    is_featured?: boolean;
+    featured?: boolean;
+    starred?: boolean;
+  };
+  return Boolean(featured.is_featured || featured.featured || featured.starred);
+}
 
 export function ConcertsPage() {
   const { t } = useT();
@@ -33,7 +76,7 @@ export function ConcertsPage() {
   useEffect(() => {
     async function fetchConcerts() {
       setIsLoading(true);
-      const fetched = await eventService.getEvents("upcoming", undefined);
+      const fetched = await eventService.getEvents("all", undefined, "concert");
       const concertOnly = fetched.filter(
         (e) => getTopLevelPageCategory(e) === "concerts",
       );
@@ -71,17 +114,78 @@ export function ConcertsPage() {
     },
   });
 
-  const upcomingConcerts = events.slice(0, 6);
-  const featuredConcerts = events.slice(6, 9);
-  const nearbyConcerts = events
-    .filter((e) => e.city && e.city !== "Banja Luka")
-    .slice(0, 4);
+  const { upcomingConcerts, featuredConcerts, otherCitiesConcerts } =
+    useMemo(() => {
+      const now = new Date();
+      const normalizedSelectedCity = normalizeCityForCompare(selectedCity);
+
+      const baseConcerts = events.filter(
+        (event) =>
+          event.event_type === "concert" &&
+          event.status === "approved" &&
+          isNotFinished(event, now),
+      );
+
+      const localConcerts = baseConcerts.filter((event) =>
+        cityEquals(event.city, normalizedSelectedCity),
+      );
+
+      const eligibleUpcomingConcerts = sortByStartAtAsc(
+        localConcerts.filter((event) => {
+          const nextStart = nextStartAtOrNull(event, now);
+          return Boolean(nextStart && nextStart >= now);
+        }),
+        now,
+      );
+
+      const starredConcerts = sortByStartAtAsc(
+        eligibleUpcomingConcerts.filter((event) => isFeaturedEvent(event)),
+        now,
+      );
+      const featuredConcertsSelected = starredConcerts.slice(
+        0,
+        FEATURED_MAX_CARDS,
+      );
+      const featuredConcertIds = new Set(
+        featuredConcertsSelected.map((event) => event.id),
+      );
+
+      const featuredFallbackConcerts = eligibleUpcomingConcerts.filter(
+        (event) => !featuredConcertIds.has(event.id),
+      );
+      const finalFeaturedConcerts = [...featuredConcertsSelected].concat(
+        featuredFallbackConcerts.slice(
+          0,
+          Math.max(FEATURED_MAX_CARDS - featuredConcertsSelected.length, 0),
+        ),
+      );
+      const usedFeaturedIds = new Set(
+        finalFeaturedConcerts.map((event) => event.id),
+      );
+
+      const upcomingConcerts = eligibleUpcomingConcerts
+        .filter((event) => !usedFeaturedIds.has(event.id))
+        .slice(0, UPCOMING_MAX_CARDS);
+
+      const otherCitiesConcerts = sortByStartAtAsc(
+        baseConcerts.filter(
+          (event) => !cityEquals(event.city, normalizedSelectedCity),
+        ),
+        now,
+      ).slice(0, OTHER_CITIES_MAX_CARDS);
+
+      return {
+        upcomingConcerts,
+        featuredConcerts: finalFeaturedConcerts,
+        otherCitiesConcerts,
+      };
+    }, [events, selectedCity]);
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -126,7 +230,10 @@ export function ConcertsPage() {
       </section>
 
       {/* Upcoming Concerts */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      <section
+        className="py-16 min-h-[320px]"
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-4"
@@ -140,9 +247,9 @@ export function ConcertsPage() {
             {language === "sr" ? "Predstojeći koncerti" : "Upcoming Concerts"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={6} imageHeight="300px" />
+              <EventCardSkeleton count={4} imageHeight="320px" />
             ) : upcomingConcerts.length > 0 ? (
               upcomingConcerts.map((event) => (
                 <EventCard
@@ -150,16 +257,25 @@ export function ConcertsPage() {
                   event={event}
                   language={language}
                   accentColor="#C0CA33"
-                  imageHeight="300px"
+                  imageHeight="320px"
                   interestCount={interestCounts[event.id]}
+                  showCity={false}
+                  showVenue
+                  showDate
+                  showTime
+                  metadataOrder={["venue", "date", "time"]}
                 />
               ))
             ) : (
-              <div className="col-span-3">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#C0CA33"
+              <div className="col-span-4">
+                <SectionEmptyState
                   icon={Music}
+                  accentColor="#C0CA33"
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
                 />
               </div>
             )}
@@ -187,7 +303,10 @@ export function ConcertsPage() {
       </section>
 
       {/* Featured Concerts */}
-      <section className="py-16" style={{ background: "#F5F7E8" }}>
+      <section
+        className="py-16 min-h-[320px]"
+        style={{ background: "#F5F7E8" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left mb-6"
@@ -202,23 +321,34 @@ export function ConcertsPage() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {featuredConcerts.length > 0 ? (
+            {isLoading ? (
+              <EventCardSkeleton count={3} imageHeight="450px" />
+            ) : featuredConcerts.length > 0 ? (
               featuredConcerts.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
                   language={language}
                   accentColor="#C0CA33"
-                  imageHeight="400px"
+                  imageHeight="450px"
                   interestCount={interestCounts[event.id]}
+                  showCity={false}
+                  showVenue
+                  showDate
+                  showTime
+                  metadataOrder={["venue", "date", "time"]}
                 />
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#C0CA33"
+                <SectionEmptyState
                   icon={Music}
+                  accentColor="#C0CA33"
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
                 />
               </div>
             )}
@@ -226,8 +356,11 @@ export function ConcertsPage() {
         </div>
       </section>
 
-      {/* Nearby Concerts */}
-      <section className="pt-16 pb-8" style={{ background: "#FFFFFF" }}>
+      {/* Concerts From Other Cities */}
+      <section
+        className="pt-16 pb-8 min-h-[320px]"
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -238,12 +371,16 @@ export function ConcertsPage() {
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {language === "sr" ? "Koncerti u blizini" : "Nearby Concerts"}
+            {language === "sr"
+              ? "Koncerti iz drugih gradova"
+              : "Concerts from other cities"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-            {nearbyConcerts.length > 0 ? (
-              nearbyConcerts.map((event) => (
+            {isLoading ? (
+              <EventCardSkeleton count={4} imageHeight="300px" />
+            ) : otherCitiesConcerts.length > 0 ? (
+              otherCitiesConcerts.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
@@ -251,14 +388,23 @@ export function ConcertsPage() {
                   accentColor="#C0CA33"
                   imageHeight="300px"
                   interestCount={interestCounts[event.id]}
+                  showCity
+                  showVenue
+                  showDate
+                  showTime
+                  metadataOrder={["city", "venue", "date", "time"]}
                 />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#C0CA33"
+                <SectionEmptyState
                   icon={Music}
+                  accentColor="#C0CA33"
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
                 />
               </div>
             )}
