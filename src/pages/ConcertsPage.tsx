@@ -8,13 +8,16 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
-import { DOC_TITLE_CONCERTS, listingDocumentTitle } from "../utils/documentTitle";
+import {
+  DOC_TITLE_CONCERTS,
+  listingDocumentTitle,
+} from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
-import concertsHeroImage from "../assets/b2e065a42a0a51bb75c2d1ea6e313313b9eeac02.png";
+const ogImage = "/zipa-city-guide-OG.png";
+import concertsHeroImage from "../assets/concerts-hero.png";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 export function ConcertsPage() {
@@ -23,21 +26,23 @@ export function ConcertsPage() {
   const { selectedCity } = useSelectedCity();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
+  const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
+    {},
+  );
 
   useEffect(() => {
     async function fetchConcerts() {
       setIsLoading(true);
       const fetched = await eventService.getEvents("upcoming", undefined);
       const concertOnly = fetched.filter(
-        (e) => getTopLevelPageCategory(e) === "concerts"
+        (e) => getTopLevelPageCategory(e) === "concerts",
       );
       setEvents(concertOnly);
       setIsLoading(false);
 
       const freeIds = concertOnly
-        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
-        .map(e => e.id);
+        .filter((e) => /^(free|besplatn|gratis)/i.test(e.price || ""))
+        .map((e) => e.id);
       if (freeIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeIds);
         setInterestCounts(counts);
@@ -68,12 +73,17 @@ export function ConcertsPage() {
 
   const upcomingConcerts = events.slice(0, 6);
   const featuredConcerts = events.slice(6, 9);
-  const nearbyConcerts = events.filter(e => e.city && e.city !== 'Banja Luka').slice(0, 4);
+  const nearbyConcerts = events
+    .filter((e) => e.city && e.city !== "Banja Luka")
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
-      <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
+      <section
+        className="relative w-full"
+        style={{ height: "420px", marginTop: 0 }}
+      >
         <img
           src={concertsHeroImage}
           alt="Koncerti u Banjaluci"
@@ -81,7 +91,10 @@ export function ConcertsPage() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(rgba(192, 202, 51, 0.5), rgba(0, 0, 0, 0.7))" }}
+          style={{
+            background:
+              "linear-gradient(rgba(192, 202, 51, 0.5), rgba(0, 0, 0, 0.7))",
+          }}
         />
         <div className="relative z-10 h-full flex flex-col justify-center items-center px-8 lg:px-24">
           <h1
@@ -90,7 +103,8 @@ export function ConcertsPage() {
               fontSize: "42px",
               fontWeight: 700,
               color: "#FFFFFF",
-              textShadow: "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
             }}
           >
             {t("concertsPageHero")}
@@ -100,7 +114,8 @@ export function ConcertsPage() {
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
-              textShadow: "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
             }}
           >
             {language === "sr"
@@ -141,7 +156,11 @@ export function ConcertsPage() {
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor="#C0CA33" icon={Music} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#C0CA33"
+                  icon={Music}
+                />
               </div>
             )}
           </div>
@@ -151,9 +170,16 @@ export function ConcertsPage() {
             <Link to="/concerts/all">
               <button
                 className="px-8 py-3 rounded-md transition-all duration-300 hover:opacity-90 hover:shadow-lg"
-                style={{ background: "#C0CA33", color: "#FFFFFF", fontSize: "16px", fontWeight: 500 }}
+                style={{
+                  background: "#C0CA33",
+                  color: "#FFFFFF",
+                  fontSize: "16px",
+                  fontWeight: 500,
+                }}
               >
-                {language === "sr" ? "Pogledaj sve koncerte" : "View All Concerts"}
+                {language === "sr"
+                  ? "Pogledaj sve koncerte"
+                  : "View All Concerts"}
               </button>
             </Link>
           </div>
@@ -189,7 +215,11 @@ export function ConcertsPage() {
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor="#C0CA33" icon={Music} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#C0CA33"
+                  icon={Music}
+                />
               </div>
             )}
           </div>
@@ -225,7 +255,11 @@ export function ConcertsPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor="#C0CA33" icon={Music} />
+                <UnderConstruction
+                  language={language}
+                  accentColor="#C0CA33"
+                  icon={Music}
+                />
               </div>
             )}
           </div>

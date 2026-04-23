@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
-import { MapPin, Disc3 } from 'lucide-react';
-import { useT } from '../hooks/useT';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useLocation } from '../contexts/LocationContext';
+import { useState, useEffect } from "react";
+import { Link } from "react-router";
+import { MapPin, Disc3 } from "lucide-react";
+import { useT } from "../hooks/useT";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
@@ -11,11 +11,14 @@ import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
-import clubsHeroImage from "../assets/7ad54244090ee97cf9170d61ce80eeb03b91c8aa.png";
-import { UnderConstruction } from '../components/UnderConstruction';
-import { VenueOpeningHoursRow } from '../components/VenueOpeningHoursRow';
-import { CLUBS_CATEGORY_THEME, CLUBS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+const ogImage = "/zipa-city-guide-OG.png";
+import clubsHeroImage from "../assets/clubs-hero.png";
+import { UnderConstruction } from "../components/UnderConstruction";
+import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
+import {
+  CLUBS_CATEGORY_THEME,
+  CLUBS_HERO_OVERLAY_GRADIENT,
+} from "../utils/categoryThemes";
 import { venueTagsFallbackLine } from "../utils/venueTagLabels";
 
 export function ClubsPage() {
@@ -28,7 +31,7 @@ export function ClubsPage() {
   useEffect(() => {
     async function fetchClubs() {
       setIsLoading(true);
-      const fetchedClubs = await getVenues('clubs');
+      const fetchedClubs = await getVenues("clubs");
       setClubs(fetchedClubs.slice(0, 12)); // Show first 12 as featured
       setIsLoading(false);
     }
@@ -66,10 +69,7 @@ export function ClubsPage() {
   });
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ background: "#FFFFFF" }}
-    >
+    <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION - Full Width */}
       <section
         className="relative w-full"
@@ -108,10 +108,7 @@ export function ClubsPage() {
       </section>
 
       {/* CLUBS BY MUSIC GENRE - ROZA POZADINA */}
-      <section
-        className="py-16"
-        style={{ background: "#FFFFFF" }}
-      >
+      <section className="py-16" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -125,26 +122,39 @@ export function ClubsPage() {
             {t("clubsByMusicGenre")}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6" key={language}>
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"
+            key={language}
+          >
             {isLoading ? (
               <div className="col-span-3 text-center py-12">
-                <p className="text-lg font-semibold text-gray-600">{t('loading')}</p>
+                <p className="text-lg font-semibold text-gray-600">
+                  {t("loading")}
+                </p>
               </div>
             ) : clubs.length === 0 ? (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={Disc3} />
+                <UnderConstruction
+                  language={language}
+                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  icon={Disc3}
+                />
               </div>
             ) : (
               clubs.slice(0, 9).map((club) => (
                 <Link
                   key={club.id}
                   to={`/clubs/${club.id}`}
-                  style={{ textDecoration: 'none' }}
+                  style={{ textDecoration: "none" }}
                 >
                   <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                     <img
                       src={club.image}
-                      alt={language === 'en' && club.title_en ? club.title_en : club.title}
+                      alt={
+                        language === "en" && club.title_en
+                          ? club.title_en
+                          : club.title
+                      }
                       className="w-full h-[220px] object-cover rounded-md"
                     />
                     <div className="p-4">
@@ -159,8 +169,8 @@ export function ClubsPage() {
                         >
                           {venueTagsFallbackLine(
                             club.tags,
-                            language === 'en' ? 'en' : 'sr',
-                            t('clubs')
+                            language === "en" ? "en" : "sr",
+                            t("clubs"),
                           )}
                         </span>
                       </div>
@@ -170,20 +180,16 @@ export function ClubsPage() {
                         className="text-base font-semibold mb-2"
                         style={{ color: "#1a1a1a" }}
                       >
-                        {language === 'en' && club.title_en ? club.title_en : club.title}
+                        {language === "en" && club.title_en
+                          ? club.title_en
+                          : club.title}
                       </h3>
 
                       {/* Location */}
                       <div className="flex items-center gap-2 mb-1">
-                        <MapPin
-                          size={14}
-                          style={{ color: "#6B7280" }}
-                        />
-                        <span
-                          className="text-sm"
-                          style={{ color: "#6B7280" }}
-                        >
-                          {club.address || club.city || 'Banja Luka'}
+                        <MapPin size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {club.address || club.city || "Banja Luka"}
                         </span>
                       </div>
 
@@ -191,7 +197,7 @@ export function ClubsPage() {
                       {club.opening_hours && (
                         <VenueOpeningHoursRow
                           hoursText={
-                            language === 'en' && club.opening_hours_en
+                            language === "en" && club.opening_hours_en
                               ? club.opening_hours_en
                               : club.opening_hours
                           }
@@ -233,10 +239,7 @@ export function ClubsPage() {
       </section>
 
       {/* FEATURED CLUBS */}
-      <section
-        className="py-16"
-        style={{ background: "#FCE4EC" }}
-      >
+      <section className="py-16" style={{ background: "#FCE4EC" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -256,12 +259,16 @@ export function ClubsPage() {
                 <Link
                   key={club.id}
                   to={`/clubs/${club.id}`}
-                  style={{ textDecoration: 'none' }}
+                  style={{ textDecoration: "none" }}
                 >
                   <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                     <img
                       src={club.image}
-                      alt={language === 'en' && club.title_en ? club.title_en : club.title}
+                      alt={
+                        language === "en" && club.title_en
+                          ? club.title_en
+                          : club.title
+                      }
                       className="w-full h-[300px] object-cover rounded-md"
                     />
                     <div className="p-4">
@@ -275,8 +282,8 @@ export function ClubsPage() {
                         >
                           {venueTagsFallbackLine(
                             club.tags,
-                            language === 'en' ? 'en' : 'sr',
-                            t('clubs')
+                            language === "en" ? "en" : "sr",
+                            t("clubs"),
                           )}
                         </span>
                       </div>
@@ -285,26 +292,22 @@ export function ClubsPage() {
                         className="text-base font-semibold mb-2"
                         style={{ color: "#1a1a1a" }}
                       >
-                        {language === 'en' && club.title_en ? club.title_en : club.title}
+                        {language === "en" && club.title_en
+                          ? club.title_en
+                          : club.title}
                       </h3>
 
                       <div className="flex items-center gap-2 mb-1">
-                        <MapPin
-                          size={14}
-                          style={{ color: "#6B7280" }}
-                        />
-                        <span
-                          className="text-sm"
-                          style={{ color: "#6B7280" }}
-                        >
-                          {club.address || club.city || 'Banja Luka'}
+                        <MapPin size={14} style={{ color: "#6B7280" }} />
+                        <span className="text-sm" style={{ color: "#6B7280" }}>
+                          {club.address || club.city || "Banja Luka"}
                         </span>
                       </div>
 
                       {club.opening_hours && (
                         <VenueOpeningHoursRow
                           hoursText={
-                            language === 'en' && club.opening_hours_en
+                            language === "en" && club.opening_hours_en
                               ? club.opening_hours_en
                               : club.opening_hours
                           }
@@ -316,7 +319,11 @@ export function ClubsPage() {
               ))
             ) : !isLoading ? (
               <div className="col-span-2">
-                <UnderConstruction language={language} accentColor={CLUBS_CATEGORY_THEME.accentColor} icon={Disc3} />
+                <UnderConstruction
+                  language={language}
+                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  icon={Disc3}
+                />
               </div>
             ) : null}
           </div>
@@ -324,10 +331,7 @@ export function ClubsPage() {
       </section>
 
       {/* NEARBY CLUBS */}
-      <section
-        className="py-16"
-        style={{ background: "#FFFFFF" }}
-      >
+      <section className="py-16" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -387,57 +391,53 @@ export function ClubsPage() {
                 title: t("loungeTeslic"),
                 location: t("teslic"),
               },
-            ].slice(0, 5).map((club, i) => (
-              <div
-                key={i}
-                className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-              >
-                {/* Image */}
-                <img
-                  src={club.image}
-                  alt={club.title}
-                  className="w-full h-[250px] object-cover rounded-md"
-                />
+            ]
+              .slice(0, 5)
+              .map((club, i) => (
+                <div
+                  key={i}
+                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                >
+                  {/* Image */}
+                  <img
+                    src={club.image}
+                    alt={club.title}
+                    className="w-full h-[250px] object-cover rounded-md"
+                  />
 
-                {/* Content ISPOD SLIKE */}
-                <div className="p-4">
-                  {/* Category and Badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="text-xs font-medium px-2 py-1 rounded"
-                      style={{
-                        background: "#F3F4F6",
-                        color: CLUBS_CATEGORY_THEME.accentColor,
-                      }}
+                  {/* Content ISPOD SLIKE */}
+                  <div className="p-4">
+                    {/* Category and Badge */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="text-xs font-medium px-2 py-1 rounded"
+                        style={{
+                          background: "#F3F4F6",
+                          color: CLUBS_CATEGORY_THEME.accentColor,
+                        }}
+                      >
+                        {club.category}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3
+                      className="text-base font-semibold mb-2"
+                      style={{ color: "#1a1a1a" }}
                     >
-                      {club.category}
-                    </span>
-                  </div>
+                      {club.title}
+                    </h3>
 
-                  {/* Title */}
-                  <h3
-                    className="text-base font-semibold mb-2"
-                    style={{ color: "#1a1a1a" }}
-                  >
-                    {club.title}
-                  </h3>
-
-                  {/* Location */}
-                  <div className="flex items-center gap-2">
-                    <MapPin
-                      size={14}
-                      style={{ color: "#6B7280" }}
-                    />
-                    <span
-                      className="text-sm"
-                      style={{ color: "#6B7280" }}
-                    >
-                      {club.location}
-                    </span>
+                    {/* Location */}
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} style={{ color: "#6B7280" }} />
+                      <span className="text-sm" style={{ color: "#6B7280" }}>
+                        {club.location}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       </section>

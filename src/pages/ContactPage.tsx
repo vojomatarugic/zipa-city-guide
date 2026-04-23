@@ -1,29 +1,29 @@
-import { useState } from 'react';
-import emailjs from '@emailjs/browser';
-import { MapPin, Phone, Mail } from 'lucide-react';
-import { useT } from '../hooks/useT';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useLocation as useSelectedCity } from '../contexts/LocationContext';
-import { useSEO } from '../hooks/useSEO';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { listingDocumentTitle } from '../utils/documentTitle';
-import ogImage from '../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png';
-import { CONTACT_EMAIL, SITE_URL } from '../config/siteConfig';
+import { useState } from "react";
+import emailjs from "@emailjs/browser";
+import { MapPin, Phone, Mail } from "lucide-react";
+import { useT } from "../hooks/useT";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useLocation as useSelectedCity } from "../contexts/LocationContext";
+import { useSEO } from "../hooks/useSEO";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { listingDocumentTitle } from "../utils/documentTitle";
+import ogImage from "../assets/zipa-city-guide-OG.png";
+import { CONTACT_EMAIL, SITE_URL } from "../config/siteConfig";
 
-const UI_CONTACT_EMAIL = 'info@zipaagency.com';
+const UI_CONTACT_EMAIL = "info@zipaagency.com";
 
 export function ContactPage() {
   const { t } = useT();
   const { language } = useLanguage();
   const { selectedCity } = useSelectedCity();
-  const contactPageName = language === 'sr' ? 'Kontakt' : 'Contact';
+  const contactPageName = language === "sr" ? "Kontakt" : "Contact";
   useDocumentTitle(listingDocumentTitle(contactPageName, selectedCity));
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
+    name: "",
+    email: "",
+    phone: "",
+    message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -31,19 +31,21 @@ export function ContactPage() {
 
   // SEO optimization
   useSEO({
-    title: t('seoContactTitle'),
-    description: t('seoContactDescription'),
-    keywords: t('seoContactKeywords'),
+    title: t("seoContactTitle"),
+    description: t("seoContactDescription"),
+    keywords: t("seoContactKeywords"),
     ogImage: ogImage,
-    ogType: 'website',
-    canonical: SITE_URL + '/contact'
+    ogType: "website",
+    canonical: SITE_URL + "/contact",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -51,15 +53,15 @@ export function ContactPage() {
     e.preventDefault();
     if (isSubmitting) return;
 
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID?.trim() ?? '';
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID?.trim() ?? '';
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY?.trim() ?? '';
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID?.trim() ?? "";
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID?.trim() ?? "";
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY?.trim() ?? "";
 
     setSubmitError(null);
     setSubmitSuccess(false);
 
     if (!serviceId || !templateId || !publicKey) {
-      setSubmitError(t('contactFormMissingConfig'));
+      setSubmitError(t("contactFormMissingConfig"));
       return;
     }
 
@@ -69,7 +71,7 @@ export function ContactPage() {
       from_name: formData.name.trim(),
       from_email: formData.email.trim(),
       phone: formData.phone.trim(),
-      subject: `${t('contactPageTitle')} — ${formData.name.trim()}`,
+      subject: `${t("contactPageTitle")} — ${formData.name.trim()}`,
       message: formData.message.trim(),
       to_email: CONTACT_EMAIL,
     };
@@ -77,34 +79,38 @@ export function ContactPage() {
     try {
       await emailjs.send(serviceId, templateId, templateParams, { publicKey });
       setSubmitSuccess(true);
-      setFormData({ name: '', email: '', phone: '', message: '' });
+      setFormData({ name: "", email: "", phone: "", message: "" });
       window.setTimeout(() => {
         setSubmitSuccess(false);
       }, 5000);
     } catch (error) {
-      console.error('EMAILJS ERROR:', error);
-      if (error && typeof error === 'object') {
-        const emailJsError = error as { text?: unknown; message?: unknown; status?: unknown };
-        console.error('EMAILJS ERROR DETAILS:', {
+      console.error("EMAILJS ERROR:", error);
+      if (error && typeof error === "object") {
+        const emailJsError = error as {
+          text?: unknown;
+          message?: unknown;
+          status?: unknown;
+        };
+        console.error("EMAILJS ERROR DETAILS:", {
           text: emailJsError.text,
           message: emailJsError.message,
           status: emailJsError.status,
         });
 
         const debugDetail =
-          typeof emailJsError.text === 'string'
+          typeof emailJsError.text === "string"
             ? emailJsError.text
-            : typeof emailJsError.message === 'string'
+            : typeof emailJsError.message === "string"
               ? emailJsError.message
               : null;
 
         setSubmitError(
           import.meta.env.DEV && debugDetail
-            ? `${t('contactFormSendError')} (${debugDetail})`
-            : t('contactFormSendError')
+            ? `${t("contactFormSendError")} (${debugDetail})`
+            : t("contactFormSendError"),
         );
       } else {
-        setSubmitError(t('contactFormSendError'));
+        setSubmitError(t("contactFormSendError"));
       }
     } finally {
       setIsSubmitting(false);
@@ -116,27 +122,27 @@ export function ContactPage() {
       {/* Hero Section - Naslov i Opis */}
       <section className="w-full py-16 bg-white">
         <div className="max-w-[1280px] mx-auto px-4 text-center">
-          <h1 
+          <h1
             style={{
-              fontSize: '42px',
+              fontSize: "42px",
               fontWeight: 700,
-              lineHeight: '1.2',
-              color: '#1a2332',
-              marginBottom: '16px'
+              lineHeight: "1.2",
+              color: "#1a2332",
+              marginBottom: "16px",
             }}
           >
-            {t('contactPageTitle')}
+            {t("contactPageTitle")}
           </h1>
-          <p 
+          <p
             style={{
-              fontSize: '16px',
-              color: '#5A6C7D',
-              lineHeight: '1.6',
-              maxWidth: '700px',
-              margin: '0 auto'
+              fontSize: "16px",
+              color: "#5A6C7D",
+              lineHeight: "1.6",
+              maxWidth: "700px",
+              margin: "0 auto",
             }}
           >
-            {t('contactSubtitle')}
+            {t("contactSubtitle")}
           </p>
         </div>
       </section>
@@ -144,20 +150,19 @@ export function ContactPage() {
       {/* Main Content - 2 Kolone */}
       <div className="w-full max-w-[1100px] mx-auto px-4 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
           {/* LIJEVO - FORMA */}
           <div>
             <div className="bg-white">
               {submitSuccess && (
-                <div 
+                <div
                   className="mb-6 p-4 rounded-lg"
                   style={{
-                    backgroundColor: '#E8F5E9',
-                    border: '1px solid #4CAF50',
-                    color: '#2E7D32'
+                    backgroundColor: "#E8F5E9",
+                    border: "1px solid #4CAF50",
+                    color: "#2E7D32",
                   }}
                 >
-                  {t('formSubmitted')}
+                  {t("formSubmitted")}
                 </div>
               )}
 
@@ -165,9 +170,9 @@ export function ContactPage() {
                 <div
                   className="mb-6 p-4 rounded-lg"
                   style={{
-                    backgroundColor: '#FFEBEE',
-                    border: '1px solid #EF5350',
-                    color: '#C62828'
+                    backgroundColor: "#FFEBEE",
+                    border: "1px solid #EF5350",
+                    color: "#C62828",
                   }}
                   role="alert"
                 >
@@ -178,12 +183,17 @@ export function ContactPage() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 {/* Ime i prezime */}
                 <div>
-                  <label 
-                    htmlFor="name" 
+                  <label
+                    htmlFor="name"
                     className="block mb-2"
-                    style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#1a1a1a",
+                    }}
                   >
-                    {t('contactName')} <span style={{ color: '#DC2626' }}>*</span>
+                    {t("contactName")}{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -194,21 +204,26 @@ export function ContactPage() {
                     required
                     className="w-full px-4 py-3 border rounded-lg outline-none focus:border-blue-500 transition-colors"
                     style={{
-                      borderColor: '#E5E9F0',
-                      fontSize: '15px'
+                      borderColor: "#E5E9F0",
+                      fontSize: "15px",
                     }}
-                    placeholder={t('contactNamePlaceholder')}
+                    placeholder={t("contactNamePlaceholder")}
                   />
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label 
-                    htmlFor="email" 
+                  <label
+                    htmlFor="email"
                     className="block mb-2"
-                    style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#1a1a1a",
+                    }}
                   >
-                    {t('contactEmail')} <span style={{ color: '#DC2626' }}>*</span>
+                    {t("contactEmail")}{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="email"
@@ -219,21 +234,26 @@ export function ContactPage() {
                     required
                     className="w-full px-4 py-3 border rounded-lg outline-none focus:border-blue-500 transition-colors"
                     style={{
-                      borderColor: '#E5E9F0',
-                      fontSize: '15px'
+                      borderColor: "#E5E9F0",
+                      fontSize: "15px",
                     }}
-                    placeholder={t('contactEmailPlaceholder')}
+                    placeholder={t("contactEmailPlaceholder")}
                   />
                 </div>
 
                 {/* Telefon */}
                 <div>
-                  <label 
-                    htmlFor="phone" 
+                  <label
+                    htmlFor="phone"
                     className="block mb-2"
-                    style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#1a1a1a",
+                    }}
                   >
-                    {t('contactPhone')} <span style={{ color: '#DC2626' }}>*</span>
+                    {t("contactPhone")}{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <input
                     type="tel"
@@ -244,21 +264,26 @@ export function ContactPage() {
                     required
                     className="w-full px-4 py-3 border rounded-lg outline-none focus:border-blue-500 transition-colors"
                     style={{
-                      borderColor: '#E5E9F0',
-                      fontSize: '15px'
+                      borderColor: "#E5E9F0",
+                      fontSize: "15px",
                     }}
-                    placeholder={t('contactPhonePlaceholder')}
+                    placeholder={t("contactPhonePlaceholder")}
                   />
                 </div>
 
                 {/* Poruka */}
                 <div>
-                  <label 
-                    htmlFor="message" 
+                  <label
+                    htmlFor="message"
                     className="block mb-2"
-                    style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      color: "#1a1a1a",
+                    }}
                   >
-                    {t('contactMessage')} <span style={{ color: '#DC2626' }}>*</span>
+                    {t("contactMessage")}{" "}
+                    <span style={{ color: "#DC2626" }}>*</span>
                   </label>
                   <textarea
                     id="message"
@@ -269,10 +294,10 @@ export function ContactPage() {
                     rows={5}
                     className="w-full px-4 py-3 border rounded-lg outline-none focus:border-blue-500 transition-colors resize-none"
                     style={{
-                      borderColor: '#E5E9F0',
-                      fontSize: '15px'
+                      borderColor: "#E5E9F0",
+                      fontSize: "15px",
                     }}
-                    placeholder={t('contactMessagePlaceholder')}
+                    placeholder={t("contactMessagePlaceholder")}
                   />
                 </div>
 
@@ -282,27 +307,29 @@ export function ContactPage() {
                   disabled={isSubmitting}
                   className="w-full py-3 rounded-lg transition-all hover:opacity-90 disabled:opacity-50"
                   style={{
-                    background: 'linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)',
-                    color: 'white',
-                    fontSize: '16px',
+                    background:
+                      "linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)",
+                    color: "white",
+                    fontSize: "16px",
                     fontWeight: 600,
-                    border: 'none',
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer'
+                    border: "none",
+                    cursor: isSubmitting ? "not-allowed" : "pointer",
                   }}
                 >
-                  {isSubmitting ? t('sending') : t('submit')}
+                  {isSubmitting ? t("sending") : t("submit")}
                 </button>
 
                 {/* Napomena */}
-                <p 
-                  style={{ 
-                    fontSize: '13px', 
-                    color: '#6B7280', 
-                    textAlign: 'center',
-                    marginTop: '12px'
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "#6B7280",
+                    textAlign: "center",
+                    marginTop: "12px",
                   }}
                 >
-                  <span style={{ color: '#DC2626' }}>*</span> {t('allFieldsRequired')}
+                  <span style={{ color: "#DC2626" }}>*</span>{" "}
+                  {t("allFieldsRequired")}
                 </p>
               </form>
             </div>
@@ -310,27 +337,40 @@ export function ContactPage() {
 
           {/* DESNO - KONTAKT INFORMACIJE */}
           <div>
-            <h3 
-              className="mb-6" 
-              style={{ fontSize: '20px', fontWeight: 600, color: '#1a1a1a' }}
+            <h3
+              className="mb-6"
+              style={{ fontSize: "20px", fontWeight: 600, color: "#1a1a1a" }}
             >
-              {t('contactInfo')}
+              {t("contactInfo")}
             </h3>
 
             <div className="space-y-6 mb-8">
               {/* Telefon */}
               <div className="flex items-start gap-4">
-                <div 
+                <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#E8F0FE' }}
+                  style={{ backgroundColor: "#E8F0FE" }}
                 >
-                  <Phone size={20} style={{ color: '#0E3DC5' }} />
+                  <Phone size={20} style={{ color: "#0E3DC5" }} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px', color: '#1a1a1a' }}>
-                    {t('phone')}
+                  <h4
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      marginBottom: "4px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    {t("phone")}
                   </h4>
-                  <p style={{ fontSize: '14px', color: '#0E3DC5', fontWeight: 500 }}>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#0E3DC5",
+                      fontWeight: 500,
+                    }}
+                  >
                     +387 65 123 4567
                   </p>
                 </div>
@@ -338,18 +378,34 @@ export function ContactPage() {
 
               {/* Email */}
               <div className="flex items-start gap-4">
-                <div 
+                <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#E8F0FE' }}
+                  style={{ backgroundColor: "#E8F0FE" }}
                 >
-                  <Mail size={20} style={{ color: '#0E3DC5' }} />
+                  <Mail size={20} style={{ color: "#0E3DC5" }} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px', color: '#1a1a1a' }}>
+                  <h4
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      marginBottom: "4px",
+                      color: "#1a1a1a",
+                    }}
+                  >
                     Email
                   </h4>
-                  <p style={{ fontSize: '14px', color: '#0E3DC5', fontWeight: 500 }}>
-                    <a href={`mailto:${UI_CONTACT_EMAIL}`} style={{ color: 'inherit', fontWeight: 500 }}>
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#0E3DC5",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <a
+                      href={`mailto:${UI_CONTACT_EMAIL}`}
+                      style={{ color: "inherit", fontWeight: 500 }}
+                    >
                       {UI_CONTACT_EMAIL}
                     </a>
                   </p>
@@ -358,59 +414,88 @@ export function ContactPage() {
 
               {/* Adresa */}
               <div className="flex items-start gap-4">
-                <div 
+                <div
                   className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: '#E8F0FE' }}
+                  style={{ backgroundColor: "#E8F0FE" }}
                 >
-                  <MapPin size={20} style={{ color: '#0E3DC5' }} />
+                  <MapPin size={20} style={{ color: "#0E3DC5" }} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px', color: '#1a1a1a' }}>
-                    {t('address')}
+                  <h4
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      marginBottom: "4px",
+                      color: "#1a1a1a",
+                    }}
+                  >
+                    {t("address")}
                   </h4>
-                  <p style={{ fontSize: '14px', color: '#5A6C7D', lineHeight: '1.5' }}>
-                    {t('zipaStreet')}<br />
-                    {t('zipaCity')}
+                  <p
+                    style={{
+                      fontSize: "14px",
+                      color: "#5A6C7D",
+                      lineHeight: "1.5",
+                    }}
+                  >
+                    {t("zipaStreet")}
+                    <br />
+                    {t("zipaCity")}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Radno vrijeme */}
-            <div 
+            <div
               className="p-5 rounded-lg"
-              style={{ backgroundColor: '#F9FAFB', border: '1px solid #E5E9F0' }}
+              style={{
+                backgroundColor: "#F9FAFB",
+                border: "1px solid #E5E9F0",
+              }}
             >
-              <h4 
-                className="mb-4" 
-                style={{ fontSize: '16px', fontWeight: 600, color: '#1a1a1a' }}
+              <h4
+                className="mb-4"
+                style={{ fontSize: "16px", fontWeight: 600, color: "#1a1a1a" }}
               >
-                {t('workingHours')}
+                {t("workingHours")}
               </h4>
 
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                    {t('monday')} - {t('friday')}:
+                  <span style={{ fontSize: "14px", color: "#1a1a1a" }}>
+                    {t("monday")} - {t("friday")}:
                   </span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "#1a1a1a",
+                    }}
+                  >
                     09:00 - 17:00
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                    {t('saturday')}:
+                  <span style={{ fontSize: "14px", color: "#1a1a1a" }}>
+                    {t("saturday")}:
                   </span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a1a' }}>
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: "#1a1a1a",
+                    }}
+                  >
                     10:00 - 14:00
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span style={{ fontSize: '14px', color: '#1a1a1a' }}>
-                    {t('sunday')}:
+                  <span style={{ fontSize: "14px", color: "#1a1a1a" }}>
+                    {t("sunday")}:
                   </span>
-                  <span style={{ fontSize: '14px', color: '#9CA3AF' }}>
-                    {t('closed')}
+                  <span style={{ fontSize: "14px", color: "#9CA3AF" }}>
+                    {t("closed")}
                   </span>
                 </div>
               </div>

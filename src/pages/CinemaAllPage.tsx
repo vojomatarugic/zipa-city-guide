@@ -9,7 +9,7 @@ import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
+import cinemaHeroImage from "../assets/cinema-hero.png";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { Badge } from "../components/ui/badge";
@@ -36,7 +36,9 @@ export function CinemaAllPage() {
           "cinema",
         );
         const now = new Date();
-        const nextUpcomingSlot = (e: Item): { start_at: string; end_at?: string | null } | null => {
+        const nextUpcomingSlot = (
+          e: Item,
+        ): { start_at: string; end_at?: string | null } | null => {
           const slots = eventService.getEventScheduleSlots(e);
           return slots.find((s) => new Date(s.start_at) >= now) ?? null;
         };
@@ -152,7 +154,7 @@ export function CinemaAllPage() {
               sr: { one: "projekcija", few: "projekcije", many: "projekcija" },
               en: { one: "screening", many: "screenings" },
             }}
-            renderCard={(event) => (
+            renderCard={(event) =>
               (() => {
                 const categoryLabel = event.category
                   ? getLocalizedEventCategory(event.category, language)
@@ -161,87 +163,96 @@ export function CinemaAllPage() {
                   getTopLevelPageCategory(event),
                 );
                 return (
-              <Link
-                key={event.id}
-                to={`/events/${event.id}`}
-                className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
-                style={{ textDecoration: "none" }}
-              >
-                <ImageWithFallback
-                  src={
-                    event.image ||
-                    "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
-                  }
-                  alt={
-                    language === "en" && event.title_en
-                      ? event.title_en
-                      : event.title
-                  }
-                  className="w-full h-[200px] object-cover rounded-md"
-                />
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    {categoryLabel && (
-                      <Badge
-                        className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
-                        style={{ color: categoryTextColor }}
-                      >
-                        {categoryLabel}
-                      </Badge>
-                    )}
-                    {event.price && (
-                      <Badge
-                        className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
-                        style={{ color: categoryTextColor }}
-                      >
-                        {eventService.formatPrice(event.price, language)}
-                      </Badge>
-                    )}
-                  </div>
-                  <h3
-                    className="text-base font-semibold mb-2 line-clamp-2"
-                    style={{ color: "#1a1a1a" }}
+                  <Link
+                    key={event.id}
+                    to={`/events/${event.id}`}
+                    className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
+                    style={{ textDecoration: "none" }}
                   >
-                    {language === "en" && event.title_en
-                      ? event.title_en
-                      : event.title}
-                  </h3>
-                  {event.start_at && (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Calendar size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.getRelativeDateLabel(
-                            event.start_at,
-                            language,
-                          )}
-                        </span>
+                    <ImageWithFallback
+                      src={
+                        event.image ||
+                        "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
+                      }
+                      alt={
+                        language === "en" && event.title_en
+                          ? event.title_en
+                          : event.title
+                      }
+                      className="w-full h-[200px] object-cover rounded-md"
+                    />
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {categoryLabel && (
+                          <Badge
+                            className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                            style={{ color: categoryTextColor }}
+                          >
+                            {categoryLabel}
+                          </Badge>
+                        )}
+                        {event.price && (
+                          <Badge
+                            className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                            style={{ color: categoryTextColor }}
+                          >
+                            {eventService.formatPrice(event.price, language)}
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.formatEventTime(
-                            event.start_at,
-                            event.end_at,
-                            language === "en" ? "en" : "sr",
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  {(event.venue_name || event.address) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} style={{ color: "#6B7280" }} />
-                      <span className="text-sm" style={{ color: "#6B7280" }}>
-                        {event.venue_name || event.address}
-                      </span>
+                      <h3
+                        className="text-base font-semibold mb-2 line-clamp-2"
+                        style={{ color: "#1a1a1a" }}
+                      >
+                        {language === "en" && event.title_en
+                          ? event.title_en
+                          : event.title}
+                      </h3>
+                      {event.start_at && (
+                        <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar size={14} style={{ color: "#6B7280" }} />
+                            <span
+                              className="text-sm"
+                              style={{ color: "#6B7280" }}
+                            >
+                              {eventService.getRelativeDateLabel(
+                                event.start_at,
+                                language,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock size={14} style={{ color: "#6B7280" }} />
+                            <span
+                              className="text-sm"
+                              style={{ color: "#6B7280" }}
+                            >
+                              {eventService.formatEventTime(
+                                event.start_at,
+                                event.end_at,
+                                language === "en" ? "en" : "sr",
+                              )}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {(event.venue_name || event.address) && (
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          <span
+                            className="text-sm"
+                            style={{ color: "#6B7280" }}
+                          >
+                            {event.venue_name || event.address}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </Link>
+                  </Link>
                 );
               })()
-            )}
+            }
           />
         )}
       </div>

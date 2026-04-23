@@ -100,6 +100,28 @@ const VENUE_IMAGES_BUCKET = "make-ee0c365c-venue-images";
 const PROFILE_IMAGES_BUCKET = "profile-images-ee0c365c";
 type OwnedStorageBucket = typeof VENUE_IMAGES_BUCKET | typeof PROFILE_IMAGES_BUCKET;
 
+const VENUE_TYPE_TO_PAGE_SLUG: Record<string, string> = {
+  restaurant: "food-and-drink",
+  cafe: "food-and-drink",
+  bar: "food-and-drink",
+  pub: "food-and-drink",
+  brewery: "food-and-drink",
+  kafana: "food-and-drink",
+  fast_food: "food-and-drink",
+  cevabdzinica: "food-and-drink",
+  pizzeria: "food-and-drink",
+  dessert_shop: "food-and-drink",
+  nightclub: "clubs",
+  other: "food-and-drink",
+};
+
+function deriveVenuePageSlugFromVenueType(rawVenueType: unknown): string | null {
+  if (typeof rawVenueType !== "string") return null;
+  const normalized = rawVenueType.trim().toLowerCase();
+  if (!normalized) return null;
+  return VENUE_TYPE_TO_PAGE_SLUG[normalized] ?? null;
+}
+
 const normalize = (value: unknown): string =>
   String(value ?? "").trim().toLowerCase();
 
@@ -1754,12 +1776,13 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
     // Events: start_at / event_type, or legacy routing via page_slug (never persisted on event rows).
     const EVENT_PAGE_SLUGS = ['events', 'event', 'concerts', 'theatre', 'cinema'];
     const submittedPageSlug = String(eventBody.page_slug ?? '').toLowerCase().trim();
+    const derivedVenuePageSlug = deriveVenuePageSlugFromVenueType(body.venue_type);
     const isEvent =
       !!eventBody.start_at ||
       !!eventBody.event_type ||
       EVENT_PAGE_SLUGS.includes(submittedPageSlug);
-    if (!isEvent && !body.page_slug) {
-      return c.json({ error: 'Missing required field: page_slug' }, 400);
+    if (!isEvent && !derivedVenuePageSlug && !body.page_slug) {
+      return c.json({ error: 'Missing required field: venue_type (or page_slug fallback)' }, 400);
     }
     if (!body.title) {
       return c.json({ error: 'Missing required field: title' }, 400);
@@ -1878,8 +1901,11 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       
     } else {
       // ── VENUE CREATION ── snake_case only
+      if (body.venue_type !== undefined && !derivedVenuePageSlug) {
+        return c.json({ error: `Invalid venue_type: ${String(body.venue_type)}` }, 400);
+      }
       const venue = {
-        page_slug: body.page_slug,
+        page_slug: derivedVenuePageSlug || body.page_slug || null,
         venue_type: body.venue_type || null,
         title: body.title,
         title_en: body.title_en || body.title,
@@ -2039,7 +2065,15 @@ app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
       ...(resolvedSubmittedByName !== undefined ? { submitted_by_name: resolvedSubmittedByName } : {}),
       updated_at: new Date().toISOString(),
     };
-    if (body.page_slug !== undefined) venuePayload.page_slug = body.page_slug;
+    const derivedVenuePageSlugForUpdate = deriveVenuePageSlugFromVenueType(body.venue_type);
+    if (body.venue_type !== undefined && !derivedVenuePageSlugForUpdate) {
+      return c.json({ error: `Invalid venue_type: ${String(body.venue_type)}` }, 400);
+    }
+    if (derivedVenuePageSlugForUpdate) {
+      venuePayload.page_slug = derivedVenuePageSlugForUpdate;
+    } else if (body.page_slug !== undefined) {
+      venuePayload.page_slug = body.page_slug;
+    }
     if (body.venue_type !== undefined) venuePayload.venue_type = body.venue_type;
     if (body.website !== undefined) venuePayload.website = body.website;
     if (body.phone !== undefined) venuePayload.phone = body.phone;
@@ -3403,6 +3437,10 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
 
     const tagsUpdate =
       body.tags !== undefined ? { tags: normalizeVenueTagsInput(body.tags) } : {};
+    const derivedVenuePageSlugForVenueUpdate = deriveVenuePageSlugFromVenueType(body.venue_type);
+    if (body.venue_type !== undefined && !derivedVenuePageSlugForVenueUpdate) {
+      return c.json({ error: `Invalid venue_type: ${String(body.venue_type)}` }, 400);
+    }
 
     // ✅ snake_case only — ?? (nullish coalescing) preserves empty strings
     const { data: venue, error } = await supabase
@@ -3412,7 +3450,7 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
         title_en: body.title_en,
         description: body.description,
         description_en: body.description_en,
-        page_slug: body.page_slug,
+        page_slug: derivedVenuePageSlugForVenueUpdate || body.page_slug,
         venue_type: body.venue_type ?? null,
         cuisine: body.cuisine,
         cuisine_en: body.cuisine_en,

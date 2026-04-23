@@ -22,29 +22,27 @@ export function FoodAndDrinkDetailPage() {
   const { id } = useParams();
   const { t, language } = useT();
   const { selectedCity } = useSelectedCity();
-  const [restaurant, setRestaurant] = useState<Item | null>(null);
+  const [venue, setVenue] = useState<Item | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const documentTitle = useMemo(() => {
-    if (isLoading || !restaurant) return detailLoadingDocumentTitle();
+    if (isLoading || !venue) return detailLoadingDocumentTitle();
     const entityTitle =
-      language === "en" && restaurant.title_en
-        ? restaurant.title_en
-        : restaurant.title;
+      language === "en" && venue.title_en ? venue.title_en : venue.title;
     return detailDocumentTitle(entityTitle, selectedCity);
-  }, [isLoading, restaurant, language, selectedCity]);
+  }, [isLoading, venue, language, selectedCity]);
 
   useDocumentTitle(documentTitle);
 
   useEffect(() => {
-    async function fetchRestaurant() {
+    async function fetchVenue() {
       if (!id) return;
       setIsLoading(true);
-      const fetchedRestaurant = await getVenueById(id);
-      setRestaurant(fetchedRestaurant);
+      const fetched = await getVenueById(id);
+      setVenue(fetched);
       setIsLoading(false);
     }
-    fetchRestaurant();
+    fetchVenue();
   }, [id]);
 
   if (isLoading) {
@@ -60,7 +58,7 @@ export function FoodAndDrinkDetailPage() {
     );
   }
 
-  if (!restaurant) {
+  if (!venue) {
     return (
       <div style={{ background: "#FAFBFC", minHeight: "100vh" }}>
         <div className="max-w-7xl mx-auto px-4 py-16 text-center flex flex-col gap-4">
@@ -68,7 +66,7 @@ export function FoodAndDrinkDetailPage() {
             {t("venueNotFound") || "Restaurant not found"}
           </p>
           <Link to="/food-and-drink" className="text-blue-600 hover:underline">
-            {t("backToRestaurants") || "Back to Restaurants"}
+            {t("backToFoodAndDrink") || "Back to Food & Drink"}
           </Link>
         </div>
       </div>
@@ -76,13 +74,11 @@ export function FoodAndDrinkDetailPage() {
   }
 
   const title =
-    language === "en" && restaurant.title_en
-      ? restaurant.title_en
-      : restaurant.title;
+    language === "en" && venue.title_en ? venue.title_en : venue.title;
   const description =
-    language === "en" && restaurant.description_en
-      ? restaurant.description_en
-      : restaurant.description;
+    language === "en" && venue.description_en
+      ? venue.description_en
+      : venue.description;
 
   return (
     <div key={language} style={{ background: "#FAFBFC", minHeight: "100vh" }}>
@@ -101,7 +97,7 @@ export function FoodAndDrinkDetailPage() {
         >
           <ImageWithFallback
             src={
-              restaurant.image ||
+              venue.image ||
               "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200"
             }
             alt={title}
@@ -119,7 +115,7 @@ export function FoodAndDrinkDetailPage() {
           <div className="col-span-1 flex h-full min-h-0 min-w-0 flex-col lg:col-span-2">
             <div className="flex h-full min-h-0 flex-col">
               <VenueHeroVenueTypeLabel
-                venue_type={restaurant.venue_type}
+                venue_type={venue.venue_type}
                 t={t}
                 accentColor={FOOD_VENUE_THEME.accentColor}
                 tone="onLight"
@@ -138,9 +134,9 @@ export function FoodAndDrinkDetailPage() {
               </h1>
 
               <VenueBadgeRow
-                cuisine={restaurant.cuisine}
-                cuisine_en={restaurant.cuisine_en}
-                tags={restaurant.tags}
+                cuisine={venue.cuisine}
+                cuisine_en={venue.cuisine_en}
+                tags={venue.tags}
                 cuisineOnly
                 language={language === "en" ? "en" : "sr"}
                 t={t}
@@ -165,16 +161,16 @@ export function FoodAndDrinkDetailPage() {
 
               <div className="mt-auto grid grid-cols-1 gap-6 md:grid-cols-2">
                 <VenueDetailHoursCard
-                  openingHoursText={restaurant.opening_hours}
-                  openingHoursTextEn={restaurant.opening_hours_en}
+                  openingHoursText={venue.opening_hours}
+                  openingHoursTextEn={venue.opening_hours_en}
                   language={language}
                   t={t}
                   accentColor={FOOD_VENUE_THEME.accentColor}
                 />
                 <VenueDetailAddressCard
-                  address={restaurant.address}
-                  city={restaurant.city}
-                  mapUrl={restaurant.map_url}
+                  address={venue.address}
+                  city={venue.city}
+                  mapUrl={venue.map_url}
                   t={t}
                   accentColor={FOOD_VENUE_THEME.accentColor}
                 />
@@ -184,14 +180,14 @@ export function FoodAndDrinkDetailPage() {
 
           <div className="h-full min-h-0 min-w-0">
             <VenueDetailUnifiedInfoCard
-              contactName={restaurant.contact_name}
-              phone={restaurant.phone}
-              contactPhone={restaurant.contact_phone}
-              email={restaurant.contact_email}
-              website={restaurant.website}
-              address={restaurant.address}
-              city={restaurant.city}
-              mapUrl={restaurant.map_url}
+              contactName={venue.contact_name}
+              phone={venue.phone}
+              contactPhone={venue.contact_phone}
+              email={venue.contact_email}
+              website={venue.website}
+              address={venue.address}
+              city={venue.city}
+              mapUrl={venue.map_url}
               t={t}
               accentColor={FOOD_VENUE_THEME.accentColor}
               buttonBg={FOOD_VENUE_THEME.ctaBackground}

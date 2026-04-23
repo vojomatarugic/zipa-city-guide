@@ -12,14 +12,14 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://zipa-city-guide.vercel.app/?lang=en" />
   </url>
   
-  <!-- Restaurants Page -->
+  <!-- Food & drink page -->
   <url>
-    <loc>https://zipa-city-guide.vercel.app/restaurants</loc>
+    <loc>https://zipa-city-guide.vercel.app/food-and-drink</loc>
     <lastmod>2024-12-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
-    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://zipa-city-guide.vercel.app/restaurants?lang=sr" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://zipa-city-guide.vercel.app/restaurants?lang=en" />
+    <xhtml:link rel="alternate" hreflang="sr-Latn" href="https://zipa-city-guide.vercel.app/food-and-drink?lang=sr" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://zipa-city-guide.vercel.app/food-and-drink?lang=en" />
   </url>
   
   <!-- Events Page -->

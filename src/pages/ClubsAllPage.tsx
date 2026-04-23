@@ -8,7 +8,7 @@ import { ImageWithFallback } from "../components/figma/ImageWithFallback";
 import { UnderConstruction } from "../components/UnderConstruction";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
-import clubsHeroImage from "../assets/7ad54244090ee97cf9170d61ce80eeb03b91c8aa.png";
+import clubsHeroImage from "../assets/clubs-hero.png";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import {
   CLUBS_CATEGORY_THEME,
@@ -51,13 +51,15 @@ export function ClubsAllPage() {
       <div
         className="relative w-full"
         style={{
-          height: "350px",
+          height: "420px",
           background: CLUBS_CATEGORY_THEME.heroGradient,
         }}
       >
         <img
           src={clubsHeroImage}
-          alt={language === "sr" ? "Klubovi u Banjaluci" : "Clubs in Banja Luka"}
+          alt={
+            language === "sr" ? "Klubovi u Banjaluci" : "Clubs in Banja Luka"
+          }
           style={{
             position: "absolute",
             top: 0,
@@ -145,7 +147,7 @@ export function ClubsAllPage() {
                       {venueTagsFallbackLine(
                         club.tags,
                         language === "en" ? "en" : "sr",
-                        t("clubs")
+                        t("clubs"),
                       )}
                     </span>
                     {club.opening_hours && (

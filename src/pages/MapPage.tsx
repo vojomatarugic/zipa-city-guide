@@ -31,7 +31,7 @@ export function MapPage() {
   };
 
   const categories = [
-    { key: 'food-and-drink' as const, icon: UtensilsCrossed, labelKey: 'restaurants', color: '#FF6B35' },
+    { key: 'food-and-drink' as const, icon: UtensilsCrossed, labelKey: 'foodAndDrink', color: '#FF6B35' },
     { key: 'attractions' as const, icon: MapPin, labelKey: 'attractions', color: '#E74C3C' },
     { key: 'hotels' as const, icon: Hotel, labelKey: 'hotelsMap', color: '#3498DB' },
     { key: 'apartments' as const, icon: Building2, labelKey: 'apartmentsMap', color: '#E67E22' },

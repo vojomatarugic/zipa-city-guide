@@ -1,7 +1,7 @@
 import { MapPin, X } from "lucide-react";
 import { useLocation, type City } from "../contexts/LocationContext";
 import { useT } from "../hooks/useT";
-import newCityModalBg from "../assets/6723694754a898f8b40bab31482fee544e9de39b.png";
+import newCityModalBg from "../assets/location-modal-bg.png";
 
 export function CityModal() {
   const {
@@ -92,9 +92,7 @@ export function CityModal() {
               type="text"
               placeholder={t("enterYourCity")}
               value={citySearchQuery}
-              onChange={(e) =>
-                setCitySearchQuery(e.target.value)
-              }
+              onChange={(e) => setCitySearchQuery(e.target.value)}
               className="flex-1 bg-transparent border-0 outline-none"
               style={{
                 fontSize: "15px",
@@ -184,10 +182,7 @@ export function CityModal() {
                     >
                       {t(city.nameKey as any)}
                     </div>
-                    <div
-                      className="text-xs"
-                      style={{ color: "#9CA3AF" }}
-                    >
+                    <div className="text-xs" style={{ color: "#9CA3AF" }}>
                       {city.events} {t("eventCountSuffix")}
                     </div>
                   </div>

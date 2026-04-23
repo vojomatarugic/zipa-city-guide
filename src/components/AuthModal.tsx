@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Mail, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useT } from "../hooks/useT";
-import zipaLogo from "../assets/9265992fac3001b28e85179123b7b79ce1f668b0.png";
+const zipaLogo = "/zipa-logo.png";
 
 function GoogleIcon() {
   return (

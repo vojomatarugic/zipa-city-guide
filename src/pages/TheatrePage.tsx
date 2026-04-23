@@ -17,8 +17,8 @@ import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
-import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb.png";
+const ogImage = "/zipa-city-guide-OG.png";
+import theatreHeroImage from "../assets/theatre-hero.png";
 
 function isApprovedTheatreEvent(e: Item): boolean {
   if (e.status !== "approved") return false;

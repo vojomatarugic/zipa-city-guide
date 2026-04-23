@@ -13,9 +13,12 @@ import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
-import eventsHeroImage from "../assets/55c8d14367570f30de708fa478fd6a7489c658c9.png";
-import { EVENTS_CATEGORY_THEME, EVENTS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+const ogImage = "/zipa-city-guide-OG.png";
+import eventsHeroImage from "../assets/events-hero.png";
+import {
+  EVENTS_CATEGORY_THEME,
+  EVENTS_HERO_OVERLAY_GRADIENT,
+} from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 
 export function EventsPage() {
@@ -24,26 +27,28 @@ export function EventsPage() {
   const { selectedCity } = useLocation();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
+  const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
+    {},
+  );
 
   // Fetch events from database
   useEffect(() => {
     async function fetchEvents() {
       setIsLoading(true);
       const fetchedEvents = await eventService.getEvents(
-        'upcoming',
-        selectedCity
+        "upcoming",
+        selectedCity,
       );
       const eventsBucket = fetchedEvents.filter(
-        (e) => getTopLevelPageCategory(e) === "events"
+        (e) => getTopLevelPageCategory(e) === "events",
       );
       setEvents(eventsBucket);
       setIsLoading(false);
 
       // Fetch interest counts for free events
       const freeIds = eventsBucket
-        .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
-        .map(e => e.id);
+        .filter((e) => /^(free|besplatn|gratis)/i.test(e.price || ""))
+        .map((e) => e.id);
       if (freeIds.length > 0) {
         const counts = await eventService.batchGetInterestCounts(freeIds);
         setInterestCounts(counts);
@@ -82,7 +87,9 @@ export function EventsPage() {
   // Split events into sections
   const featuredEvents = events.slice(0, 4);
   const upcomingEvents = events.slice(4, 10);
-  const nearbyEvents = events.filter(e => e.city && e.city !== 'Banja Luka').slice(0, 4);
+  const nearbyEvents = events
+    .filter((e) => e.city && e.city !== "Banja Luka")
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
@@ -101,7 +108,8 @@ export function EventsPage() {
               fontSize: "42px",
               fontWeight: 700,
               color: "#FFFFFF",
-              textShadow: "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
             }}
           >
             {t("eventsPageTitle")}
@@ -111,7 +119,8 @@ export function EventsPage() {
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
-              textShadow: "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
               maxWidth: "600px",
               margin: "0 auto",
               whiteSpace: "nowrap",
@@ -153,13 +162,23 @@ export function EventsPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
+                <UnderConstruction
+                  language={language}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  icon={CalendarDays}
+                />
               </div>
             )}
           </div>
 
           {/* CTA Button */}
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "40px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "40px",
+            }}
+          >
             <Link
               to="/events/all"
               style={{
@@ -212,7 +231,11 @@ export function EventsPage() {
               ))
             ) : (
               <div className="col-span-3">
-                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
+                <UnderConstruction
+                  language={language}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  icon={CalendarDays}
+                />
               </div>
             )}
           </div>
@@ -248,7 +271,11 @@ export function EventsPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
+                <UnderConstruction
+                  language={language}
+                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                  icon={CalendarDays}
+                />
               </div>
             )}
           </div>

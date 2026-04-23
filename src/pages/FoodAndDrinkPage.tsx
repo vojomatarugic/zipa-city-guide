@@ -14,8 +14,8 @@ import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import { VenueBadgeRow } from "../components/VenueBadgeRow";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
-import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
-import restaurantsHeroImage from "../assets/124a9756dea5764367ff53e5154e06c6b335de75.png";
+const ogImage = "/zipa-city-guide-OG.png";
+import foodAndDrinkHeroImage from "../assets/food-and-drink-hero.png";
 
 // Reusable card component for venue items
 function VenueCard({
@@ -29,14 +29,11 @@ function VenueCard({
 }) {
   const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
   return (
-    <Link
-      to={`/food-and-drink/${item.id}`}
-      style={{ textDecoration: 'none' }}
-    >
+    <Link to={`/food-and-drink/${item.id}`} style={{ textDecoration: "none" }}>
       <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
         <img
           src={item.image}
-          alt={language === 'en' && item.title_en ? item.title_en : item.title}
+          alt={language === "en" && item.title_en ? item.title_en : item.title}
           className="w-full h-[200px] object-cover rounded-md"
         />
         <div className="p-4">
@@ -45,22 +42,29 @@ function VenueCard({
             cuisine={item.cuisine}
             cuisine_en={item.cuisine_en}
             tags={item.tags}
-            language={language === 'en' ? 'en' : 'sr'}
+            language={language === "en" ? "en" : "sr"}
             t={t}
             textColor={badgeTextColor}
           />
-          <h3 className="text-base font-semibold mb-2" style={{ color: "#1a1a1a" }}>
-            {language === 'en' && item.title_en ? item.title_en : item.title}
+          <h3
+            className="text-base font-semibold mb-2"
+            style={{ color: "#1a1a1a" }}
+          >
+            {language === "en" && item.title_en ? item.title_en : item.title}
           </h3>
           <div className="flex items-center gap-2 mb-1">
             <MapPin size={14} style={{ color: "#6B7280" }} />
             <span className="text-sm" style={{ color: "#6B7280" }}>
-              {item.address || item.city || 'Banja Luka'}
+              {item.address || item.city || "Banja Luka"}
             </span>
           </div>
           {item.opening_hours && (
             <VenueOpeningHoursRow
-              hoursText={language === 'en' && item.opening_hours_en ? item.opening_hours_en : item.opening_hours}
+              hoursText={
+                language === "en" && item.opening_hours_en
+                  ? item.opening_hours_en
+                  : item.opening_hours
+              }
             />
           )}
         </div>
@@ -111,11 +115,17 @@ function CategorySection({
 
         {isLoading ? (
           <div className="text-center py-12">
-            <p className="text-lg font-semibold text-gray-600">{t('loading')}</p>
+            <p className="text-lg font-semibold text-gray-600">
+              {t("loading")}
+            </p>
           </div>
         ) : items.length === 0 ? (
           <div className="text-center py-12">
-            <UnderConstruction language={language} accentColor="#E5E9F0" icon={Utensils} />
+            <UnderConstruction
+              language={language}
+              accentColor="#E5E9F0"
+              icon={Utensils}
+            />
           </div>
         ) : (
           <div className={gridClass}>
@@ -132,58 +142,73 @@ function CategorySection({
 export function FoodAndDrinkPage() {
   const { t, language } = useT();
   const { selectedCity } = useLocation();
-  const [allRestaurants, setAllRestaurants] = useState<Item[]>([]);
-  const [featuredRestaurants, setFeaturedRestaurants] = useState<Item[]>([]);
+  const [foodAndDrinkVenues, setFoodAndDrinkVenues] = useState<Item[]>([]);
+  const [featuredFoodAndDrink, setFeaturedFoodAndDrink] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
 
   useEffect(() => {
-    async function fetchRestaurants() {
+    async function fetchFoodAndDrinkVenues() {
       setIsLoading(true);
-      const [fetchedRestaurants, fetchedFeatured] = await Promise.all([
-        getVenues('food-and-drink'),
+      const [fetchedVenues, fetchedFeatured] = await Promise.all([
+        getVenues("food-and-drink"),
         getFeaturedVenues(),
       ]);
-      setAllRestaurants(fetchedRestaurants);
+      setFoodAndDrinkVenues(fetchedVenues);
 
       const featuredFiltered = fetchedFeatured
-        .filter(v => v.page_slug === 'food-and-drink')
+        .filter((v) => v.page_slug === "food-and-drink")
         .slice(0, 4);
-      setFeaturedRestaurants(
-        featuredFiltered.length > 0 ? featuredFiltered : fetchedRestaurants.slice(0, 4)
+      setFeaturedFoodAndDrink(
+        featuredFiltered.length > 0
+          ? featuredFiltered
+          : fetchedVenues.slice(0, 4),
       );
 
       setIsLoading(false);
     }
-    fetchRestaurants();
+    fetchFoodAndDrinkVenues();
   }, []);
 
   const SECTION_LIMIT = 4;
   const filterByType = (type: string) =>
-    allRestaurants.filter(r => r.venue_type === type).slice(0, SECTION_LIMIT);
+    foodAndDrinkVenues.filter((r) => r.venue_type === type).slice(0, SECTION_LIMIT);
 
-  const cevabdzinice = filterByType('cevabdzinica');
-  const restaurants = filterByType('restaurant');
-  const cafes = filterByType('cafe');
-  const fastFood = filterByType('fast_food');
-  const pizzerias = filterByType('pizzeria');
-  const dessertShops = filterByType('dessert_shop');
-  const pubs = filterByType('pub');
+  const cevabdzinice = filterByType("cevabdzinica");
+  const restaurantVenues = filterByType("restaurant");
+  const cafes = filterByType("cafe");
+  const fastFood = filterByType("fast_food");
+  const pizzerias = filterByType("pizzeria");
+  const dessertShops = filterByType("dessert_shop");
+  const pubs = filterByType("pub");
 
   const KNOWN_TYPES = [
-    'cevabdzinica', 'restaurant', 'cafe', 'fast_food',
-    'pizzeria', 'dessert_shop', 'pub', 'nightclub', 'other',
+    "cevabdzinica",
+    "restaurant",
+    "cafe",
+    "fast_food",
+    "pizzeria",
+    "dessert_shop",
+    "pub",
+    "nightclub",
+    "other",
   ];
-  const otherVenues = allRestaurants
-    .filter(r => {
-      const vt = (r.venue_type || '').trim();
-      return vt === '' || !KNOWN_TYPES.includes(vt);
+  const otherVenues = foodAndDrinkVenues
+    .filter((r) => {
+      const vt = (r.venue_type || "").trim();
+      return vt === "" || !KNOWN_TYPES.includes(vt);
     })
     .slice(0, SECTION_LIMIT);
 
-  const nearbyRestaurants = selectedCity
-    ? allRestaurants.filter(r => (r.city || '').toLowerCase().includes(selectedCity.toLowerCase())).slice(0, 3)
-    : allRestaurants.slice(Math.max(0, allRestaurants.length - 3));
+  const nearbyFoodAndDrink = selectedCity
+    ? foodAndDrinkVenues
+        .filter((r) =>
+          (r.city || "").toLowerCase().includes(selectedCity.toLowerCase()),
+        )
+        .slice(0, 3)
+    : foodAndDrinkVenues.slice(
+        Math.max(0, foodAndDrinkVenues.length - 3),
+      );
 
   const foodTitle = useMemo(
     () => listingDocumentTitle(DOC_TITLE_FOOD, selectedCity),
@@ -192,9 +217,9 @@ export function FoodAndDrinkPage() {
   useDocumentTitle(foodTitle);
 
   useSEO({
-    title: t("seoRestaurantsTitle"),
-    description: t("seoRestaurantsDescription"),
-    keywords: t("seoRestaurantsKeywords"),
+    title: t("seoFoodAndDrinkTitle"),
+    description: t("seoFoodAndDrinkDescription"),
+    keywords: t("seoFoodAndDrinkKeywords"),
     ogImage: ogImage,
     ogType: "website",
     canonical: SITE_URL + "/food-and-drink",
@@ -204,16 +229,20 @@ export function FoodAndDrinkPage() {
         getBreadcrumbSchema([
           { name: "Home", url: SITE_URL + "/" },
           {
-            name: language === 'en' ? "Food & Drink" : "Hrana i piće",
+            name: language === "en" ? "Food & Drink" : "Hrana i piće",
             url: SITE_URL + "/food-and-drink",
           },
         ]),
         {
           "@type": "ItemList",
-          name: language === 'en' ? "Food & Drink in Banja Luka" : "Hrana i piće u Banjoj Luci",
-          description: language === 'en'
-            ? "Best restaurants, cafes and bars in Banja Luka"
-            : "Najbolja mjesta za hranu i piće u Banjoj Luci",
+          name:
+            language === "en"
+              ? "Food & Drink in Banja Luka"
+              : "Hrana i piće u Banjoj Luci",
+          description:
+            language === "en"
+              ? "Best restaurants, cafes and bars in Banja Luka"
+              : "Najbolja mjesta za hranu i piće u Banjoj Luci",
           numberOfItems: 50,
         },
       ],
@@ -223,15 +252,25 @@ export function FoodAndDrinkPage() {
   return (
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO */}
-      <section className="relative w-full" style={{ height: "420px", marginTop: 0 }}>
+      <section
+        className="relative w-full"
+        style={{ height: "420px", marginTop: 0 }}
+      >
         <img
-          src={restaurantsHeroImage}
-          alt="Restorani u Banjaluci"
+          src={foodAndDrinkHeroImage}
+          alt={
+            language === "en"
+              ? "Food and drink in Banja Luka"
+              : "Hrana i piće u Banjoj Luci"
+          }
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(rgba(139, 111, 71, 0.5), rgba(0, 0, 0, 0.7))" }}
+          style={{
+            background:
+              "linear-gradient(rgba(139, 111, 71, 0.5), rgba(0, 0, 0, 0.7))",
+          }}
         />
         <div className="relative z-10 h-full flex flex-col justify-center items-center px-8 lg:px-24">
           <h1
@@ -240,7 +279,8 @@ export function FoodAndDrinkPage() {
               fontSize: "42px",
               fontWeight: 700,
               color: "#FFFFFF",
-              textShadow: "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
             }}
           >
             {t("foodAndDrink")}
@@ -250,10 +290,11 @@ export function FoodAndDrinkPage() {
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
-              textShadow: "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
             }}
           >
-            {t("restaurantsPageDesc")}
+            {t("foodAndDrinkPageDesc")}
           </p>
         </div>
       </section>
@@ -270,7 +311,7 @@ export function FoodAndDrinkPage() {
       />
 
       {/* 2. ISTAKNUTO */}
-      {!isLoading && featuredRestaurants.length > 0 && (
+      {!isLoading && featuredFoodAndDrink.length > 0 && (
         <section className="py-16" style={{ background: "#FAF7F2" }}>
           <div className="w-[60vw] mx-auto">
             <h2
@@ -285,44 +326,53 @@ export function FoodAndDrinkPage() {
               {language === "sr" ? "Istaknuto" : "Featured"}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {featuredRestaurants.slice(0, 4).map((restaurant) => (
+              {featuredFoodAndDrink.slice(0, 4).map((venue) => (
                 <Link
-                  key={restaurant.id}
-                  to={`/food-and-drink/${restaurant.id}`}
-                  style={{ textDecoration: 'none' }}
+                  key={venue.id}
+                  to={`/food-and-drink/${venue.id}`}
+                  style={{ textDecoration: "none" }}
                 >
                   <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                     <img
-                      src={restaurant.image}
-                      alt={language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
+                      src={venue.image}
+                      alt={
+                        language === "en" && venue.title_en
+                          ? venue.title_en
+                          : venue.title
+                      }
                       className="w-full h-[400px] object-cover rounded-md"
                     />
                     <div className="p-4">
                       <VenueBadgeRow
-                        venue_type={restaurant.venue_type}
-                        cuisine={restaurant.cuisine}
-                        cuisine_en={restaurant.cuisine_en}
-                        tags={restaurant.tags}
-                        language={language === 'en' ? 'en' : 'sr'}
+                        venue_type={venue.venue_type}
+                        cuisine={venue.cuisine}
+                        cuisine_en={venue.cuisine_en}
+                        tags={venue.tags}
+                        language={language === "en" ? "en" : "sr"}
                         t={t}
                         textColor={badgeTextColor}
                       />
-                      <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
-                        {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
+                      <h3
+                        className="text-base font-semibold mt-2 mb-1"
+                        style={{ color: "#1a1a1a" }}
+                      >
+                        {language === "en" && venue.title_en
+                          ? venue.title_en
+                          : venue.title}
                       </h3>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} style={{ color: "#6B7280" }} />
                         <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {restaurant.address || restaurant.city || 'Banja Luka'}
+                          {venue.address || venue.city || "Banja Luka"}
                         </span>
                       </div>
-                      {restaurant.opening_hours && (
+                      {venue.opening_hours && (
                         <VenueOpeningHoursRow
                           className="mt-1"
                           hoursText={
-                            language === 'en' && restaurant.opening_hours_en
-                              ? restaurant.opening_hours_en
-                              : restaurant.opening_hours
+                            language === "en" && venue.opening_hours_en
+                              ? venue.opening_hours_en
+                              : venue.opening_hours
                           }
                         />
                       )}
@@ -339,7 +389,7 @@ export function FoodAndDrinkPage() {
       <CategorySection
         titleSr="Restorani"
         titleEn="Restaurants"
-        items={restaurants}
+        items={restaurantVenues}
         isLoading={isLoading}
         language={language}
         t={t}
@@ -413,59 +463,70 @@ export function FoodAndDrinkPage() {
       />
 
       {/* 10. HRANA I PIĆE U BLIZINI */}
-      {!isLoading && nearbyRestaurants.length > 0 && (
-        <section className="py-16" style={{ background: '#FAF7F2' }}>
+      {!isLoading && nearbyFoodAndDrink.length > 0 && (
+        <section className="py-16" style={{ background: "#FAF7F2" }}>
           <div className="w-[60vw] mx-auto">
             <h2
               style={{
-                fontSize: '24px',
+                fontSize: "24px",
                 fontWeight: 600,
-                color: '#8B6F47',
-                textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                marginBottom: '24px',
+                color: "#8B6F47",
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                marginBottom: "24px",
               }}
             >
-              {language === 'sr' ? 'Hrana i piće u blizini' : 'Food & Drink Nearby'}
+              {language === "sr"
+                ? "Hrana i piće u blizini"
+                : "Food & Drink Nearby"}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {nearbyRestaurants.map((restaurant) => (
+              {nearbyFoodAndDrink.map((venue) => (
                 <Link
-                  key={restaurant.id}
-                  to={`/food-and-drink/${restaurant.id}`}
-                  style={{ textDecoration: 'none' }}
+                  key={venue.id}
+                  to={`/food-and-drink/${venue.id}`}
+                  style={{ textDecoration: "none" }}
                 >
                   <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                     <img
-                      src={restaurant.image}
-                      alt={language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
+                      src={venue.image}
+                      alt={
+                        language === "en" && venue.title_en
+                          ? venue.title_en
+                          : venue.title
+                      }
                       className="w-full h-[250px] object-cover rounded-md"
                     />
                     <div className="p-4">
                       <VenueBadgeRow
-                        venue_type={restaurant.venue_type}
-                        cuisine={restaurant.cuisine}
-                        cuisine_en={restaurant.cuisine_en}
-                        tags={restaurant.tags}
-                        language={language === 'en' ? 'en' : 'sr'}
+                        venue_type={venue.venue_type}
+                        cuisine={venue.cuisine}
+                        cuisine_en={venue.cuisine_en}
+                        tags={venue.tags}
+                        language={language === "en" ? "en" : "sr"}
                         t={t}
                         textColor={badgeTextColor}
                       />
-                      <h3 className="text-base font-semibold mt-2 mb-1" style={{ color: "#1a1a1a" }}>
-                        {language === 'en' && restaurant.title_en ? restaurant.title_en : restaurant.title}
+                      <h3
+                        className="text-base font-semibold mt-2 mb-1"
+                        style={{ color: "#1a1a1a" }}
+                      >
+                        {language === "en" && venue.title_en
+                          ? venue.title_en
+                          : venue.title}
                       </h3>
                       <div className="flex items-center gap-2">
                         <MapPin size={14} style={{ color: "#6B7280" }} />
                         <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {restaurant.address || restaurant.city || 'Banja Luka'}
+                          {venue.address || venue.city || "Banja Luka"}
                         </span>
                       </div>
-                      {restaurant.opening_hours && (
+                      {venue.opening_hours && (
                         <VenueOpeningHoursRow
                           className="mt-1"
                           hoursText={
-                            language === 'en' && restaurant.opening_hours_en
-                              ? restaurant.opening_hours_en
-                              : restaurant.opening_hours
+                            language === "en" && venue.opening_hours_en
+                              ? venue.opening_hours_en
+                              : venue.opening_hours
                           }
                         />
                       )}

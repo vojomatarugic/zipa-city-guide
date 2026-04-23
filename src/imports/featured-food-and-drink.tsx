@@ -19,7 +19,7 @@
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
             {/* ⚠️ FEATURED RESTAURANTS - OGRANIČENO NA 4 KARTICE ⚠️ */}
-            {/* NOVI RESTORAN SE DODAJE SAMO NA /restaurants/all STRANICU! */}
+            {/* NOVI SADRŽAJ SE DODAJE NA /food-and-drink (glavna stranica), NE OVDJE — fiksno 4 kartice. */}
             {/* NE DODAVATI OVDJE - OVO JE FEATURED SEKCIJA SA FIKSNIH 4 KARTICE! */}
             {/* ⚠️ ZAŠTITA: .slice(0, 4) osigurava da se prikazuje MAKSIMALNO 4 kartice */}
             {[

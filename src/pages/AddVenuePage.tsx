@@ -10,24 +10,7 @@ import { parseCuisineSrSelectionsFromDb, serializeCuisineForDb } from '../utils/
 import { parseVenueTagKeysFromDb, type VenueTagKey } from '../utils/venueTagLabels';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
-
-// Mapira venue_type → page_slug (za DB)
-// ⚠️  Record<VenueType, ...> (ne Record<string, ...>) — TypeScript ODBIJA kompajliranje
-//     ako postoji VenueType koji nema mapiranje. Nemoguće zaboraviti.
-const VENUE_TYPE_TO_CATEGORY: Record<dataService.VenueType, dataService.ItemCategory> = {
-  restaurant:   'food-and-drink',
-  cafe:         'food-and-drink',
-  bar:          'food-and-drink',
-  pub:          'food-and-drink',
-  brewery:      'food-and-drink',
-  kafana:       'food-and-drink',
-  fast_food:    'food-and-drink',
-  cevabdzinica: 'food-and-drink',
-  pizzeria:     'food-and-drink',
-  dessert_shop: 'food-and-drink',
-  nightclub:    'clubs',
-  other:        'food-and-drink',
-};
+import { resolvePageSlugForVenueType, VENUE_TYPE_TO_PAGE_SLUG } from '../config/venueTypePageSlug';
 
 // Stare plural kategorije → ispravan venue_type (za stare venue-e bez venue_type)
 const CATEGORY_TO_VENUE_TYPE: Record<string, string> = {
@@ -39,7 +22,7 @@ const CATEGORY_TO_VENUE_TYPE: Record<string, string> = {
   attractions: 'other',
 };
 
-const VALID_VENUE_TYPES = Object.keys(VENUE_TYPE_TO_CATEGORY);
+const VALID_VENUE_TYPES = Object.keys(VENUE_TYPE_TO_PAGE_SLUG);
 
 export function AddVenuePage() {
   const { t } = useT(); // translation hook
@@ -156,14 +139,14 @@ export function AddVenuePage() {
     // ✅ TypeScript garantuje da je venue_type validan VenueType,
     //    a Record<VenueType, ItemCategory> garantuje da mapiranje postoji —
     //    page_slug ne može biti undefined.
-    const page_slug = VENUE_TYPE_TO_CATEGORY[form_data.venue_type];
+    const page_slug = resolvePageSlugForVenueType(form_data.venue_type);
 
     const { cuisine, cuisine_en } = serializeCuisineForDb(form_data.cuisine_sr_selected);
     const tags_payload =
       form_data.venue_tag_keys.length > 0 ? form_data.venue_tag_keys : null;
 
     if (!page_slug) {
-      console.error(`❌ [AddVenuePage] Nepoznat venue_type: "${form_data.venue_type}" — nema mapiranja u VENUE_TYPE_TO_CATEGORY. Submission blokiran.`);
+      console.error(`❌ [AddVenuePage] Nepoznat venue_type: "${form_data.venue_type}" — nema mapiranja u VENUE_TYPE_TO_PAGE_SLUG. Submission blokiran.`);
       toast.error(`Greška: tip lokala "${form_data.venue_type}" nije mapiran na stranicu. Kontaktirajte administratora.`);
       return;
     }

@@ -20,7 +20,6 @@ export const GRADIENTS = {
   events: 'linear-gradient(135deg, #FB8C00, #FF9800)',
   theatre: 'linear-gradient(135deg, #8E24AA, #AB47BC)',
   cinema: 'linear-gradient(135deg, #00897B, #26A69A)',
-  restaurants: 'linear-gradient(135deg, #8B6F47, #A0785A)',
   clubs: 'linear-gradient(135deg, #D81B60, #F06292)',
   concerts: 'linear-gradient(135deg, #C0CA33, #D4E157)',
   footerHeading: 'linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)',
@@ -34,7 +33,6 @@ export const CATEGORY_COLORS = {
   events: '#FB8C00',
   theatre: '#8E24AA',
   cinema: '#00897B',
-  restaurants: '#8B6F47',
   clubs: '#D81B60',
   concerts: '#C0CA33',
 } as const;

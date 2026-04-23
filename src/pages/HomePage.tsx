@@ -36,21 +36,21 @@ import {
 } from "../utils/colors";
 import { translations } from "../utils/translations";
 import { formatDate as formatAppDate } from "../utils/dateFormat";
-import kastelHeroImage from "../assets/2cc3b226c8687491df7c5255c57428c1428bdda2.png";
-import ogImage from "../assets/ae3d44fbb2bace1359cf1d0dcf503ab46d8abef2.png";
-import cityModalBg from "../assets/4e00219e8da31038f51e64d45285bbc6d7f6feaa.png";
-import newCityModalBg from "../assets/6723694754a898f8b40bab31482fee544e9de39b.png";
-import ljubljanaImage from "../assets/88e6138cbdfd83a22058e515ab20d1b1e81b3339.png";
-import budvaImage from "../assets/38b2c0160b51bb71bbc5aa949db36fce790aea66.png";
-import zagrebImage from "../assets/c2759ad9780a7a7c464fab48ab3c02fee98aabfb.png";
-import beogradImage from "../assets/2e147443589cb70f6ea595a9e31d0bb9ea9d0b87.png";
-import heroBackgroundImage from "/public/images/hero-home-page.png";
+import kastelHeroImage from "../assets/kastel.png";
+const ogImage = "/zipa-city-guide-OG.png";
+import cityModalBg from "../assets/location-modal-bg.png";
+import newCityModalBg from "../assets/location-modal-bg.png";
+import ljubljanaImage from "../assets/ljubljana.png";
+import budvaImage from "../assets/budva.png";
+import zagrebImage from "../assets/zagreb.png";
+import beogradImage from "../assets/beograd.png";
+import heroBackgroundImage from "../assets/hero-home-page.png";
 import eventCardBg from "../assets/89bb26cd8326bce9428238434c0c748f29da8ece.png";
 import newEventCardBg from "../assets/b4eb92f2d8dabb323b7bbcfe325643ecf2317bad.png";
 import latestEventCardBg from "../assets/d3b7ae5072e14ac7566a2b3ff69d9798aefa4aa5.png";
-import prijedorImage from "../assets/c7afefcd8762b783ba717a12d11d33354bcf1e87.png";
-import gradiskaImage from "../assets/02d44d6e71c7267460c0dec18253b52390e1308d.png";
-import dobojImage from "../assets/1b0369b9bc57e5aa1705649d8994d738e67bdc1a.png";
+import prijedorImage from "../assets/prijedor.png";
+import gradiskaImage from "../assets/gradiska.png";
+import dobojImage from "../assets/doboj.png";
 
 export function HomePage() {
   const { t, language } = useT();
@@ -270,9 +270,7 @@ export function HomePage() {
       "@graph": [
         getWebSiteSchema(),
         getTouristDestinationSchema(),
-        getBreadcrumbSchema([
-          { name: t("home"), url: SITE_URL + "/" },
-        ]),
+        getBreadcrumbSchema([{ name: t("home"), url: SITE_URL + "/" }]),
       ],
     },
   });
@@ -1289,7 +1287,7 @@ export function HomePage() {
               fontSize: "24px",
               fontWeight: 600,
               marginBottom: "24px",
-              ...getGradientTextStyle(GRADIENTS.restaurants),
+              ...getGradientTextStyle(GRADIENTS.foodAndDrink),
             }}
           >
             <Link
@@ -1303,7 +1301,7 @@ export function HomePage() {
           {/*
             VAŽNO: Ova sekcija prikazuje TAČNO 3 FEATURED RESTORANA
             NE DODAVATI NOVE RESTORANE OVDJE!
-            Novi restorani treba da se prikazuju samo na /restaurants/all stranici.
+            Novi restorani treba da se prikazuju samo na /food-and-drink stranici.
           */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
@@ -1371,7 +1369,7 @@ export function HomePage() {
                           className="text-xs font-medium px-2 py-1 rounded"
                           style={{
                             background: BACKGROUNDS.lightGray,
-                            color: CATEGORY_COLORS.restaurants,
+                            color: CATEGORY_COLORS.foodAndDrink,
                           }}
                         >
                           {restaurant.category}

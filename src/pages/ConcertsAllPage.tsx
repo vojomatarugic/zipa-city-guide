@@ -9,7 +9,7 @@ import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import concertsHeroImage from "../assets/b2e065a42a0a51bb75c2d1ea6e313313b9eeac02.png";
+import concertsHeroImage from "../assets/concerts-hero.png";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import {
@@ -65,7 +65,7 @@ export function ConcertsAllPage() {
       <div
         className="relative w-full"
         style={{
-          height: "350px",
+          height: "420px",
           background: "linear-gradient(135deg, #C0CA33, #D4E157)",
         }}
       >

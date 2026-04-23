@@ -17,8 +17,8 @@ import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
-import cinemaHeroImage from "../assets/8fd8ca41ddd7aefadbb24990bbf75bf03885286c.png";
+const ogImage = "/zipa-city-guide-OG.png";
+import cinemaHeroImage from "../assets/cinema-hero.png";
 
 /**
  * Cinema-specific card with star rating display
@@ -40,7 +40,8 @@ function CinemaCard({
   const isFree = /^(free|besplatn|gratis)/i.test(event.price || "");
   const now = new Date();
   const slots = eventService.getEventScheduleSlots(event);
-  const nextSlot = slots.find((s) => new Date(s.start_at) >= now) ?? slots[0] ?? null;
+  const nextSlot =
+    slots.find((s) => new Date(s.start_at) >= now) ?? slots[0] ?? null;
   const dateLabel = nextSlot
     ? eventService.getRelativeDateLabel(nextSlot.start_at, lang)
     : event.start_at
@@ -55,8 +56,12 @@ function CinemaCard({
     showEventCity && event.city
       ? event.venue_name || event.address || ""
       : event.venue_name || event.address || event.city || "";
-  const categoryLabel = event.category ? getLocalizedEventCategory(event.category, language) : "";
-  const badgeTextColor = getBadgeTextColorForPageSlug(getTopLevelPageCategory(event));
+  const categoryLabel = event.category
+    ? getLocalizedEventCategory(event.category, language)
+    : "";
+  const badgeTextColor = getBadgeTextColorForPageSlug(
+    getTopLevelPageCategory(event),
+  );
 
   const otherCityVenueLine = (event.venue_name || event.address || "").trim();
   const showOtherCityMetaBlock =
@@ -259,7 +264,10 @@ export function CinemaPage() {
       if (!start) return false;
       return start >= now && start <= weekEnd;
     });
-    const nowShowing = sortByStartAtAsc(repertoire).slice(0, REPERTOIRE_MAX_CARDS);
+    const nowShowing = sortByStartAtAsc(repertoire).slice(
+      0,
+      REPERTOIRE_MAX_CARDS,
+    );
 
     const comingSoon = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;

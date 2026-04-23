@@ -9,10 +9,6 @@ export const translations = {
     lat: "Početna",
     en: "Home",
   },
-  restaurants: {
-    lat: "Restorani",
-    en: "Restaurants",
-  },
   foodAndDrink: {
     lat: "Hrana i piće",
     en: "Food & Drink",
@@ -515,7 +511,7 @@ export const translations = {
   },
 
   // Food & Drink Page
-  restaurantsPageDesc: {
+  foodAndDrinkPageDesc: {
     lat: "Restorani, kafići, pekare i svi ukusi grada na jednom mjestu.",
     en: "Restaurants, cafés, bakeries and all the city's flavors in one place.",
   },
@@ -2741,7 +2737,7 @@ export const translations = {
     en: "Apartments Guide",
   },
 
-  // RestaurantsPage
+  // FoodAndDrinkPage
   districtHelper: {
     lat: "Pretražite po dijelu grada i lako pronađite mjesto najbliže vama.",
     en: "Search by district and easily find the place closest to you.",
@@ -3561,16 +3557,16 @@ export const translations = {
     en: "Banja Luka, tourism, restaurants, nightlife, events, guide, Republika Srpska, culture, magazine",
   },
 
-  // Restaurants Page SEO
-  seoRestaurantsTitle: {
+  // Food & drink page SEO
+  seoFoodAndDrinkTitle: {
     lat: "Hrana i piće u Banjoj Luci | Zipa City Guide - Gastronomija",
     en: "Food & Drink in Banja Luka | Zipa City Guide - Best Gastronomy",
   },
-  seoRestaurantsDescription: {
+  seoFoodAndDrinkDescription: {
     lat: "Pronađite najbolje restorane u Banjoj Luci. Tradicionalna kuhinja, internacionalni specijaliteti, live muzika, terase. Recenzije i preporuke lokalaca.",
     en: "Find the best restaurants in Banja Luka. Traditional cuisine, international specialties, live music, terraces. Reviews and recommendations from locals.",
   },
-  seoRestaurantsKeywords: {
+  seoFoodAndDrinkKeywords: {
     lat: "restorani Banja Luka, hrana Banja Luka, gastronomija, tradicionalna kuhinja, internacionalni restorani, kafići, terase, live muzika",
     en: "restaurants Banja Luka, food Banja Luka, gastronomy, traditional cuisine, international restaurants, cafes, terraces, live music",
   },
@@ -4145,9 +4141,9 @@ export const translations = {
   callRestaurant: { lat: "Pozovi", en: "Call" },
   callClub: { lat: "Pozovi", en: "Call" },
   clubNotFound: { lat: "Klub nije pronađen", en: "Club not found" },
-  backToRestaurants: {
-    lat: "Povratak na restorane",
-    en: "Back to Restaurants",
+  backToFoodAndDrink: {
+    lat: "Povratak na hranu i piće",
+    en: "Back to Food & Drink",
   },
   backToClubs: { lat: "Povratak na klubove", en: "Back to Clubs" },
   noClubsFound: { lat: "Nema pronađenih klubova", en: "No clubs found" },

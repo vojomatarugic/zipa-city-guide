@@ -19,7 +19,7 @@
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
             {/* ⚠️ FEATURED NEARBY RESTAURANTS - OGRANIČENO NA 3 KARTICE ⚠️ */}
-            {/* NOVI RESTORAN SE DODAJE SAMO NA /restaurants/all STRANICU! */}
+            {/* NOVI SADRŽAJ SE DODAJE NA /food-and-drink (glavna stranica), NE OVDJE — fiksno 3 kartice. */}
             {/* NE DODAVATI OVDJE - OVO JE FEATURED SEKCIJA SA FIKSNIH 3 KARTICE! */}
             {/* ⚠️ ZAŠTITA: .slice(0, 3) osigurava da se prikazuje MAKSIMALNO 3 kartice */}
             {[

@@ -10,7 +10,7 @@ import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import theatreHeroImage from "../assets/c7c3d29642e3d9901c6110dae2bf02f98da5daeb.png";
+import theatreHeroImage from "../assets/theatre-hero.png";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import {
   DOC_TITLE_THEATRE,

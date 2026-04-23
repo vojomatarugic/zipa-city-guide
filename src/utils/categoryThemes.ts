@@ -1,6 +1,6 @@
 /**
  * Single source for category accent / hero / CTA colors used across listing and detail pages.
- * Restaurants follow food-and-drink detail; clubs follow ClubsPage; events follow EventsPage / EventsAllPage.
+ * Food-and-drink venues follow FoodAndDrinkDetailPage; clubs follow ClubsPage; events follow EventsPage / EventsAllPage.
  */
 
 /** RGB components for #D81B60 (Material Pink 600) — matches ClubsPage hero overlay */

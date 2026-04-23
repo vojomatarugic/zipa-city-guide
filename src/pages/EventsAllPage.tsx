@@ -1,11 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  Heart,
-  CalendarDays,
-} from "lucide-react";
+import { Calendar, MapPin, Clock, Heart, CalendarDays } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -14,8 +8,11 @@ import { UnderConstruction } from "../components/UnderConstruction";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
-import eventsHeroImage from "../assets/55c8d14367570f30de708fa478fd6a7489c658c9.png";
-import { EVENTS_CATEGORY_THEME, EVENTS_HERO_OVERLAY_GRADIENT } from "../utils/categoryThemes";
+import eventsHeroImage from "../assets/events-hero.png";
+import {
+  EVENTS_CATEGORY_THEME,
+  EVENTS_HERO_OVERLAY_GRADIENT,
+} from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
@@ -24,25 +21,26 @@ export function EventsAllPage() {
   const { t } = useT();
   const { language } = useLanguage();
   const { selectedCity } = useLocation();
-  
+
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [interestCounts, setInterestCounts] = useState<Record<string, number>>({});
+  const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
+    {},
+  );
 
   useEffect(() => {
     async function fetchEvents() {
       setIsLoading(true);
       try {
-        const fetchedEvents = await eventService.getEvents(
-          "all",
-          selectedCity
-        );
-        
+        const fetchedEvents = await eventService.getEvents("all", selectedCity);
+
         const now = new Date();
         const activeEvents = fetchedEvents
           .filter((event) => {
             if (!event.start_at) return false;
-            const endDate = event.end_at ? new Date(event.end_at) : new Date(event.start_at);
+            const endDate = event.end_at
+              ? new Date(event.end_at)
+              : new Date(event.start_at);
             return endDate >= now;
           })
           .filter((e) => getTopLevelPageCategory(e) === "events")
@@ -51,18 +49,18 @@ export function EventsAllPage() {
             const dateB = b.start_at ? new Date(b.start_at).getTime() : 0;
             return dateA - dateB;
           });
-        
+
         setEvents(activeEvents);
-        
+
         const freeIds = activeEvents
-          .filter(e => /^(free|besplatn|gratis)/i.test(e.price || ''))
-          .map(e => e.id);
+          .filter((e) => /^(free|besplatn|gratis)/i.test(e.price || ""))
+          .map((e) => e.id);
         if (freeIds.length > 0) {
           const counts = await eventService.batchGetInterestCounts(freeIds);
           setInterestCounts(counts);
         }
       } catch (err) {
-        console.error('❌ EventsAllPage: Error fetching events:', err);
+        console.error("❌ EventsAllPage: Error fetching events:", err);
       }
       setIsLoading(false);
     }
@@ -80,7 +78,7 @@ export function EventsAllPage() {
       {/* Hero Section */}
       <section
         className="relative w-full"
-        style={{ height: "250px", marginTop: 0 }}
+        style={{ height: "420px", marginTop: 0 }}
       >
         <img
           src={eventsHeroImage}
@@ -98,7 +96,8 @@ export function EventsAllPage() {
               fontSize: "42px",
               fontWeight: 700,
               color: "#FFFFFF",
-              textShadow: "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 20px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.6), 3px 3px 10px rgba(0,0,0,0.9)",
             }}
           >
             {language === "sr" ? "Sva dešavanja" : "All Events"}
@@ -108,7 +107,8 @@ export function EventsAllPage() {
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
-              textShadow: "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
+              textShadow:
+                "0 0 15px rgba(255,255,255,0.7), 0 0 25px rgba(255,255,255,0.5), 2px 2px 8px rgba(0,0,0,0.9)",
               maxWidth: "600px",
             }}
           >
@@ -121,7 +121,6 @@ export function EventsAllPage() {
 
       {/* Main Content */}
       <div className="w-[60vw] mx-auto px-8 py-12">
-
         {/* Loading */}
         {isLoading && (
           <div className="text-center py-12">
@@ -133,7 +132,11 @@ export function EventsAllPage() {
 
         {/* Empty */}
         {!isLoading && events.length === 0 && (
-          <UnderConstruction language={language} accentColor={EVENTS_CATEGORY_THEME.accentColor} icon={CalendarDays} />
+          <UnderConstruction
+            language={language}
+            accentColor={EVENTS_CATEGORY_THEME.accentColor}
+            icon={CalendarDays}
+          />
         )}
 
         {/* Events Grouped by Month with Accordion */}
@@ -156,36 +159,60 @@ export function EventsAllPage() {
                 style={{ textDecoration: "none" }}
               >
                 <img
-                  src={event.image || "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"}
+                  src={
+                    event.image ||
+                    "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
+                  }
                   alt={event.title}
                   className="w-full h-[200px] object-cover rounded-lg"
                 />
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-sm font-medium" style={{ color: EVENTS_CATEGORY_THEME.accentColor }}>
-                      {eventService.translateEventType(event.event_type || event.page_slug || '', language) || (language === "sr" ? "Događaj" : "Event")}
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+                    >
+                      {eventService.translateEventType(
+                        event.event_type || event.page_slug || "",
+                        language,
+                      ) || (language === "sr" ? "Događaj" : "Event")}
                     </span>
-                    {/^(free|besplatn|gratis)/i.test(event.price || '') && (
-                      <span className="text-xs font-medium px-2 py-1 rounded" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                    {/^(free|besplatn|gratis)/i.test(event.price || "") && (
+                      <span
+                        className="text-xs font-medium px-2 py-1 rounded"
+                        style={{ background: "#F3F4F6", color: "#6B7280" }}
+                      >
                         {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
                       </span>
                     )}
                   </div>
-                  <h3 className="text-base font-semibold mb-2 line-clamp-2" style={{ color: "#1a1a1a" }}>
-                    {language === "sr" ? event.title : (event.title_en || event.title)}
+                  <h3
+                    className="text-base font-semibold mb-2 line-clamp-2"
+                    style={{ color: "#1a1a1a" }}
+                  >
+                    {language === "sr"
+                      ? event.title
+                      : event.title_en || event.title}
                   </h3>
                   {event.start_at && (
                     <>
                       <div className="flex items-center gap-2 mb-1">
                         <Calendar size={14} style={{ color: "#6B7280" }} />
                         <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.getRelativeDateLabel(event.start_at, language)}
+                          {eventService.getRelativeDateLabel(
+                            event.start_at,
+                            language,
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 mb-1">
                         <Clock size={14} style={{ color: "#6B7280" }} />
                         <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.formatEventTime(event.start_at, event.end_at, language === "en" ? "en" : "sr")}
+                          {eventService.formatEventTime(
+                            event.start_at,
+                            event.end_at,
+                            language === "en" ? "en" : "sr",
+                          )}
                         </span>
                       </div>
                     </>
@@ -200,9 +227,13 @@ export function EventsAllPage() {
                   )}
                   {interestCounts[event.id] > 0 && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <Heart size={12} style={{ color: EVENTS_CATEGORY_THEME.accentColor }} />
+                      <Heart
+                        size={12}
+                        style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+                      />
                       <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                        {interestCounts[event.id]} {language === "sr" ? "zainteresovano" : "interested"}
+                        {interestCounts[event.id]}{" "}
+                        {language === "sr" ? "zainteresovano" : "interested"}
                       </span>
                     </div>
                   )}

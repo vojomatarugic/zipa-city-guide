@@ -13,6 +13,7 @@ import {
   type EventApiPayload,
   type EventDbRow,
 } from '../shared/eventSchema';
+import { resolvePageSlugForVenueType } from '../config/venueTypePageSlug';
 
 /**
  * Get current user's access token (if logged in).
@@ -90,8 +91,8 @@ export type ItemCategory =
 
 /**
  * Svi dozvoljeni tipovi lokala.
- * ⚠️ Ako dodaješ novi VenueType, MORAS dodati i red u VENUE_TYPE_TO_CATEGORY
- *    u AddVenuePage.tsx — TypeScript compile error će te spriječiti da zaboraviš.
+ * ⚠️ Ako dodaješ novi VenueType, MORAS dodati mapiranje u
+ *    src/config/venueTypePageSlug.ts
  */
 export type VenueType =
   | 'restaurant'
@@ -176,6 +177,17 @@ function authHeaders(accessToken?: string | null): Record<string, string> {
   };
   if (accessToken) headers['x-auth-token'] = accessToken;
   return headers;
+}
+
+function withDerivedVenuePageSlug<T extends Record<string, unknown>>(payload: T): T {
+  const venueTypeRaw = payload.venue_type;
+  if (typeof venueTypeRaw !== 'string') return payload;
+  const derivedPageSlug = resolvePageSlugForVenueType(venueTypeRaw);
+  if (!derivedPageSlug) return payload;
+  return {
+    ...payload,
+    page_slug: derivedPageSlug,
+  };
 }
 
 function parseJsonSafe(text: string): Record<string, unknown> {
@@ -362,8 +374,9 @@ export async function createItem(
     Record<string, unknown>
 ): Promise<Item | null> {
   try {
+    const normalizedItem = withDerivedVenuePageSlug(item);
     console.log('🌐 [createItem] POST URL:', `${getApiBase()}/submissions`);
-    console.log('🌐 [createItem] POST BODY:', JSON.stringify(item, null, 2));
+    console.log('🌐 [createItem] POST BODY:', JSON.stringify(normalizedItem, null, 2));
 
     const accessToken = await getAccessToken();
     const controller = new AbortController();
@@ -372,7 +385,7 @@ export async function createItem(
     const response = await fetch(`${getApiBase()}/submissions`, {
       method: 'POST',
       headers: authHeaders(accessToken),
-      body: JSON.stringify(item),
+      body: JSON.stringify(normalizedItem),
       signal: controller.signal,
     });
 
@@ -413,6 +426,7 @@ export async function updateVenue(
   venueData: Partial<Item> & Record<string, unknown>
 ): Promise<Item | null> {
   try {
+    const normalizedVenueData = withDerivedVenuePageSlug(venueData);
     const accessToken = await getAccessToken();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -420,7 +434,7 @@ export async function updateVenue(
     const response = await fetch(`${getApiBase()}/venues/${id}`, {
       method: 'PUT',
       headers: authHeaders(accessToken),
-      body: JSON.stringify(venueData),
+      body: JSON.stringify(normalizedVenueData),
       signal: controller.signal,
     });
 
