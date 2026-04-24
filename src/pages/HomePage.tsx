@@ -26,6 +26,7 @@ import { BannerAd, useBannerExists } from "../components/BannerAd";
 import { SquareBannersGrid } from "../components/SquareBannersGrid";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import { SocialProofGallery } from "../components/SocialProofGallery";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 import {
   GRADIENTS,
   BACKGROUNDS,
@@ -734,12 +735,12 @@ export function HomePage() {
                   ] || "Event";
 
                 return (
-                  <Link
-                    key={event.id}
-                    to={`/events/${event.id}`}
-                    className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
-                    style={{ textDecoration: "none", color: "inherit" }}
-                  >
+                  <RevealOnScrollArticle key={event.id}>
+                    <Link
+                      to={`/events/${event.id}`}
+                      className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
+                      style={{ textDecoration: "none", color: "inherit" }}
+                    >
                     {/* Image */}
                     <img
                       src={
@@ -850,7 +851,8 @@ export function HomePage() {
                         </div>
                       )}
                     </div>
-                  </Link>
+                    </Link>
+                  </RevealOnScrollArticle>
                 );
               })}
             </div>
@@ -904,11 +906,11 @@ export function HomePage() {
             ]
               .slice(0, 3)
               .map((item, i) => (
-                <div
-                  key={i}
-                  className="rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300 border border-gray-100 relative"
-                  style={{ height: "200px" }}
-                >
+                <RevealOnScrollArticle key={i}>
+                  <div
+                    className="rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300 border border-gray-100 relative"
+                    style={{ height: "200px" }}
+                  >
                   {/* Image - pozadina */}
                   <img
                     src={item.image}
@@ -948,7 +950,8 @@ export function HomePage() {
                       {item.events} {t("events")}
                     </div>
                   </div>
-                </div>
+                  </div>
+                </RevealOnScrollArticle>
               ))}
           </div>
         </div>
@@ -1036,10 +1039,8 @@ export function HomePage() {
             ]
               .slice(0, 3)
               .map((show, i) => (
-                <div
-                  key={i}
-                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                >
+                <RevealOnScrollArticle key={i}>
+                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                   <Link
                     to="/theatre"
                     style={{
@@ -1108,7 +1109,8 @@ export function HomePage() {
                       </div>
                     </div>
                   </Link>
-                </div>
+                  </div>
+                </RevealOnScrollArticle>
               ))}
           </div>
         </div>
@@ -1203,10 +1205,8 @@ export function HomePage() {
             ]
               .slice(0, 5)
               .map((movie, i) => (
-                <div
-                  key={i}
-                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                >
+                <RevealOnScrollArticle key={i}>
+                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                   <Link
                     to="/cinema"
                     style={{
@@ -1272,7 +1272,8 @@ export function HomePage() {
                       </div>
                     </div>
                   </Link>
-                </div>
+                  </div>
+                </RevealOnScrollArticle>
               ))}
           </div>
         </div>
@@ -1346,10 +1347,8 @@ export function HomePage() {
             ]
               .slice(0, 3)
               .map((restaurant, i) => (
-                <div
-                  key={i}
-                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                >
+                <RevealOnScrollArticle key={i}>
+                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                   <Link
                     to="/food-and-drink"
                     style={{
@@ -1390,7 +1389,8 @@ export function HomePage() {
                       <VenueOpeningHoursRow hoursText={restaurant.hours} />
                     </div>
                   </Link>
-                </div>
+                  </div>
+                </RevealOnScrollArticle>
               ))}
           </div>
         </div>
@@ -1462,10 +1462,8 @@ export function HomePage() {
                   language === "sr" ? "Srijeda • 21:00" : "Wednesday • 21:00",
               },
             ].map((club, i) => (
-              <div
-                key={i}
-                className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-              >
+              <RevealOnScrollArticle key={i}>
+                <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                 <Link
                   to="/clubs"
                   style={{
@@ -1520,7 +1518,8 @@ export function HomePage() {
                     </div>
                   </div>
                 </Link>
-              </div>
+                </div>
+              </RevealOnScrollArticle>
             ))}
           </div>
         </div>
@@ -1594,10 +1593,8 @@ export function HomePage() {
                 venue: language === "sr" ? "Tvrđava Kastel" : "Kastel Fortress",
               },
             ].map((concert, i) => (
-              <div
-                key={i}
-                className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-              >
+              <RevealOnScrollArticle key={i}>
+                <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
                 <Link
                   to="/concerts"
                   style={{
@@ -1664,7 +1661,8 @@ export function HomePage() {
                     </div>
                   </div>
                 </Link>
-              </div>
+                </div>
+              </RevealOnScrollArticle>
             ))}
           </div>
         </div>
@@ -1715,11 +1713,11 @@ export function HomePage() {
                 image: budvaImage,
               },
             ].map((item, i) => (
-              <div
-                key={i}
-                className="relative rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                style={{ height: "160px" }}
-              >
+              <RevealOnScrollArticle key={i}>
+                <div
+                  className="relative rounded-md overflow-hidden cursor-pointer hover:scale-[1.02] transition-all duration-300"
+                  style={{ height: "160px" }}
+                >
                 <img
                   src={item.image}
                   alt={item.city}
@@ -1748,7 +1746,8 @@ export function HomePage() {
                     {item.events} {t("events")}
                   </div>
                 </div>
-              </div>
+                </div>
+              </RevealOnScrollArticle>
             ))}
           </div>
         </div>

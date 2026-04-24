@@ -20,6 +20,7 @@ const ogImage = "/zipa-city-guide-OG.png";
 import concertsHeroImage from "../assets/concerts-hero.png";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { cityEquals, normalizeCityForCompare } from "../utils/city";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
 const UPCOMING_MAX_CARDS = 4;
 const FEATURED_MAX_CARDS = 3;
@@ -252,19 +253,20 @@ export function ConcertsPage() {
               <EventCardSkeleton count={4} imageHeight="320px" />
             ) : upcomingConcerts.length > 0 ? (
               upcomingConcerts.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#C0CA33"
-                  imageHeight="320px"
-                  interestCount={interestCounts[event.id]}
-                  showCity={false}
-                  showVenue
-                  showDate
-                  showTime
-                  metadataOrder={["venue", "date", "time"]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#C0CA33"
+                    imageHeight="320px"
+                    interestCount={interestCounts[event.id]}
+                    showCity={false}
+                    showVenue
+                    showDate
+                    showTime
+                    metadataOrder={["venue", "date", "time"]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">
@@ -325,19 +327,20 @@ export function ConcertsPage() {
               <EventCardSkeleton count={3} imageHeight="450px" />
             ) : featuredConcerts.length > 0 ? (
               featuredConcerts.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#C0CA33"
-                  imageHeight="450px"
-                  interestCount={interestCounts[event.id]}
-                  showCity={false}
-                  showVenue
-                  showDate
-                  showTime
-                  metadataOrder={["venue", "date", "time"]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#C0CA33"
+                    imageHeight="450px"
+                    interestCount={interestCounts[event.id]}
+                    showCity={false}
+                    showVenue
+                    showDate
+                    showTime
+                    metadataOrder={["venue", "date", "time"]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-3">
@@ -381,19 +384,20 @@ export function ConcertsPage() {
               <EventCardSkeleton count={4} imageHeight="300px" />
             ) : otherCitiesConcerts.length > 0 ? (
               otherCitiesConcerts.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#C0CA33"
-                  imageHeight="300px"
-                  interestCount={interestCounts[event.id]}
-                  showCity
-                  showVenue
-                  showDate
-                  showTime
-                  metadataOrder={["city", "venue", "date", "time"]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#C0CA33"
+                    imageHeight="300px"
+                    interestCount={interestCounts[event.id]}
+                    showCity
+                    showVenue
+                    showDate
+                    showTime
+                    metadataOrder={["city", "venue", "date", "time"]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">

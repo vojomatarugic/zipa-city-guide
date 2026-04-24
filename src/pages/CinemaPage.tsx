@@ -20,6 +20,7 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 const ogImage = "/zipa-city-guide-OG.png";
 import cinemaHeroImage from "../assets/cinema-hero.png";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
 /**
  * Cinema-specific card with star rating display
@@ -386,12 +387,13 @@ export function CinemaPage() {
               <EventCardSkeleton count={5} imageHeight="300px" />
             ) : nowShowing.length > 0 ? (
               nowShowing.map((event) => (
-                <CinemaCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  imageHeight="300px"
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <CinemaCard
+                    event={event}
+                    language={language}
+                    imageHeight="300px"
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-5">
@@ -451,12 +453,13 @@ export function CinemaPage() {
               <EventCardSkeleton count={4} imageHeight="400px" />
             ) : moreFromRepertoire.length > 0 ? (
               moreFromRepertoire.map((event) => (
-                <CinemaCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  imageHeight="400px"
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <CinemaCard
+                    event={event}
+                    language={language}
+                    imageHeight="400px"
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">
@@ -491,13 +494,14 @@ export function CinemaPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {otherCities.length > 0 ? (
               otherCities.map((event) => (
-                <CinemaCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  imageHeight="280px"
-                  showEventCity
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <CinemaCard
+                    event={event}
+                    language={language}
+                    imageHeight="280px"
+                    showEventCity
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">

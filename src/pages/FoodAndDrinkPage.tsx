@@ -17,6 +17,7 @@ import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import { cityEquals } from "../utils/city";
 const ogImage = "/zipa-city-guide-OG.png";
 import foodAndDrinkHeroImage from "../assets/food-and-drink-hero.png";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
 // Reusable card component for venue items
 function VenueCard({
@@ -133,7 +134,9 @@ function CategorySection({
         ) : (
           <div className={gridClass}>
             {items.map((item) => (
-              <VenueCard key={item.id} item={item} language={language} t={t} />
+              <RevealOnScrollArticle key={item.id}>
+                <VenueCard item={item} language={language} t={t} />
+              </RevealOnScrollArticle>
             ))}
           </div>
         )}
@@ -328,58 +331,59 @@ export function FoodAndDrinkPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {featuredFoodAndDrink.slice(0, 4).map((venue) => (
-                <Link
-                  key={venue.id}
-                  to={`/food-and-drink/${venue.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
-                    <img
-                      src={venue.image}
-                      alt={
-                        language === "en" && venue.title_en
-                          ? venue.title_en
-                          : venue.title
-                      }
-                      className="w-full h-[400px] object-cover rounded-md"
-                    />
-                    <div className="p-4">
-                      <VenueBadgeRow
-                        venue_type={venue.venue_type}
-                        cuisine={venue.cuisine}
-                        cuisine_en={venue.cuisine_en}
-                        tags={venue.tags}
-                        language={language === "en" ? "en" : "sr"}
-                        t={t}
-                        textColor={badgeTextColor}
+                <RevealOnScrollArticle key={venue.id}>
+                  <Link
+                    to={`/food-and-drink/${venue.id}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
+                      <img
+                        src={venue.image}
+                        alt={
+                          language === "en" && venue.title_en
+                            ? venue.title_en
+                            : venue.title
+                        }
+                        className="w-full h-[400px] object-cover rounded-md"
                       />
-                      <h3
-                        className="text-base font-semibold mt-2 mb-1"
-                        style={{ color: "#1a1a1a" }}
-                      >
-                        {language === "en" && venue.title_en
-                          ? venue.title_en
-                          : venue.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {venue.address || venue.city || "Banja Luka"}
-                        </span>
-                      </div>
-                      {venue.opening_hours && (
-                        <VenueOpeningHoursRow
-                          className="mt-1"
-                          hoursText={
-                            language === "en" && venue.opening_hours_en
-                              ? venue.opening_hours_en
-                              : venue.opening_hours
-                          }
+                      <div className="p-4">
+                        <VenueBadgeRow
+                          venue_type={venue.venue_type}
+                          cuisine={venue.cuisine}
+                          cuisine_en={venue.cuisine_en}
+                          tags={venue.tags}
+                          language={language === "en" ? "en" : "sr"}
+                          t={t}
+                          textColor={badgeTextColor}
                         />
-                      )}
+                        <h3
+                          className="text-base font-semibold mt-2 mb-1"
+                          style={{ color: "#1a1a1a" }}
+                        >
+                          {language === "en" && venue.title_en
+                            ? venue.title_en
+                            : venue.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          <span className="text-sm" style={{ color: "#6B7280" }}>
+                            {venue.address || venue.city || "Banja Luka"}
+                          </span>
+                        </div>
+                        {venue.opening_hours && (
+                          <VenueOpeningHoursRow
+                            className="mt-1"
+                            hoursText={
+                              language === "en" && venue.opening_hours_en
+                                ? venue.opening_hours_en
+                                : venue.opening_hours
+                            }
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </RevealOnScrollArticle>
               ))}
             </div>
           </div>
@@ -482,58 +486,59 @@ export function FoodAndDrinkPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {nearbyFoodAndDrink.map((venue) => (
-                <Link
-                  key={venue.id}
-                  to={`/food-and-drink/${venue.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
-                    <img
-                      src={venue.image}
-                      alt={
-                        language === "en" && venue.title_en
-                          ? venue.title_en
-                          : venue.title
-                      }
-                      className="w-full h-[250px] object-cover rounded-md"
-                    />
-                    <div className="p-4">
-                      <VenueBadgeRow
-                        venue_type={venue.venue_type}
-                        cuisine={venue.cuisine}
-                        cuisine_en={venue.cuisine_en}
-                        tags={venue.tags}
-                        language={language === "en" ? "en" : "sr"}
-                        t={t}
-                        textColor={badgeTextColor}
+                <RevealOnScrollArticle key={venue.id}>
+                  <Link
+                    to={`/food-and-drink/${venue.id}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
+                      <img
+                        src={venue.image}
+                        alt={
+                          language === "en" && venue.title_en
+                            ? venue.title_en
+                            : venue.title
+                        }
+                        className="w-full h-[250px] object-cover rounded-md"
                       />
-                      <h3
-                        className="text-base font-semibold mt-2 mb-1"
-                        style={{ color: "#1a1a1a" }}
-                      >
-                        {language === "en" && venue.title_en
-                          ? venue.title_en
-                          : venue.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <MapPin size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {venue.address || venue.city || "Banja Luka"}
-                        </span>
-                      </div>
-                      {venue.opening_hours && (
-                        <VenueOpeningHoursRow
-                          className="mt-1"
-                          hoursText={
-                            language === "en" && venue.opening_hours_en
-                              ? venue.opening_hours_en
-                              : venue.opening_hours
-                          }
+                      <div className="p-4">
+                        <VenueBadgeRow
+                          venue_type={venue.venue_type}
+                          cuisine={venue.cuisine}
+                          cuisine_en={venue.cuisine_en}
+                          tags={venue.tags}
+                          language={language === "en" ? "en" : "sr"}
+                          t={t}
+                          textColor={badgeTextColor}
                         />
-                      )}
+                        <h3
+                          className="text-base font-semibold mt-2 mb-1"
+                          style={{ color: "#1a1a1a" }}
+                        >
+                          {language === "en" && venue.title_en
+                            ? venue.title_en
+                            : venue.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          <span className="text-sm" style={{ color: "#6B7280" }}>
+                            {venue.address || venue.city || "Banja Luka"}
+                          </span>
+                        </div>
+                        {venue.opening_hours && (
+                          <VenueOpeningHoursRow
+                            className="mt-1"
+                            hoursText={
+                              language === "en" && venue.opening_hours_en
+                                ? venue.opening_hours_en
+                                : venue.opening_hours
+                            }
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </RevealOnScrollArticle>
               ))}
             </div>
           </div>

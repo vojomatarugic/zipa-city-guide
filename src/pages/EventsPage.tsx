@@ -21,6 +21,7 @@ import {
 } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { cityEquals } from "../utils/city";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
 const CURRENT_MAX_CARDS = 4;
 const FEATURED_MAX_CARDS = 6;
@@ -240,14 +241,15 @@ export function EventsPage() {
               <EventCardSkeleton count={4} imageHeight="350px" />
             ) : currentEvents.length > 0 ? (
               currentEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                  imageHeight="350px"
-                  interestCount={interestCounts[event.id]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                    imageHeight="350px"
+                    interestCount={interestCounts[event.id]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">
@@ -309,14 +311,15 @@ export function EventsPage() {
               <EventCardSkeleton count={6} imageHeight="200px" />
             ) : featuredEvents.length > 0 ? (
               featuredEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                  imageHeight="200px"
-                  interestCount={interestCounts[event.id]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                    imageHeight="200px"
+                    interestCount={interestCounts[event.id]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-3">
@@ -353,19 +356,20 @@ export function EventsPage() {
               <EventCardSkeleton count={4} imageHeight="200px" />
             ) : otherCitiesEvents.length > 0 ? (
               otherCitiesEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                  imageHeight="200px"
-                  interestCount={interestCounts[event.id]}
-                  showCity
-                  showVenue
-                  showDate
-                  showTime
-                  metadataOrder={["city", "venue", "date", "time"]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor={EVENTS_CATEGORY_THEME.accentColor}
+                    imageHeight="200px"
+                    interestCount={interestCounts[event.id]}
+                    showCity
+                    showVenue
+                    showDate
+                    showTime
+                    metadataOrder={["city", "venue", "date", "time"]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">

@@ -651,3 +651,20 @@ a:hover {
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+.certificate-card-reveal {
+  will-change: transform, opacity;
+}
+
+.certificate-card-reveal:not(.certificate-card-visible) {
+  opacity: 0;
+  transform: translateY(48px);
+}
+
+.certificate-card-reveal.certificate-card-visible {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 640ms ease-out,
+    transform 640ms ease-out;
+}

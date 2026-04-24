@@ -20,6 +20,7 @@ import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { cityEquals } from "../utils/city";
 const ogImage = "/zipa-city-guide-OG.png";
 import theatreHeroImage from "../assets/theatre-hero.png";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
 function isApprovedTheatreEvent(e: Item): boolean {
   if (e.status !== "approved") return false;
@@ -234,14 +235,15 @@ export function TheatrePage() {
               <EventCardSkeleton count={5} imageHeight="300px" />
             ) : repertoire.length > 0 ? (
               repertoire.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#8E24AA"
-                  imageHeight="300px"
-                  interestCount={interestCounts[event.id]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#8E24AA"
+                    imageHeight="300px"
+                    interestCount={interestCounts[event.id]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-5">
@@ -305,14 +307,15 @@ export function TheatrePage() {
               <EventCardSkeleton count={4} imageHeight="400px" />
             ) : moreFromRepertoire.length > 0 ? (
               moreFromRepertoire.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#8E24AA"
-                  imageHeight="400px"
-                  interestCount={interestCounts[event.id]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#8E24AA"
+                    imageHeight="400px"
+                    interestCount={interestCounts[event.id]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">
@@ -347,19 +350,20 @@ export function TheatrePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {otherCities.length > 0 ? (
               otherCities.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  language={language}
-                  accentColor="#8E24AA"
-                  imageHeight="280px"
-                  interestCount={interestCounts[event.id]}
-                  showCity
-                  showVenue
-                  showDate
-                  showTime
-                  metadataOrder={["city", "venue", "date", "time"]}
-                />
+                <RevealOnScrollArticle key={event.id}>
+                  <EventCard
+                    event={event}
+                    language={language}
+                    accentColor="#8E24AA"
+                    imageHeight="280px"
+                    interestCount={interestCounts[event.id]}
+                    showCity
+                    showVenue
+                    showDate
+                    showTime
+                    metadataOrder={["city", "venue", "date", "time"]}
+                  />
+                </RevealOnScrollArticle>
               ))
             ) : (
               <div className="col-span-4">
