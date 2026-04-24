@@ -5,7 +5,7 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { SectionEmptyState } from "../components/SectionEmptyState";
-import { MonthAccordion } from "../components/MonthAccordion";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import eventsHeroImage from "../assets/events-hero.png";
@@ -17,6 +17,36 @@ import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
 
+const MONTH_NAMES_SR = [
+  "Januar",
+  "Februar",
+  "Mart",
+  "April",
+  "Maj",
+  "Jun",
+  "Jul",
+  "Avgust",
+  "Septembar",
+  "Oktobar",
+  "Novembar",
+  "Decembar",
+];
+
+const MONTH_NAMES_EN = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 export function EventsAllPage() {
   const { t } = useT();
   const { language } = useLanguage();
@@ -27,6 +57,11 @@ export function EventsAllPage() {
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
     {},
   );
+  const [visibleByMonth, setVisibleByMonth] = useState<Record<string, number>>(
+    {},
+  );
+  const INITIAL_VISIBLE_PER_MONTH = 6;
+  const LOAD_MORE_STEP = 6;
 
   useEffect(() => {
     async function fetchEvents() {
@@ -72,6 +107,24 @@ export function EventsAllPage() {
     [selectedCity],
   );
   useDocumentTitle(eventsAllTitle);
+
+  const groupedByMonth = useMemo(() => {
+    const grouped: Record<string, Item[]> = {};
+    const monthOrder: string[] = [];
+
+    events.forEach((event) => {
+      if (!event.start_at) return;
+      const date = new Date(event.start_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
+      if (!grouped[key]) {
+        grouped[key] = [];
+        monthOrder.push(key);
+      }
+      grouped[key].push(event);
+    });
+
+    return { grouped, monthOrder };
+  }, [events]);
 
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
@@ -139,108 +192,193 @@ export function EventsAllPage() {
           />
         )}
 
-        {/* Events Grouped by Month with Accordion */}
+        {/* Events Grouped by Month */}
         {!isLoading && events.length > 0 && (
-          <MonthAccordion
-            events={events}
-            language={language}
-            accentColor={EVENTS_CATEGORY_THEME.accentColor}
-            badgeBg="#FFF7ED"
-            badgeBorder="#FDBA74"
-            countPluralForms={{
-              sr: { one: "događaj", few: "događaja", many: "događaja" },
-              en: { one: "event", many: "events" },
-            }}
-            renderCard={(event) => (
-              <Link
-                key={event.id}
-                to={`/events/${event.id}`}
-                className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
-                style={{ textDecoration: "none" }}
-              >
-                <img
-                  src={
-                    event.image ||
-                    "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
-                  }
-                  alt={event.title}
-                  className="w-full h-[200px] object-cover rounded-lg"
-                />
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+          <>
+            <div className="mb-6">
+              <p className="text-sm" style={{ color: "#6B7280" }}>
+                {language === "sr"
+                  ? `Pronađeno ${events.length} događaja`
+                  : `Found ${events.length} events`}
+              </p>
+            </div>
+
+            {groupedByMonth.monthOrder.map((monthKey) => {
+              const monthEvents = groupedByMonth.grouped[monthKey];
+              const visibleCount =
+                visibleByMonth[monthKey] ?? INITIAL_VISIBLE_PER_MONTH;
+              const visibleEvents = monthEvents.slice(0, visibleCount);
+              const hiddenCount = Math.max(monthEvents.length - visibleCount, 0);
+              const hasMore = hiddenCount > 0;
+              const [yearStr, monthStr] = monthKey.split("-");
+              const monthIndex = parseInt(monthStr, 10);
+              const year = parseInt(yearStr, 10);
+              const currentYear = new Date().getFullYear();
+              const monthName =
+                language === "sr"
+                  ? MONTH_NAMES_SR[monthIndex]
+                  : MONTH_NAMES_EN[monthIndex];
+              const monthLabel =
+                year === currentYear ? monthName : `${monthName} ${year}`;
+
+              return (
+                <div key={monthKey} className="mb-8">
+                  <div className="flex items-center gap-3 mb-4 w-full">
+                    <div
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl"
+                      style={{
+                        background: `linear-gradient(135deg, ${EVENTS_CATEGORY_THEME.accentColor} 0%, ${EVENTS_CATEGORY_THEME.accentColor}CC 100%)`,
+                      }}
                     >
-                      {eventService.translateEventType(
-                        event.event_type || event.page_slug || "",
-                        language,
-                      ) || (language === "sr" ? "Događaj" : "Event")}
-                    </span>
-                    {/^(free|besplatn|gratis)/i.test(event.price || "") && (
+                      <Calendar size={18} style={{ color: "#FFFFFF" }} />
                       <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{ background: "#F3F4F6", color: "#6B7280" }}
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: 700,
+                          color: "#FFFFFF",
+                          letterSpacing: "0.3px",
+                        }}
                       >
-                        {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
-                      </span>
-                    )}
-                  </div>
-                  <h3
-                    className="text-base font-semibold mb-2 line-clamp-2"
-                    style={{ color: "#1a1a1a" }}
-                  >
-                    {language === "sr"
-                      ? event.title
-                      : event.title_en || event.title}
-                  </h3>
-                  {event.start_at && (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Calendar size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.getRelativeDateLabel(
-                            event.start_at,
-                            language,
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {eventService.formatEventTime(
-                            event.start_at,
-                            event.end_at,
-                            language === "en" ? "en" : "sr",
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                  {(event.venue_name || event.address) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} style={{ color: "#6B7280" }} />
-                      <span className="text-sm" style={{ color: "#6B7280" }}>
-                        {event.venue_name || event.address}
+                        {monthLabel}
                       </span>
                     </div>
-                  )}
-                  {interestCounts[event.id] > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Heart
-                        size={12}
-                        style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
-                      />
-                      <span className="text-xs" style={{ color: "#9CA3AF" }}>
-                        {interestCounts[event.id]}{" "}
-                        {language === "sr" ? "zainteresovano" : "interested"}
-                      </span>
+                    <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
+                    <span
+                      className="text-xs font-medium px-2 py-1 rounded-full"
+                      style={{
+                        background: "#FFF7ED",
+                        color: EVENTS_CATEGORY_THEME.accentColor,
+                        border: "1px solid #FDBA74",
+                      }}
+                    >
+                      {monthEvents.length} {language === "sr" ? "događaja" : "events"}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {visibleEvents.map((event) => (
+                      <RevealOnScrollArticle key={event.id}>
+                        <Link
+                          to={`/events/${event.id}`}
+                          className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
+                          style={{ textDecoration: "none" }}
+                        >
+                          <img
+                            src={
+                              event.image ||
+                              "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
+                            }
+                            alt={event.title}
+                            className="w-full h-[200px] object-cover rounded-lg"
+                          />
+                          <div className="p-4">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <span
+                                className="text-sm font-medium"
+                                style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+                              >
+                                {eventService.translateEventType(
+                                  event.event_type || event.page_slug || "",
+                                  language,
+                                ) || (language === "sr" ? "Događaj" : "Event")}
+                              </span>
+                              {/^(free|besplatn|gratis)/i.test(event.price || "") && (
+                                <span
+                                  className="text-xs font-medium px-2 py-1 rounded"
+                                  style={{ background: "#F3F4F6", color: "#6B7280" }}
+                                >
+                                  {language === "sr"
+                                    ? "Besplatan ulaz"
+                                    : "Free Entry"}
+                                </span>
+                              )}
+                            </div>
+                            <h3
+                              className="text-base font-semibold mb-2 line-clamp-2"
+                              style={{ color: "#1a1a1a" }}
+                            >
+                              {language === "sr"
+                                ? event.title
+                                : event.title_en || event.title}
+                            </h3>
+                            {event.start_at && (
+                              <>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Calendar size={14} style={{ color: "#6B7280" }} />
+                                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                                    {eventService.getRelativeDateLabel(
+                                      event.start_at,
+                                      language,
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Clock size={14} style={{ color: "#6B7280" }} />
+                                  <span className="text-sm" style={{ color: "#6B7280" }}>
+                                    {eventService.formatEventTime(
+                                      event.start_at,
+                                      event.end_at,
+                                      language === "en" ? "en" : "sr",
+                                    )}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {(event.venue_name || event.address) && (
+                              <div className="flex items-center gap-2">
+                                <MapPin size={14} style={{ color: "#6B7280" }} />
+                                <span className="text-sm" style={{ color: "#6B7280" }}>
+                                  {event.venue_name || event.address}
+                                </span>
+                              </div>
+                            )}
+                            {interestCounts[event.id] > 0 && (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <Heart
+                                  size={12}
+                                  style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+                                />
+                                <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                                  {interestCounts[event.id]}{" "}
+                                  {language === "sr" ? "zainteresovano" : "interested"}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      </RevealOnScrollArticle>
+                    ))}
+                  </div>
+
+                  {hasMore && (
+                    <div className="flex justify-center mt-6">
+                      <button
+                        onClick={() =>
+                          setVisibleByMonth((prev) => ({
+                            ...prev,
+                            [monthKey]:
+                              (prev[monthKey] ?? INITIAL_VISIBLE_PER_MONTH) +
+                              LOAD_MORE_STEP,
+                          }))
+                        }
+                        className="px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ease-out hover:scale-105 hover:shadow-md hover:bg-orange-50 active:scale-95"
+                        style={{
+                          background: "transparent",
+                          color: EVENTS_CATEGORY_THEME.accentColor,
+                          border: `2px solid ${EVENTS_CATEGORY_THEME.accentColor}`,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {language === "sr"
+                          ? `Učitaj još ${hiddenCount}`
+                          : `Load ${hiddenCount} more`}
+                      </button>
                     </div>
                   )}
                 </div>
-              </Link>
-            )}
-          />
+              );
+            })}
+          </>
         )}
       </div>
     </div>
