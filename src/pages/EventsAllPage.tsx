@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -77,7 +77,7 @@ export function EventsAllPage() {
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
       {/* Hero Section */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -132,10 +132,10 @@ export function EventsAllPage() {
 
         {/* Empty */}
         {!isLoading && events.length === 0 && (
-          <UnderConstruction
-            language={language}
-            accentColor={EVENTS_CATEGORY_THEME.accentColor}
+          <SectionEmptyState
             icon={CalendarDays}
+            accentColor={EVENTS_CATEGORY_THEME.accentColor}
+            message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
           />
         )}
 

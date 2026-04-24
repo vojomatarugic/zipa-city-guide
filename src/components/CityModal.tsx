@@ -1,9 +1,22 @@
+import { useEffect, useMemo, useState } from "react";
+import { useLocation as useRouterLocation } from "react-router";
 import { MapPin, X } from "lucide-react";
 import { useLocation, type City } from "../contexts/LocationContext";
 import { useT } from "../hooks/useT";
 import newCityModalBg from "../assets/location-modal-bg.png";
+import {
+  getAvailableCities,
+  getCityCountsByKey,
+  getTopCities,
+  normalizeCityForCompare,
+  sortCitiesForSearchQuery,
+} from "../utils/city";
+import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import * as eventService from "../utils/eventService";
+import type { Item } from "../utils/dataService";
 
 export function CityModal() {
+  const routeLocation = useRouterLocation();
   const {
     isCityPopupOpen,
     setIsCityPopupOpen,
@@ -13,6 +26,84 @@ export function CityModal() {
     setSelectedCity,
   } = useLocation();
   const { t } = useT();
+  const [allEvents, setAllEvents] = useState<Item[]>([]);
+
+  useEffect(() => {
+    if (!isCityPopupOpen) return;
+    let cancelled = false;
+
+    async function fetchEventsForCities() {
+      const fetchedEvents = await eventService.getEvents("all");
+      if (cancelled) return;
+      setAllEvents(
+        fetchedEvents.filter((event) => event.status === "approved"),
+      );
+    }
+
+    fetchEventsForCities();
+    return () => {
+      cancelled = true;
+    };
+  }, [isCityPopupOpen]);
+
+  const pageEvents = useMemo(() => {
+    const path = routeLocation.pathname.toLowerCase();
+    if (path.startsWith("/cinema")) {
+      return allEvents.filter(
+        (event) => getTopLevelPageCategory(event) === "cinema",
+      );
+    }
+    if (path.startsWith("/theatre")) {
+      return allEvents.filter(
+        (event) => getTopLevelPageCategory(event) === "theatre",
+      );
+    }
+    if (path.startsWith("/concerts")) {
+      return allEvents.filter(
+        (event) => getTopLevelPageCategory(event) === "concerts",
+      );
+    }
+    if (path.startsWith("/events")) {
+      return allEvents.filter(
+        (event) => getTopLevelPageCategory(event) === "events",
+      );
+    }
+    return allEvents;
+  }, [allEvents, routeLocation.pathname]);
+
+  const availableCities = useMemo(
+    () => getAvailableCities(pageEvents),
+    [pageEvents],
+  );
+
+  const topCities = useMemo(() => getTopCities(pageEvents), [pageEvents]);
+
+  const cityCountsByKey = useMemo(
+    () => getCityCountsByKey(pageEvents),
+    [pageEvents],
+  );
+
+  const filteredCities = useMemo(() => {
+    const normalizedQuery = normalizeCityForCompare(citySearchQuery);
+    if (!normalizedQuery) return availableCities;
+
+    const filtered = availableCities.filter((city) =>
+      normalizeCityForCompare(city.label).includes(normalizedQuery),
+    );
+    return sortCitiesForSearchQuery(
+      filtered,
+      citySearchQuery,
+      cityCountsByKey,
+    );
+  }, [availableCities, citySearchQuery, cityCountsByKey]);
+
+  const displayedCities = useMemo(
+    () =>
+      citySearchQuery
+        ? filteredCities.map((city) => ({ ...city, count: undefined }))
+        : topCities,
+    [citySearchQuery, filteredCities, topCities],
+  );
 
   if (!isCityPopupOpen) return null;
 
@@ -131,24 +222,9 @@ export function CityModal() {
 
           {/* Cities Grid */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            {[
-              { nameKey: "citySarajevo", events: "29+" },
-              { nameKey: "cityTuzla", events: "2+" },
-              { nameKey: "cityZenica", events: "7+" },
-              { nameKey: "cityMostar", events: "5+" },
-              { nameKey: "cityBihac", events: "1+" },
-              { nameKey: "cityBanjaLuka", events: "16+" },
-            ]
-              .filter((city) =>
-                citySearchQuery
-                  ? t(city.nameKey as any)
-                      .toLowerCase()
-                      .includes(citySearchQuery.toLowerCase())
-                  : true,
-              )
-              .map((city, i) => (
+            {displayedCities.map((city) => (
                 <div
-                  key={i}
+                  key={city.key}
                   className="flex items-start gap-3 p-3 rounded-md cursor-pointer transition-all"
                   style={{
                     background: "rgba(255, 255, 255, 0.7)",
@@ -162,7 +238,7 @@ export function CityModal() {
                       "rgba(255, 255, 255, 0.7)")
                   }
                   onClick={() => {
-                    setSelectedCity(t(city.nameKey as any) as City);
+                    setSelectedCity(city.label as City);
                     setIsCityPopupOpen(false);
                     setCitySearchQuery("");
                   }}
@@ -176,15 +252,18 @@ export function CityModal() {
                     }}
                   />
                   <div className="flex-1">
+                    {/* City name is a proper noun from events — show city.label only; never t(...) or normalized keys. */}
                     <div
                       className="text-sm font-semibold mb-0.5"
                       style={{ color: "#1a1a1a" }}
                     >
-                      {t(city.nameKey as any)}
+                      {city.label}
                     </div>
-                    <div className="text-xs" style={{ color: "#9CA3AF" }}>
-                      {city.events} {t("eventCountSuffix")}
-                    </div>
+                    {typeof city.count === "number" ? (
+                      <div className="text-xs" style={{ color: "#9CA3AF" }}>
+                        {city.count}+ {t("eventCountSuffix")}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}

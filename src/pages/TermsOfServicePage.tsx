@@ -12,7 +12,7 @@ import {
   BACKGROUNDS,
   BORDERS,
 } from "../utils/colors";
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
+const ogImage = "/zipa-city-guide-OG.png";
 
 export function TermsOfServicePage() {
   const { t } = useT();

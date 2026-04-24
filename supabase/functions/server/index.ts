@@ -125,6 +125,16 @@ function deriveVenuePageSlugFromVenueType(rawVenueType: unknown): string | null 
 const normalize = (value: unknown): string =>
   String(value ?? "").trim().toLowerCase();
 
+const normalizeCityForCompare = (value: unknown): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    // Canonical rule: map đ/Đ to "dj" before stripping remaining diacritics.
+    .replace(/đ/g, "dj")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 function resolveOwnedStorageTarget(
   rawValue: unknown,
   allowedBuckets: readonly OwnedStorageBucket[]
@@ -303,14 +313,35 @@ async function resolveRegisteredSubmitterEmail(
   return null;
 }
 
+/** Paginate `auth.admin.listUsers` — never assume <=1000 users. */
+async function authAdminListAllUsers(serviceClient: ReturnType<typeof sbService>): Promise<
+  { email?: string | null; user_metadata?: Record<string, unknown> | null }[]
+> {
+  const out: { email?: string | null; user_metadata?: Record<string, unknown> | null }[] = [];
+  let page = 1;
+  const perPage = 1000;
+  for (;;) {
+    const { data, error } = await serviceClient.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error("❌ [authAdminListAllUsers] listUsers:", error.message);
+      break;
+    }
+    const users = data?.users ?? [];
+    out.push(...users);
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return out;
+}
+
+/**
+ * Stored/displayed submitter label — must match profile edit + header priority:
+ * `display_name` (app override) → `name` → `full_name` → email local-part / email.
+ */
 function extractDisplayNameFromAuthUser(user: { user_metadata?: Record<string, unknown> } | null | undefined): string | null {
-  if (!user?.user_metadata) return null;
-  const meta = user.user_metadata;
-  const fromName = typeof meta.name === 'string' ? meta.name.trim() : '';
-  if (fromName) return fromName;
-  const fromFullName = typeof meta.full_name === 'string' ? meta.full_name.trim() : '';
-  if (fromFullName) return fromFullName;
-  return null;
+  const label = displayNameFromAuthUser(user as { email?: string | null; user_metadata?: Record<string, unknown> | null });
+  const t = String(label ?? "").trim();
+  return t || null;
 }
 
 /** Allowed normalized keys for venue `tags` (Oznaka); max 2. */
@@ -1674,25 +1705,24 @@ app.get("/make-server-a0e1e9cb/submissions", async (c) => {
     try {
       const uniqueEmails = [
         ...new Set(
-          allSubmissions.map((s) => s.submitted_by).filter((e): e is string => Boolean(e)),
+          allSubmissions
+            .map((s) => String(s.submitted_by ?? "").trim().toLowerCase())
+            .filter((e): e is string => Boolean(e)),
         ),
       ];
       if (uniqueEmails.length > 0) {
-        const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-        if (authData?.users) {
+        const authUsers = await authAdminListAllUsers(supabase);
+        if (authUsers.length > 0) {
           const emailToName: Record<string, string> = {};
-          for (const user of authData.users) {
-            if (user.email) {
-              const name = user.user_metadata?.name || user.user_metadata?.full_name;
-              if (name) {
-                emailToName[user.email] = name;
-              }
-            }
+          for (const user of authUsers) {
+            const em = String(user.email ?? "").trim().toLowerCase();
+            if (!em) continue;
+            emailToName[em] = displayNameFromAuthUser(user);
           }
           allSubmissions = allSubmissions.map((item) => ({
             ...item,
             submitted_by_name: item.submitted_by
-              ? emailToName[item.submitted_by] ?? null
+              ? emailToName[String(item.submitted_by).trim().toLowerCase()] ?? null
               : null,
           }));
         }
@@ -1855,6 +1885,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
 
       const eventType = eventBody.event_type || null;
       const categoryInsert = normalizeEventCategoryFromRequest(body, eventBody);
+      const eventCity = eventBody.city || 'Banja Luka';
       const event = {
         page_slug: eventBody.page_slug || null,
         event_type: eventType,
@@ -1862,7 +1893,8 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         title_en: eventBody.title_en || eventBody.title,
         description: eventBody.description,
         description_en: eventBody.description_en || eventBody.description,
-        city: eventBody.city || 'Banja Luka',
+        city: eventCity,
+        city_normalized: normalizeCityForCompare(eventCity),
         venue_name: eventBody.venue_name || null,
         address: eventBody.address || null,
         image: eventBody.image || null,
@@ -1904,6 +1936,7 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
       if (body.venue_type !== undefined && !derivedVenuePageSlug) {
         return c.json({ error: `Invalid venue_type: ${String(body.venue_type)}` }, 400);
       }
+      const venueCity = body.city || 'Banja Luka';
       const venue = {
         page_slug: derivedVenuePageSlug || body.page_slug || null,
         venue_type: body.venue_type || null,
@@ -1911,7 +1944,8 @@ app.post("/make-server-a0e1e9cb/submissions", async (c) => {
         title_en: body.title_en || body.title,
         description: body.description,
         description_en: body.description_en || body.description,
-        city: body.city || 'Banja Luka',
+        city: venueCity,
+        city_normalized: normalizeCityForCompare(venueCity),
         address: body.address || null,
         image: body.image || null,
         price: body.price || null,
@@ -2017,6 +2051,9 @@ app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     if (eventBody.page_slug !== undefined) eventPayload.page_slug = eventBody.page_slug ?? null;
     if (eventBody.date !== undefined) eventPayload.date = eventBody.date ?? null;
     if (eventBody.map_url !== undefined) eventPayload.map_url = eventBody.map_url ?? null;
+    if (eventBody.city !== undefined) {
+      eventPayload.city_normalized = normalizeCityForCompare(eventBody.city);
+    }
     if (eventBody.event_schedules !== undefined) {
       const parsedSchedules = parseCanonicalEventSchedulesInput(eventBody.event_schedules);
       const parsedSchedulesError = parsedSchedules.ok ? null : parsedSchedules.error;
@@ -2077,6 +2114,9 @@ app.put("/make-server-a0e1e9cb/submissions/:id", async (c) => {
     if (body.venue_type !== undefined) venuePayload.venue_type = body.venue_type;
     if (body.website !== undefined) venuePayload.website = body.website;
     if (body.phone !== undefined) venuePayload.phone = body.phone;
+    if (body.city !== undefined) {
+      venuePayload.city_normalized = normalizeCityForCompare(body.city);
+    }
     if (body.contact_name !== undefined) venuePayload.contact_name = body.contact_name;
     if (body.contact_phone !== undefined) venuePayload.contact_phone = body.contact_phone;
     if (body.contact_email !== undefined) venuePayload.contact_email = body.contact_email;
@@ -2519,9 +2559,9 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
       }
     }
     
-    // Filter by city
+    // Filter by canonical city key at DB level.
     if (city) {
-      query = query.eq('city', city);
+      query = query.eq('city_normalized', normalizeCityForCompare(city));
     }
     
     // Filter by type
@@ -2651,22 +2691,26 @@ app.get("/make-server-a0e1e9cb/events", async (c) => {
     // Enrich events with submitted_by_name from auth users (resolve submitted_by email → name)
     // ✅ FIXED: Use separate submitted_by_name — don't overwrite contact_name!
     try {
-      const uniqueEmails = [...new Set(events.map((e: any) => e.submitted_by).filter(Boolean))];
+      const uniqueEmails = [
+        ...new Set(
+          events
+            .map((e: any) => String(e.submitted_by ?? "").trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      ];
       if (uniqueEmails.length > 0) {
-        const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-        if (authData?.users) {
+        const authUsers = await authAdminListAllUsers(supabase);
+        if (authUsers.length > 0) {
           const emailToName: Record<string, string> = {};
-          for (const user of authData.users) {
-            if (user.email) {
-              const name = user.user_metadata?.name || user.user_metadata?.full_name;
-              if (name) {
-                emailToName[user.email] = name;
-              }
-            }
+          for (const user of authUsers) {
+            const em = String(user.email ?? "").trim().toLowerCase();
+            if (!em) continue;
+            emailToName[em] = displayNameFromAuthUser(user);
           }
           events = events.map((event: any) => ({
             ...event,
-            submitted_by_name: emailToName[event.submitted_by] || null,
+            submitted_by_name:
+              emailToName[String(event.submitted_by ?? "").trim().toLowerCase()] || null,
           }));
         }
       }
@@ -2885,6 +2929,9 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
     if (eventBody.page_slug !== undefined) updatePayload.page_slug = eventBody.page_slug ?? null;
     if (eventBody.date !== undefined) updatePayload.date = eventBody.date ?? null;
     if (eventBody.map_url !== undefined) updatePayload.map_url = eventBody.map_url ?? null;
+    if (eventBody.city !== undefined) {
+      updatePayload.city_normalized = normalizeCityForCompare(eventBody.city);
+    }
     if (eventBody.event_schedules !== undefined) {
       const parsedSchedules = parseCanonicalEventSchedulesInput(eventBody.event_schedules);
       const parsedSchedulesError = parsedSchedules.ok ? null : parsedSchedules.error;
@@ -2951,6 +2998,7 @@ app.put("/make-server-a0e1e9cb/events/:id", async (c) => {
         description_en: updatePayload.description_en ?? venueCheck.description_en,
         event_type: updatePayload.event_type || venueCheck.event_type || 'other',
         city: updatePayload.city ?? venueCheck.city,
+        city_normalized: normalizeCityForCompare(updatePayload.city ?? venueCheck.city),
         venue_name: updatePayload.venue_name ?? venueCheck.venue_name,
         address: updatePayload.address ?? venueCheck.address,
         image: updatePayload.image ?? venueCheck.image,
@@ -3269,9 +3317,9 @@ app.get("/make-server-a0e1e9cb/venues", async (c) => {
       }
     }
     
-    // Filter by city
+    // Filter by canonical city key at DB level.
     if (city) {
-      query = query.eq('city', city);
+      query = query.eq('city_normalized', normalizeCityForCompare(city));
     }
     
     // Filter by cuisine (for restaurants)
@@ -3455,6 +3503,9 @@ app.put("/make-server-a0e1e9cb/venues/:id", async (c) => {
         cuisine: body.cuisine,
         cuisine_en: body.cuisine_en,
         city: body.city,
+        ...(body.city !== undefined
+          ? { city_normalized: normalizeCityForCompare(body.city) }
+          : {}),
         address: body.address,
         phone: body.phone,
         website: body.website,
@@ -3879,6 +3930,45 @@ async function handleToggleVenueActiveRequest(c: any): Promise<Response> {
 /**
  * Toggle event active/inactive (kv_store). Admin OR event owner (events table or legacy venues row).
  */
+async function handleToggleEventFeaturedRequest(c: any): Promise<Response> {
+  const id = c.req.param('id');
+  if (!id) return c.json({ error: 'Event ID is required' }, 400);
+
+  const supabase = sbService();
+
+  const { data: eventRow, error: eventError } = await supabase
+    .from('events_ee0c365c')
+    .select('id, is_featured')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (eventError) return c.json({ error: 'Failed to load event', details: eventError.message }, 500);
+  if (!eventRow) return c.json({ error: 'Event not found' }, 404);
+
+  const nextFeatured = !(eventRow.is_featured === true);
+  const { data: updatedEvent, error: updateError } = await supabase
+    .from('events_ee0c365c')
+    .update({ is_featured: nextFeatured })
+    .eq('id', id)
+    .select('id, is_featured')
+    .maybeSingle();
+
+  if (updateError) {
+    return c.json(
+      { error: 'Failed to update featured status', details: updateError.message },
+      500,
+    );
+  }
+
+  return c.json({
+    id,
+    is_featured: updatedEvent?.is_featured === true,
+  });
+}
+
+/**
+ * Toggle event active/inactive (kv_store). Admin OR event owner (events table or legacy venues row).
+ */
 async function handleToggleEventActiveRequest(c: any): Promise<Response> {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Event ID is required' }, 400);
@@ -3947,6 +4037,15 @@ async function handleToggleEventActiveRequest(c: any): Promise<Response> {
   await saveInactiveEventIds(ids);
   return c.json({ is_active, inactive_count: ids.length, ids });
 }
+
+app.patch("/make-server-a0e1e9cb/events/:id/toggle-featured", requireAdmin, async (c) => {
+  try {
+    return await handleToggleEventFeaturedRequest(c);
+  } catch (error) {
+    console.error('❌ Error toggling event featured status:', error);
+    return c.json({ error: 'Failed to toggle event featured status', details: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
+  }
+});
 
 app.patch("/make-server-a0e1e9cb/my-events/:id/toggle-active", async (c) => {
   try {

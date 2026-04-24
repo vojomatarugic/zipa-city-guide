@@ -1,1 +1,1 @@
-import "../server/index.tsx";
+import "../server/index.ts";

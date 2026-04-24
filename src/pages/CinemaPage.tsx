@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { Building2, Calendar, Clapperboard, Clock, MapPin } from "lucide-react";
 import { EventCardSkeleton } from "../components/EventCard";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { Badge } from "../components/ui/badge";
-import { UnderConstruction } from "../components/UnderConstruction";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useSEO } from "../hooks/useSEO";
@@ -15,6 +15,7 @@ import { SITE_URL } from "../config/siteConfig";
 import { getLocalizedEventCategory } from "../config/eventCategories";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
+import { cityEquals } from "../utils/city";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 const ogImage = "/zipa-city-guide-OG.png";
@@ -259,7 +260,7 @@ export function CinemaPage() {
 
     const repertoire = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;
-      if (e.city !== selectedCity) return false;
+      if (!cityEquals(e.city, selectedCity)) return false;
       const start = nextStartAtOrNull(e);
       if (!start) return false;
       return start >= now && start <= weekEnd;
@@ -271,7 +272,7 @@ export function CinemaPage() {
 
     const comingSoon = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;
-      if (e.city !== selectedCity) return false;
+      if (!cityEquals(e.city, selectedCity)) return false;
       const start = nextStartAtOrNull(e);
       if (!start) return false;
       return start > weekEnd;
@@ -283,7 +284,7 @@ export function CinemaPage() {
 
     const otherPool = cinemaEvents.filter((e) => {
       if (!isApprovedCinemaPageEvent(e)) return false;
-      if (!e.city || e.city === selectedCity) return false;
+      if (!e.city || cityEquals(e.city, selectedCity)) return false;
       return isNotEndedForOtherCitiesRepertoire(e, now);
     });
     const otherCities = sortByStartAtAsc(otherPool).slice(
@@ -318,7 +319,7 @@ export function CinemaPage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -364,7 +365,7 @@ export function CinemaPage() {
 
       {/* NOW SHOWING */}
       <section
-        className="py-16 overflow-hidden"
+        className="py-16 overflow-hidden min-h-[320px]"
         style={{ background: "#FFFFFF" }}
       >
         <div className="w-[60vw] mx-auto">
@@ -394,10 +395,10 @@ export function CinemaPage() {
               ))
             ) : (
               <div className="col-span-5">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#00897B"
+                <SectionEmptyState
                   icon={Clapperboard}
+                  accentColor="#00897B"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -432,7 +433,7 @@ export function CinemaPage() {
       </section>
 
       {/* UPCOMING EVENTS */}
-      <section className="py-16" style={{ background: "#E0F2F1" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#E0F2F1" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -459,10 +460,10 @@ export function CinemaPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#00897B"
+                <SectionEmptyState
                   icon={Clapperboard}
+                  accentColor="#00897B"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -471,7 +472,7 @@ export function CinemaPage() {
       </section>
 
       {/* OTHER CITIES REPERTOIRE */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="text-left"
@@ -500,10 +501,10 @@ export function CinemaPage() {
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#00897B"
+                <SectionEmptyState
                   icon={Clapperboard}
+                  accentColor="#00897B"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}

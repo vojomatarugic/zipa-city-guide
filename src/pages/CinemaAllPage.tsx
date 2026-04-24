@@ -5,7 +5,7 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { MonthAccordion } from "../components/MonthAccordion";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -16,6 +16,7 @@ import { Badge } from "../components/ui/badge";
 import { getLocalizedEventCategory } from "../config/eventCategories";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
 import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
+import { cityEquals } from "../utils/city";
 
 export function CinemaAllPage() {
   const { t } = useT();
@@ -49,7 +50,7 @@ export function CinemaAllPage() {
               String(e.page_slug || "")
                 .toLowerCase()
                 .trim() === "cinema" &&
-              e.city === selectedCity,
+              cityEquals(e.city, selectedCity),
           )
           .filter((e) => {
             const slots = eventService.getEventScheduleSlots(e);
@@ -93,7 +94,7 @@ export function CinemaAllPage() {
   return (
     <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -135,10 +136,10 @@ export function CinemaAllPage() {
         )}
 
         {!isLoading && events.length === 0 && (
-          <UnderConstruction
-            language={language}
-            accentColor="#00897B"
+          <SectionEmptyState
             icon={Clapperboard}
+            accentColor="#00897B"
+            message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
           />
         )}
 

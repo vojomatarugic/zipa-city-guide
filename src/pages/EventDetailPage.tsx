@@ -135,6 +135,13 @@ export function EventDetailPage() {
   const categoryLabel = event.category
     ? getLocalizedEventCategory(event.category, language)
     : "";
+  const typeBadgeLabel =
+    (event.event_type || "").trim() !== ""
+      ? eventService.translateEventType(
+          event.event_type || "",
+          language === "en" ? "en" : "sr",
+        )
+      : categoryLabel;
   const categoryTextColor = getBadgeTextColorForPageSlug(
     getTopLevelPageCategory(event),
   );
@@ -217,16 +224,16 @@ export function EventDetailPage() {
                 {title}
               </h1>
 
-              {categoryLabel && (
+              {typeBadgeLabel ? (
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Badge
                     className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
                     style={{ color: categoryTextColor }}
                   >
-                    {categoryLabel}
+                    {typeBadgeLabel}
                   </Badge>
                 </div>
-              )}
+              ) : null}
 
               <div
                 className="max-w-[52rem]"

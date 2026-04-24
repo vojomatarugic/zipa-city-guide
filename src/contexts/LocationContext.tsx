@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type City = 'Banja Luka' | 'Prijedor' | 'Gradiška' | 'Prnjavor' | 'Doboj';
+export type City = string;
 
 interface LocationContextType {
   selectedCity: City;

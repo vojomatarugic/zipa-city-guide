@@ -7,13 +7,13 @@ import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 const ogImage = "/zipa-city-guide-OG.png";
 import clubsHeroImage from "../assets/clubs-hero.png";
-import { UnderConstruction } from "../components/UnderConstruction";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import {
   CLUBS_CATEGORY_THEME,
@@ -72,7 +72,7 @@ export function ClubsPage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION - Full Width */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{
           height: "420px",
           background: `${CLUBS_HERO_OVERLAY_GRADIENT}, url('${clubsHeroImage}') center/cover`,
@@ -108,7 +108,7 @@ export function ClubsPage() {
       </section>
 
       {/* CLUBS BY MUSIC GENRE - ROZA POZADINA */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -134,10 +134,10 @@ export function ClubsPage() {
               </div>
             ) : clubs.length === 0 ? (
               <div className="col-span-3">
-                <UnderConstruction
-                  language={language}
-                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                <SectionEmptyState
                   icon={Disc3}
+                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             ) : (
@@ -239,7 +239,7 @@ export function ClubsPage() {
       </section>
 
       {/* FEATURED CLUBS */}
-      <section className="py-16" style={{ background: "#FCE4EC" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#FCE4EC" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
@@ -319,10 +319,10 @@ export function ClubsPage() {
               ))
             ) : !isLoading ? (
               <div className="col-span-2">
-                <UnderConstruction
-                  language={language}
-                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                <SectionEmptyState
                   icon={Disc3}
+                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             ) : null}
@@ -331,7 +331,7 @@ export function ClubsPage() {
       </section>
 
       {/* NEARBY CLUBS */}
-      <section className="py-16" style={{ background: "#FFFFFF" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"

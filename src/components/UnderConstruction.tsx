@@ -9,7 +9,7 @@ interface UnderConstructionProps {
 export function UnderConstruction({ language, accentColor = "#FB8C00", icon: Icon }: UnderConstructionProps) {
   const IconComponent = Icon || Construction;
   return (
-    <div className="text-center py-16">
+    <div className="text-center py-16 min-h-[320px] flex flex-col items-center justify-center">
       <IconComponent size={56} style={{ color: accentColor, margin: "0 auto 16px", opacity: 0.25 }} />
       <p className="text-base" style={{ color: "#9CA3AF" }}>
         {language === "sr"

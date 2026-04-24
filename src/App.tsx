@@ -5,7 +5,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
 import { AuthProvider } from "./contexts/AuthContext";
 const ogImage = "/zipa-city-guide-OG.png";
-import { Toaster } from "sonner@2.0.3";
+import { Toaster, toast } from "sonner@2.0.3";
 import { SITE_URL } from "./config/siteConfig";
 
 // Force rebuild after backend ?? fix
@@ -71,6 +71,14 @@ export default function App() {
     }
   }, []);
 
+  // Prevent stale toasts from lingering across page navigation.
+  useEffect(() => {
+    const unsubscribe = router.subscribe(() => {
+      toast.dismiss();
+    });
+    return unsubscribe;
+  }, []);
+
   return (
     <LanguageProvider>
       <LocationProvider>
@@ -79,7 +87,9 @@ export default function App() {
             position="top-center"
             richColors
             closeButton
+            visibleToasts={1}
             toastOptions={{
+              duration: 4000,
               style: {
                 fontFamily: "inherit",
               },

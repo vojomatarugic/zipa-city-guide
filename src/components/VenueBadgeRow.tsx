@@ -3,7 +3,8 @@ import {
   buildVenueHeroSecondaryBadgeLabels,
   buildVenueListingBadgeLabels,
 } from '../utils/venueCuisineTaxonomy';
-import type { TranslationKey } from '../utils/translations';
+import type { TranslationKey, translations } from '../utils/translations';
+import { formatVenueTypeForBadge } from '../utils/displayTypeLabels';
 
 const BADGE_ON_DARK: CSSProperties = {
   background: 'rgba(255,255,255,0.18)',
@@ -50,14 +51,13 @@ export function VenueHeroVenueTypeLabel({
 }) {
   const vt = (venue_type || '').trim();
   if (!vt) return null;
-  const label = t(vt as TranslationKey);
+  const label = formatVenueTypeForBadge(vt, t as (key: keyof typeof translations) => string);
   return (
     <p
       style={{
         fontSize: '13px',
         fontWeight: 600,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
+        letterSpacing: '0.02em',
         color: accentColor,
         margin: 0,
         marginBottom: '10px',

@@ -4,7 +4,7 @@
  */
 import React from "react";
 import { Link } from "react-router";
-import { Heart } from "lucide-react";
+import { Heart, MapPin, Calendar, Clock3 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Item } from "../utils/dataService";
 import * as eventService from "../utils/eventService";
@@ -18,6 +18,12 @@ interface EventCardProps {
   accentColor: string;
   imageHeight?: string;
   interestCount?: number;
+  showCity?: boolean;
+  showVenue?: boolean;
+  showDate?: boolean;
+  showTime?: boolean;
+  metadataOrder?: Array<"city" | "venue" | "date" | "time">;
+  showEventCity?: boolean;
 }
 
 export function EventCard({
@@ -26,6 +32,12 @@ export function EventCard({
   accentColor,
   imageHeight = "300px",
   interestCount,
+  showCity,
+  showVenue = true,
+  showDate = true,
+  showTime = true,
+  metadataOrder = ["venue", "date", "time"],
+  showEventCity = false,
 }: EventCardProps) {
   const locale: "sr" | "en" = language === "en" ? "en" : "sr";
   const title = language === "sr" ? event.title : (event.title_en || event.title);
@@ -34,9 +46,41 @@ export function EventCard({
   const dateLabel = firstSlot ? eventService.formatEventDate(firstSlot.start_at, locale) : "";
   const timeLabel = firstSlot ? eventService.formatEventTime(firstSlot.start_at, firstSlot.end_at, locale) : "";
   const extraSlotCount = slots.length > 1 ? slots.length - 1 : 0;
-  const venue = event.venue_name || event.address || event.city || "";
+  const venue = String(
+    event.venue_name ||
+      (event as Item & { location?: string }).location ||
+      event.address ||
+      "",
+  ).trim();
+  const eventCity = String(event.city || "").trim();
   const categoryLabel = event.category ? getLocalizedEventCategory(event.category, language) : "";
+  const typeBadgeLabel =
+    (event.event_type || "").trim() !== ""
+      ? eventService.translateEventType(event.event_type || "", locale)
+      : categoryLabel;
   const categoryBadgeTextColor = getBadgeTextColorForPageSlug(getTopLevelPageCategory(event));
+  const shouldShowCity = showCity ?? showEventCity;
+  const metadataValues: Record<"city" | "venue" | "date" | "time", string> = {
+    city: eventCity,
+    venue,
+    date: dateLabel,
+    time: timeLabel,
+  };
+  const metadataVisibility: Record<"city" | "venue" | "date" | "time", boolean> = {
+    city: shouldShowCity,
+    venue: showVenue,
+    date: showDate,
+    time: showTime,
+  };
+  const metadataIcons: Record<"city" | "venue" | "date" | "time", React.ReactNode> = {
+    city: <MapPin size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    venue: <MapPin size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    date: <Calendar size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    time: <Clock3 size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+  };
+  const renderedMetadata = metadataOrder
+    .filter((key) => metadataVisibility[key] && Boolean(metadataValues[key]))
+    .map((key) => ({ key, value: metadataValues[key], icon: metadataIcons[key] }));
 
   return (
     <Link
@@ -52,39 +96,32 @@ export function EventCard({
       />
 
       <div className="p-4 space-y-1">
-        {event.category && (
+        {typeBadgeLabel ? (
           <Badge
             className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
             style={{ color: categoryBadgeTextColor || "#6B7280" }}
           >
-            {categoryLabel}
+            {typeBadgeLabel}
           </Badge>
-        )}
+        ) : null}
         <h3 className="text-base font-semibold" style={{ color: "#1a1a1a" }}>
           {title}
         </h3>
 
-        {dateLabel ? (
-          <p className="text-sm" style={{ color: "#6B7280" }}>
-            {dateLabel}
-          </p>
-        ) : null}
-
-        {(timeLabel || extraSlotCount > 0) ? (
-          <p className="text-sm" style={{ color: "#6B7280" }}>
-            {timeLabel}
-            {extraSlotCount > 0 ? (
-              <span className="whitespace-nowrap">
-                {timeLabel ? " " : ""}(+{extraSlotCount})
-              </span>
-            ) : null}
-          </p>
-        ) : null}
-
-        {venue ? (
-          <p className="text-sm" style={{ color: "#6B7280" }}>
-            {venue}
-          </p>
+        {renderedMetadata.length > 0 ? (
+          <div className="space-y-1.5">
+            {renderedMetadata.map((item) => (
+              <div key={item.key} className="flex items-center gap-2 min-w-0">
+                {item.icon}
+                <p className="text-sm truncate" style={{ color: "#6B7280" }}>
+                  {item.value}
+                  {item.key === "time" && extraSlotCount > 0 ? (
+                    <span className="whitespace-nowrap"> (+{extraSlotCount})</span>
+                  ) : null}
+                </p>
+              </div>
+            ))}
+          </div>
         ) : null}
 
         {(interestCount ?? 0) > 0 && (

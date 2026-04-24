@@ -7,7 +7,7 @@ import { listingDocumentTitle } from '../utils/documentTitle';
 import { getBreadcrumbSchema } from '../utils/structuredData';
 import { SITE_URL } from '../config/siteConfig';
 import { BRAND, TEXT, BACKGROUNDS, BORDERS } from '../utils/colors';
-import ogImage from "../assets/5d3467711e1eb567830909e9073367edfa138777.png";
+const ogImage = "/zipa-city-guide-OG.png";
 
 const UI_CONTACT_EMAIL = "info@zipaagency.com";
 

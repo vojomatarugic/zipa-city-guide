@@ -12,13 +12,15 @@ import { panelProfileDisplayName } from '../utils/userDisplay';
 import { toast } from 'sonner@2.0.3';
 import { publicAnonKey } from '../utils/supabase/info';
 import { apiUrl } from '../config/apiBase';
-import { translations } from '../utils/translations';
 import { formatDate as formatAppDate } from '../utils/dateFormat';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 import { pluralize } from '../utils/pluralize';
-import { getLocalizedEventCategory } from '../config/eventCategories';
+import {
+  formatEventTypeForBadge,
+  formatVenueTypeForBadge,
+} from '../utils/displayTypeLabels';
 
 const PLURAL_OBJEKAT_VENUE = {
   sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
@@ -1020,13 +1022,9 @@ export function MyPanelPage() {
                     const statusColor = venue.status === 'approved' ? '#16A34A' : venue.status === 'rejected' ? '#DC2626' : '#F59E0B';
                     const statusBg = venue.status === 'approved' ? '#F0FDF4' : venue.status === 'rejected' ? '#FEF2F2' : '#FFFBEB';
                     const statusLabel = venue.status === 'approved' ? t('statusApproved') : venue.status === 'rejected' ? t('statusRejected') : t('statusPending');
-                    const typeSource = (venue.venue_type || venue.category || '').toString();
-                    const typeKey = typeSource
-                      ? (`venueType${typeSource.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof typeof translations)
-                      : null;
+                    const typeSource = (venue.venue_type || venue.category || '').toString().trim();
                     const typeLabel =
-                      (typeKey ? t(typeKey) : '') ||
-                      typeSource ||
+                      (typeSource ? formatVenueTypeForBadge(typeSource, t) : '') ||
                       t('foodAndDrink');
                     return (
                       <div
@@ -1292,11 +1290,11 @@ export function MyPanelPage() {
                       : formatAppDate(event.date || '', language === 'en' ? 'en' : 'sr');
                     const eventLocation = event.address || event.venue_name || '';
                     const eventVenueBadgeLabel = (event.venue_name || event.address || '').trim();
-                    const eventTypeBadgeLabel = (() => {
-                      const category = (event.category || '').trim();
-                      if (category) return getLocalizedEventCategory(category, language);
-                      return t(((event.event_type || event.page_slug || 'events') as keyof typeof translations));
-                    })();
+                    const eventTypeBadgeLabel = formatEventTypeForBadge(
+                      event.event_type,
+                      language === 'en' ? 'en' : 'sr',
+                      event.page_slug,
+                    );
                     return (
                       <div
                         key={event.id}

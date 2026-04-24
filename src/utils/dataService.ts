@@ -140,6 +140,7 @@ export interface Item {
   organizer_phone?: string;
   organizer_email?: string;
   event_type?: string;
+  is_featured?: boolean;
   /** Genre / show type / music type (see EVENT_CATEGORY_CONFIG). */
   category?: string | null;
 
@@ -912,6 +913,49 @@ export async function toggleFeaturedVenue(
     return { is_featured: data.is_featured, featured_count: data.featured_count };
   } catch (error) {
     console.error('[toggleFeaturedVenue] Error:', error);
+    return null;
+  }
+}
+
+export async function toggleFeaturedEvent(
+  id: string
+): Promise<{ is_featured: boolean } | null> {
+  try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) { console.error('[toggleFeaturedEvent] No access token'); return null; }
+
+    const response = await fetch(`${getApiBase()}/events/${id}/toggle-featured`, {
+      method: 'PATCH',
+      headers: authHeaders(accessToken),
+    });
+    const responseBody = await response.text().catch(() => '');
+
+    if (!response.ok) {
+      console.error('[toggleFeaturedEvent] Failed response', {
+        id,
+        url: `${getApiBase()}/events/${id}/toggle-featured`,
+        method: 'PATCH',
+        status: response.status,
+        statusText: response.statusText,
+        body: responseBody,
+      });
+      return null;
+    }
+
+    const data = parseJsonSafe(responseBody);
+    const isFeatured = data.is_featured;
+    if (typeof isFeatured !== 'boolean') {
+      console.error('[toggleFeaturedEvent] Unexpected JSON (missing is_featured)', {
+        id,
+        body: responseBody,
+        data,
+      });
+      return null;
+    }
+
+    return { is_featured: isFeatured };
+  } catch (error) {
+    console.error('[toggleFeaturedEvent] Error:', error);
     return null;
   }
 }

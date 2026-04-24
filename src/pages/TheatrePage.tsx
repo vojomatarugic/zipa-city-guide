@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { Drama } from "lucide-react";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -17,6 +17,7 @@ import { SITE_URL } from "../config/siteConfig";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import { cityEquals } from "../utils/city";
 const ogImage = "/zipa-city-guide-OG.png";
 import theatreHeroImage from "../assets/theatre-hero.png";
 
@@ -32,22 +33,29 @@ function isApprovedTheatreEvent(e: Item): boolean {
 }
 
 function sortByStartAtAsc(events: Item[]): Item[] {
-  return [...events].sort(
-    (a, b) =>
-      (a.start_at ? new Date(a.start_at).getTime() : 0) -
-      (b.start_at ? new Date(b.start_at).getTime() : 0),
-  );
+  const nextStart = (e: Item, now: Date): number => {
+    const slots = eventService.getEventScheduleSlots(e);
+    const next = slots.find((s) => new Date(s.start_at) >= now) ?? slots[0];
+    if (next) return new Date(next.start_at).getTime();
+    return e.start_at ? new Date(e.start_at).getTime() : 0;
+  };
+  const now = new Date();
+  return [...events].sort((a, b) => nextStart(a, now) - nextStart(b, now));
 }
 
-function isActiveThroughNow(e: Item, now: Date): boolean {
-  if (!e.start_at) return false;
-  const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
-  return end >= now;
+function isNotEndedForOtherCitiesRepertoire(e: Item, now: Date): boolean {
+  const slots = eventService.getEventScheduleSlots(e);
+  if (slots.length > 0) {
+    return slots.some((s) => new Date(s.end_at || s.start_at) >= now);
+  }
+  if (e.end_at) return new Date(e.end_at) >= now;
+  if (e.start_at) return new Date(e.start_at) >= now;
+  return false;
 }
 
-function mergeSortTheatreOtherCities(events: Item[], now: Date): Item[] {
-  return sortByStartAtAsc(events.filter((e) => isActiveThroughNow(e, now)));
-}
+const USKORO_MAX_CARDS = 4;
+const OTHER_CITIES_MAX_CARDS = 4;
+const REPERTOIRE_MAX_CARDS = 5;
 
 export function TheatrePage() {
   const { t } = useT();
@@ -76,25 +84,55 @@ export function TheatrePage() {
     fetchTheatre();
   }, []);
 
-  const { repertoire, moreFromRepertoire, nearby } = useMemo(() => {
+  const { repertoire, moreFromRepertoire, otherCities } = useMemo(() => {
     const now = new Date();
-    const inCity = events.filter((e) => e.city === selectedCity);
-    const activeInCity = sortByStartAtAsc(
-      inCity.filter((e) => isActiveThroughNow(e, now)),
+    const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const nextStartAtOrNull = (e: Item): Date | null => {
+      const slots = eventService.getEventScheduleSlots(e);
+      const next = slots.find((s) => new Date(s.start_at) >= now);
+      if (next) return new Date(next.start_at);
+      return null;
+    };
+
+    const inCityNowShowing = events.filter((e) => {
+      if (!isApprovedTheatreEvent(e)) return false;
+      if (!cityEquals(e.city, selectedCity)) return false;
+      const start = nextStartAtOrNull(e);
+      if (!start) return false;
+      return start >= now && start <= weekEnd;
+    });
+    const repertoire = sortByStartAtAsc(inCityNowShowing).slice(
+      0,
+      REPERTOIRE_MAX_CARDS,
     );
-    const repertoire = activeInCity.slice(0, 4);
-    const moreFromRepertoire = activeInCity.slice(4, 10);
 
-    const nearby = mergeSortTheatreOtherCities(
-      events.filter((e) => e.city && e.city !== selectedCity),
-      now,
-    ).slice(0, 4);
+    const inCityComingSoon = events.filter((e) => {
+      if (!isApprovedTheatreEvent(e)) return false;
+      if (!cityEquals(e.city, selectedCity)) return false;
+      const start = nextStartAtOrNull(e);
+      if (!start) return false;
+      return start > weekEnd;
+    });
+    const moreFromRepertoire = sortByStartAtAsc(inCityComingSoon).slice(
+      0,
+      USKORO_MAX_CARDS,
+    );
 
-    return { repertoire, moreFromRepertoire, nearby };
+    const otherPool = events.filter((e) => {
+      if (!isApprovedTheatreEvent(e)) return false;
+      if (!e.city || cityEquals(e.city, selectedCity)) return false;
+      return isNotEndedForOtherCitiesRepertoire(e, now);
+    });
+    const otherCities = sortByStartAtAsc(otherPool).slice(
+      0,
+      OTHER_CITIES_MAX_CARDS,
+    );
+
+    return { repertoire, moreFromRepertoire, otherCities };
   }, [events, selectedCity]);
 
   useEffect(() => {
-    const freeIds = [...repertoire, ...moreFromRepertoire, ...nearby]
+    const freeIds = [...repertoire, ...moreFromRepertoire, ...otherCities]
       .filter((e) => /^(free|besplatn|gratis)/i.test(e.price || ""))
       .map((e) => e.id);
     if (freeIds.length === 0) {
@@ -102,7 +140,7 @@ export function TheatrePage() {
       return;
     }
     eventService.batchGetInterestCounts(freeIds).then(setInterestCounts);
-  }, [repertoire, moreFromRepertoire, nearby]);
+  }, [repertoire, moreFromRepertoire, otherCities]);
 
   useDocumentTitle(listingDocumentTitle(DOC_TITLE_THEATRE, selectedCity));
 
@@ -128,7 +166,7 @@ export function TheatrePage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -174,7 +212,7 @@ export function TheatrePage() {
 
       {/* REPERTOIRE */}
       <section
-        className="py-16 overflow-hidden"
+        className="py-16 overflow-hidden min-h-[320px]"
         style={{ background: "#FFFFFF" }}
       >
         <div className="w-[60vw] mx-auto">
@@ -191,9 +229,9 @@ export function TheatrePage() {
             {language === "sr" ? "Scenski repertoar" : "Stage Repertoire"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="380px" />
+              <EventCardSkeleton count={5} imageHeight="300px" />
             ) : repertoire.length > 0 ? (
               repertoire.map((event) => (
                 <EventCard
@@ -201,16 +239,16 @@ export function TheatrePage() {
                   event={event}
                   language={language}
                   accentColor="#8E24AA"
-                  imageHeight="380px"
+                  imageHeight="300px"
                   interestCount={interestCounts[event.id]}
                 />
               ))
             ) : (
-              <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#8E24AA"
+              <div className="col-span-5">
+                <SectionEmptyState
                   icon={Drama}
+                  accentColor="#8E24AA"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -248,7 +286,7 @@ export function TheatrePage() {
       </section>
 
       {/* UPCOMING EVENTS */}
-      <section className="py-16" style={{ background: "#F3E5F5" }}>
+      <section className="py-16 min-h-[320px]" style={{ background: "#F3E5F5" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -262,9 +300,9 @@ export function TheatrePage() {
             {language === "sr" ? "U najavi" : "Coming Soon"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={3} imageHeight="400px" />
+              <EventCardSkeleton count={4} imageHeight="400px" />
             ) : moreFromRepertoire.length > 0 ? (
               moreFromRepertoire.map((event) => (
                 <EventCard
@@ -277,11 +315,11 @@ export function TheatrePage() {
                 />
               ))
             ) : (
-              <div className="col-span-3">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#8E24AA"
+              <div className="col-span-4">
+                <SectionEmptyState
                   icon={Drama}
+                  accentColor="#8E24AA"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}
@@ -289,8 +327,8 @@ export function TheatrePage() {
         </div>
       </section>
 
-      {/* Nearby Theatre */}
-      <section className="pt-16 pb-8" style={{ background: "#FFFFFF" }}>
+      {/* Theatre From Other Cities */}
+      <section className="pt-16 pb-8 min-h-[320px]" style={{ background: "#FFFFFF" }}>
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -301,27 +339,34 @@ export function TheatrePage() {
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {language === "sr" ? "Predstave u blizini" : "Nearby Performances"}
+            {language === "sr"
+              ? "Predstave u drugim gradovima"
+              : "Performances from other cities"}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {nearby.length > 0 ? (
-              nearby.map((event) => (
+            {otherCities.length > 0 ? (
+              otherCities.map((event) => (
                 <EventCard
                   key={event.id}
                   event={event}
                   language={language}
                   accentColor="#8E24AA"
-                  imageHeight="320px"
+                  imageHeight="280px"
                   interestCount={interestCounts[event.id]}
+                  showCity
+                  showVenue
+                  showDate
+                  showTime
+                  metadataOrder={["city", "venue", "date", "time"]}
                 />
               ))
             ) : (
               <div className="col-span-4">
-                <UnderConstruction
-                  language={language}
-                  accentColor="#8E24AA"
+                <SectionEmptyState
                   icon={Drama}
+                  accentColor="#8E24AA"
+                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
                 />
               </div>
             )}

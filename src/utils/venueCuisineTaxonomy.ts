@@ -3,6 +3,8 @@
  */
 
 import { parseVenueTagKeysFromDb, venueTagLabel } from './venueTagLabels';
+import { formatVenueTypeForBadge } from './displayTypeLabels';
+import type { translations } from './translations';
 
 export const VENUE_CUISINE_ROWS = [
   { sr: 'Azijska', en: 'Asian' },
@@ -157,7 +159,10 @@ export function buildVenueListingBadgeLabels(params: {
   const { venue_type, cuisine, cuisine_en, tags, lang, tVenueType } = params;
   const out: string[] = [];
   const vt = (venue_type || '').trim();
-  if (vt) out.push(tVenueType(vt));
+  if (vt)
+    out.push(
+      formatVenueTypeForBadge(vt, tVenueType as (key: keyof typeof translations) => string),
+    );
   out.push(...buildCuisineBadgeLabelsForLang(cuisine, cuisine_en, lang).slice(0, 2));
   for (const key of parseVenueTagKeysFromDb(tags).slice(0, 2)) {
     const lab = venueTagLabel(key, lang);

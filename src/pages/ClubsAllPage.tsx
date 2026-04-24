@@ -5,7 +5,7 @@ import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import clubsHeroImage from "../assets/clubs-hero.png";
@@ -110,10 +110,10 @@ export function ClubsAllPage() {
         )}
 
         {!isLoading && clubs.length === 0 && (
-          <UnderConstruction
-            language={language}
-            accentColor={CLUBS_CATEGORY_THEME.accentColor}
+          <SectionEmptyState
             icon={Disc3}
+            accentColor={CLUBS_CATEGORY_THEME.accentColor}
+            message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
           />
         )}
 

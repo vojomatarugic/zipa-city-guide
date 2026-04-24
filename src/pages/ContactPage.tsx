@@ -7,7 +7,7 @@ import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { listingDocumentTitle } from "../utils/documentTitle";
-import ogImage from "../assets/zipa-city-guide-OG.png";
+const ogImage = "/zipa-city-guide-OG.png";
 import { CONTACT_EMAIL, SITE_URL } from "../config/siteConfig";
 
 const UI_CONTACT_EMAIL = "info@zipaagency.com";

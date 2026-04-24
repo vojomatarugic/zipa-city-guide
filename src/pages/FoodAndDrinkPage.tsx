@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
 import { MapPin, Utensils } from "lucide-react";
-import { UnderConstruction } from "../components/UnderConstruction";
+import { SectionEmptyState } from "../components/SectionEmptyState";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
@@ -14,6 +14,7 @@ import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import { VenueBadgeRow } from "../components/VenueBadgeRow";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
+import { cityEquals } from "../utils/city";
 const ogImage = "/zipa-city-guide-OG.png";
 import foodAndDrinkHeroImage from "../assets/food-and-drink-hero.png";
 
@@ -99,7 +100,7 @@ function CategorySection({
       : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4";
 
   return (
-    <section className="py-16" style={{ background: bgColor }}>
+    <section className="py-16 min-h-[320px]" style={{ background: bgColor }}>
       <div className="w-[60vw] mx-auto">
         <h2
           style={{
@@ -120,13 +121,15 @@ function CategorySection({
             </p>
           </div>
         ) : items.length === 0 ? (
-          <div className="text-center py-12">
-            <UnderConstruction
-              language={language}
-              accentColor="#E5E9F0"
-              icon={Utensils}
-            />
-          </div>
+          <SectionEmptyState
+            icon={Utensils}
+            accentColor="#8B6F47"
+            message={
+              language === "sr"
+                ? "Trenutno nema sadržaja u ovoj sekciji."
+                : "There is currently no content in this section."
+            }
+          />
         ) : (
           <div className={gridClass}>
             {items.map((item) => (
@@ -172,7 +175,9 @@ export function FoodAndDrinkPage() {
 
   const SECTION_LIMIT = 4;
   const filterByType = (type: string) =>
-    foodAndDrinkVenues.filter((r) => r.venue_type === type).slice(0, SECTION_LIMIT);
+    foodAndDrinkVenues
+      .filter((r) => r.venue_type === type)
+      .slice(0, SECTION_LIMIT);
 
   const cevabdzinice = filterByType("cevabdzinica");
   const restaurantVenues = filterByType("restaurant");
@@ -202,13 +207,9 @@ export function FoodAndDrinkPage() {
 
   const nearbyFoodAndDrink = selectedCity
     ? foodAndDrinkVenues
-        .filter((r) =>
-          (r.city || "").toLowerCase().includes(selectedCity.toLowerCase()),
-        )
+        .filter((r) => cityEquals(r.city, selectedCity))
         .slice(0, 3)
-    : foodAndDrinkVenues.slice(
-        Math.max(0, foodAndDrinkVenues.length - 3),
-      );
+    : foodAndDrinkVenues.slice(Math.max(0, foodAndDrinkVenues.length - 3));
 
   const foodTitle = useMemo(
     () => listingDocumentTitle(DOC_TITLE_FOOD, selectedCity),
@@ -253,7 +254,7 @@ export function FoodAndDrinkPage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO */}
       <section
-        className="relative w-full"
+        className="relative w-full min-h-[320px]"
         style={{ height: "420px", marginTop: 0 }}
       >
         <img
@@ -312,7 +313,7 @@ export function FoodAndDrinkPage() {
 
       {/* 2. ISTAKNUTO */}
       {!isLoading && featuredFoodAndDrink.length > 0 && (
-        <section className="py-16" style={{ background: "#FAF7F2" }}>
+        <section className="py-16 min-h-[320px]" style={{ background: "#FAF7F2" }}>
           <div className="w-[60vw] mx-auto">
             <h2
               style={{
@@ -464,7 +465,7 @@ export function FoodAndDrinkPage() {
 
       {/* 10. HRANA I PIĆE U BLIZINI */}
       {!isLoading && nearbyFoodAndDrink.length > 0 && (
-        <section className="py-16" style={{ background: "#FAF7F2" }}>
+        <section className="py-16 min-h-[320px]" style={{ background: "#FAF7F2" }}>
           <div className="w-[60vw] mx-auto">
             <h2
               style={{

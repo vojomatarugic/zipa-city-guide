@@ -22,6 +22,7 @@ export interface EventDbRow {
   organizer_phone?: string | null;
   organizer_email?: string | null;
   event_type?: string | null;
+  is_featured?: boolean | null;
   /** User-selected genre / show type / music type (cinema, theatre, concert). */
   category?: string | null;
   start_at?: string | null;
