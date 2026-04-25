@@ -437,7 +437,7 @@ export function HomePage() {
           {/* Search Bar */}
           <div
             ref={searchShellRef}
-            className="w-full max-w-2xl bg-white rounded-md shadow-lg relative"
+            className="w-full max-w-2xl bg-white rounded-md shadow-lg relative h-14 lg:h-auto"
             style={{
               padding: "8px",
               display: "flex",
@@ -445,7 +445,7 @@ export function HomePage() {
               gap: "12px",
             }}
           >
-            <div className="flex-1 flex items-center gap-3 px-3">
+            <div className="flex-1 min-w-0 flex items-center gap-3 px-3">
               <button
                 onClick={() => {
                   // Build search URL with parameters
@@ -506,7 +506,7 @@ export function HomePage() {
                     setIsSearchMenuOpen(false);
                   }
                 }}
-                className="flex-1 border-0 outline-none"
+                className="flex-1 min-w-0 border-0 outline-none whitespace-nowrap overflow-x-auto"
                 style={{
                   fontSize: "16px",
                   fontWeight: 500,
@@ -537,7 +537,7 @@ export function HomePage() {
 
             {/* Date Picker Icon */}
             <div
-              className="px-4 py-2 cursor-pointer flex items-center gap-2"
+              className="hidden lg:flex px-4 py-2 cursor-pointer items-center gap-2"
               onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
             >
               {selectedDateRange ? (

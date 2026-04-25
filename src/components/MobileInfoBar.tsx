@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, MapPinned } from "lucide-react";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import { useMemo } from "react";
 import { useLocation } from "../contexts/LocationContext";
 import { useDateFilter } from "../contexts/DateFilterContext";
@@ -44,10 +44,7 @@ export function MobileInfoBar() {
             onClick={() => setIsCityPopupOpen(true)}
             className="flex-1 min-w-0 h-10 inline-flex items-center justify-between text-left whitespace-nowrap"
           >
-            <span className="inline-flex items-center gap-2 min-w-0">
-              <MapPinned className="h-4 w-4 text-[#0E3DC5] shrink-0" />
-              <span className="truncate">{selectedCity}</span>
-            </span>
+            <span className="truncate">{selectedCity}</span>
             <ChevronDown className="h-3.5 w-3.5 text-gray-500 shrink-0" />
           </button>
 

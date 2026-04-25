@@ -19,7 +19,6 @@ export function CityModal() {
     setIsCityPopupOpen,
     citySearchQuery,
     setCitySearchQuery,
-    selectedCity,
     setSelectedCity,
   } = useLocation();
   const { t, language } = useT();
@@ -162,7 +161,7 @@ export function CityModal() {
                 setIsCityPopupOpen(false);
                 setCitySearchQuery("");
               }}
-              list="city-modal-options"
+              autoComplete="off"
               className="flex-1 bg-transparent border-0 outline-none"
               style={{
                 fontSize: "15px",
@@ -170,11 +169,6 @@ export function CityModal() {
                 color: "#1a1a1a",
               }}
             />
-            <datalist id="city-modal-options">
-              {filteredCities.map((city) => (
-                <option key={city.key} value={city.label} />
-              ))}
-            </datalist>
             <button
               type="button"
               aria-label={language === "sr" ? "Trenutna lokacija" : "Current location"}
@@ -194,6 +188,25 @@ export function CityModal() {
               <MapPinned size={17} />
             </button>
           </div>
+
+          {citySearchQuery.trim().length > 0 && filteredCities.length > 0 && (
+            <div className="mt-2 bg-white rounded-md shadow-sm overflow-hidden">
+              {filteredCities.map((city) => (
+                <button
+                  key={city.key}
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-gray-50 transition-colors"
+                  onClick={() => {
+                    setSelectedCity(city.label as City);
+                    setIsCityPopupOpen(false);
+                    setCitySearchQuery("");
+                  }}
+                >
+                  {city.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
