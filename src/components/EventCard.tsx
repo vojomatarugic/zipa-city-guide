@@ -8,7 +8,7 @@ import { Heart, MapPin, MapPinned, CalendarDays, Clock } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Item } from "../utils/dataService";
 import * as eventService from "../utils/eventService";
-import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getEventCategoryLabel } from "../config/eventCategories";
 import {
   eventDetailPath,
   getTopLevelPageCategory,
@@ -59,7 +59,9 @@ export function EventCard({
       "",
   ).trim();
   const eventCity = String(event.city || "").trim();
-  const categoryLabel = event.category ? getLocalizedEventCategory(event.category, language) : "";
+  const categoryLabel = event.category
+    ? getEventCategoryLabel(event.event_type || "", event.category, language)
+    : "";
   const typeBadgeLabel =
     (event.event_type || "").trim() !== ""
       ? eventService.translateEventType(event.event_type || "", locale)

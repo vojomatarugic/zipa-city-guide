@@ -28,7 +28,7 @@ import {
   detailLoadingDocumentTitle,
 } from "../utils/documentTitle";
 import { Badge } from "../components/ui/badge";
-import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getEventCategoryLabel } from "../config/eventCategories";
 
 // Heart pulse animation keyframes (injected once)
 const heartAnimStyle = document.createElement('style');
@@ -134,7 +134,7 @@ export function EventDetailPage() {
   const title =
     language === 'sr' ? event.title : (event.title_en || event.title);
   const categoryLabel = event.category
-    ? getLocalizedEventCategory(event.category, language)
+    ? getEventCategoryLabel(event.event_type || "", event.category, language)
     : "";
   const typeBadgeLabel =
     (event.event_type || "").trim() !== ""

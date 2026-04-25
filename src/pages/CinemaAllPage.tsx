@@ -13,7 +13,7 @@ import cinemaHeroImage from "../assets/cinema-hero.png";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { Badge } from "../components/ui/badge";
-import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getEventCategoryLabel } from "../config/eventCategories";
 import {
   eventDetailPath,
   getTopLevelPageCategory,
@@ -253,7 +253,11 @@ export function CinemaAllPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {visibleEvents.map((event) => {
                       const categoryLabel = event.category
-                        ? getLocalizedEventCategory(event.category, language)
+                        ? getEventCategoryLabel(
+                            event.event_type || "",
+                            event.category,
+                            language,
+                          )
                         : "";
                       const categoryTextColor = getBadgeTextColorForPageSlug(
                         getTopLevelPageCategory(event),

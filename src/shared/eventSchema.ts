@@ -1,4 +1,7 @@
-import { resolveEventCategoryForPayload } from '../config/eventCategories';
+import {
+  normalizeEventCategory,
+  resolveEventCategoryForPayload,
+} from '../config/eventCategories';
 
 export type EventScheduleSlot = { start_at: string; end_at?: string | null };
 
@@ -206,9 +209,13 @@ export function mapFormModelToEventApiPayload(form: EventFormModel): EventApiPay
 export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
   const rowPrice = row.price || '';
   const ext = row as unknown as Record<string, unknown>;
-  const categoryStr = normalizeEventCategoryValue(ext['category'] ?? ext['Category']) ?? '';
+  const eventType = sanitizeEventType(row.event_type || '');
+  const rawCategory = normalizeEventCategoryValue(
+    ext['category'] ?? ext['Category'],
+  );
+  const categoryStr = normalizeEventCategory(eventType, rawCategory) ?? '';
   return {
-    eventType: sanitizeEventType(row.event_type || ''),
+    eventType,
     category: categoryStr,
     image: row.image || '',
     eventName: row.title || '',
@@ -231,7 +238,11 @@ export function mapDbRowToFormModel(row: EventDbRow): EventFormModel {
 
 export function mapDbRowToUiEvent(row: EventDbRow): EventDbRow {
   const ext = row as unknown as Record<string, unknown>;
-  const category = normalizeEventCategoryValue(ext['category'] ?? ext['Category']);
+  const eventType = sanitizeEventType(row.event_type || '');
+  const rawCategory = normalizeEventCategoryValue(
+    ext['category'] ?? ext['Category'],
+  );
+  const category = normalizeEventCategory(eventType, rawCategory);
   const { Category: _legacyCategory, ...rowWithoutLegacyCategory } = ext;
 
   return {

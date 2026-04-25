@@ -12,7 +12,7 @@ import { useLocation as useSelectedCity } from "../contexts/LocationContext";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
-import { getLocalizedEventCategory } from "../config/eventCategories";
+import { getEventCategoryLabel } from "../config/eventCategories";
 import {
   eventDetailPath,
   getTopLevelPageCategory,
@@ -69,7 +69,7 @@ function CinemaCard({
       ? event.venue_name || event.address || ""
       : event.venue_name || event.address || event.city || "";
   const categoryLabel = event.category
-    ? getLocalizedEventCategory(event.category, language)
+    ? getEventCategoryLabel(event.event_type || "", event.category, language)
     : "";
   const badgeTextColor = getBadgeTextColorForPageSlug(
     getTopLevelPageCategory(event),

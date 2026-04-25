@@ -28,7 +28,10 @@ import {
 import { toast } from 'sonner@2.0.3';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
-import { getEventCategoryUiConfig, resolveEventCategoryForPayload } from '../config/eventCategories';
+import {
+  getEventCategoryConfig,
+  resolveEventCategoryForPayload,
+} from '../config/eventCategories';
 import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
 
 // Custom srpski latinica locale
@@ -468,7 +471,7 @@ export function SubmitEventPage() {
         return;
       }
 
-      const categoryUiConfig = getEventCategoryUiConfig(formData.eventType);
+      const categoryUiConfig = getEventCategoryConfig(formData.eventType, language);
       if (categoryUiConfig && !formData.category.trim()) {
         notifySubmitBlockingError(
           language === 'sr'
@@ -1011,7 +1014,7 @@ export function SubmitEventPage() {
             </div>
 
             {(() => {
-              const categoryConfig = getEventCategoryUiConfig(formData.eventType);
+              const categoryConfig = getEventCategoryConfig(formData.eventType, language);
               if (!categoryConfig) return null;
               return (
                 <div className="mb-4" ref={categoryWrapRef}>
@@ -1040,7 +1043,7 @@ export function SubmitEventPage() {
                         </span>
                       ) : (
                         <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                          {formData.category}
+                          {categoryConfig.options.find((opt) => opt.key === formData.category)?.label || formData.category}
                         </span>
                       )}
                     </button>
@@ -1054,7 +1057,7 @@ export function SubmitEventPage() {
                       >
                         {categoryConfig.options.map((opt) => (
                           <button
-                            key={opt}
+                            key={opt.key}
                             type="button"
                             className="w-full text-left px-4 py-2.5 border-0 text-[14px] cursor-pointer"
                             style={{
@@ -1069,11 +1072,11 @@ export function SubmitEventPage() {
                               e.currentTarget.style.background = 'white';
                             }}
                             onClick={() => {
-                              setFormData((prev) => ({ ...prev, category: opt }));
+                              setFormData((prev) => ({ ...prev, category: opt.key }));
                               setCategoryMenuOpen(false);
                             }}
                           >
-                            {opt}
+                            {opt.label}
                           </button>
                         ))}
                       </div>
