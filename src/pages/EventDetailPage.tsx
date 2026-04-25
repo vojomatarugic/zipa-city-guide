@@ -16,6 +16,7 @@ import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import {
   getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
   getEventDetailTheme,
 } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
@@ -204,7 +205,7 @@ export function EventDetailPage() {
               {venueLine ? (
                 <div className="mb-2 flex items-center gap-2 flex-wrap">
                   <Badge
-                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                    className={LISTING_BADGE_SURFACE_CLASS}
                     style={{ color: venueTextColor }}
                   >
                     {venueLine}
@@ -227,7 +228,7 @@ export function EventDetailPage() {
               {typeBadgeLabel ? (
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Badge
-                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                    className={LISTING_BADGE_SURFACE_CLASS}
                     style={{ color: categoryTextColor }}
                   >
                     {typeBadgeLabel}

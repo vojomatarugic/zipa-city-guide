@@ -7,7 +7,7 @@ import {
   X,
   Edit2,
   Lock,
-  Calendar,
+  CalendarDays,
   User,
   Phone,
   FileText,
@@ -16,6 +16,7 @@ import {
   LogOut,
   Star,
   Building2,
+  MapPinned,
   MapPin,
   Mail,
   ChevronDown,
@@ -31,7 +32,11 @@ import {
 } from "../utils/authService";
 import { panelProfileDisplayName } from "../utils/userDisplay";
 import * as eventService from "../utils/eventService";
-import { getCanonicalEventPageSlug } from "../utils/eventPageCategory";
+import {
+  eventDetailPath,
+  getCanonicalEventPageSlug,
+} from "../utils/eventPageCategory";
+import { venueDetailPath } from "../utils/venueRouting";
 import { shouldHandleSoftRowClick } from "../utils/rowClick";
 import { toast } from "sonner@2.0.3";
 import { publicAnonKey } from "../utils/supabase/info";
@@ -600,18 +605,8 @@ export function AdminPage() {
   const getVenueTypeLabel = (venueTypeLike: string) =>
     formatVenueTypeForBadge(venueTypeLike, t);
 
-  const getVenueDetailHref = (submission: Submission): string => {
-    const pageSlug = String(submission.page_slug || "").toLowerCase();
-    if (pageSlug === "clubs" || pageSlug === "nightlife")
-      return `/clubs/${submission.id}`;
-    if (
-      pageSlug === "food-and-drink" ||
-      pageSlug === "restaurants" ||
-      pageSlug === "cafes"
-    )
-      return `/food-and-drink/${submission.id}`;
-    return `/${pageSlug || "food-and-drink"}/${submission.id}`;
-  };
+  const getVenueDetailHref = (submission: Submission): string =>
+    venueDetailPath(submission);
 
   const isEventSubmission = (submission: Submission): boolean => {
     const eventPageSlugs = [
@@ -632,13 +627,7 @@ export function AdminPage() {
     id: string;
     event_type?: string;
     page_slug?: string;
-  }): string => {
-    const categorySlug = getCanonicalEventPageSlug(
-      eventLike.event_type,
-      eventLike.page_slug,
-    );
-    return `/${categorySlug}/${eventLike.id}`;
-  };
+  }): string => eventDetailPath(eventLike);
 
   const handleApprove = async (id: string) => {
     const success = await dataService.approveItem(id);
@@ -683,7 +672,7 @@ export function AdminPage() {
       console.log("➡️ Navigating to /submit-event/" + id);
       navigate(`/submit-event/${id}`, { state: { eventData: submission } });
     } else {
-      // Venue categories (restaurants, cafes, nightlife) - use /add-venue/:id
+      // Venue categories (food & drink, clubs) — use /add-venue/:id
       console.log("➡️ Navigating to /add-venue/" + id);
       navigate(`/add-venue/${id}`, { state: { venueData: submission } });
     }
@@ -1003,6 +992,7 @@ export function AdminPage() {
                     <input
                       type="file"
                       id="admin-profile-image-upload"
+                      name="admin-profile-image-upload"
                       accept="image/*"
                       onChange={handleImageUpload}
                       className="hidden"
@@ -1076,12 +1066,15 @@ export function AdminPage() {
                     <div className="space-y-3 mb-4 max-w-sm">
                       <div>
                         <label
+                          htmlFor="admin-profile-name"
                           className="block text-[13px] font-semibold mb-1"
                           style={{ color: "var(--text-secondary)" }}
                         >
                           {t("profileName")}
                         </label>
                         <input
+                          id="admin-profile-name"
+                          name="admin-profile-name"
                           type="text"
                           value={editName}
                           onChange={(e) => setEditName(e.target.value)}
@@ -1091,12 +1084,15 @@ export function AdminPage() {
                       </div>
                       <div>
                         <label
+                          htmlFor="admin-profile-email"
                           className="block text-[13px] font-semibold mb-1"
                           style={{ color: "var(--text-secondary)" }}
                         >
                           {t("profileEmail")}
                         </label>
                         <input
+                          id="admin-profile-email"
+                          name="admin-profile-email"
                           type="email"
                           value={editEmail}
                           onChange={(e) => setEditEmail(e.target.value)}
@@ -1107,12 +1103,15 @@ export function AdminPage() {
                       </div>
                       <div>
                         <label
+                          htmlFor="admin-profile-phone"
                           className="block text-[13px] font-semibold mb-1"
                           style={{ color: "var(--text-secondary)" }}
                         >
                           {t("profilePhone")}
                         </label>
                         <input
+                          id="admin-profile-phone"
+                          name="admin-profile-phone"
                           type="tel"
                           value={editPhone}
                           onChange={(e) => {
@@ -1364,6 +1363,7 @@ export function AdminPage() {
                         <div className="space-y-3">
                           <div>
                             <label
+                              htmlFor="admin-current-password"
                               className="block text-[13px] font-semibold mb-1"
                               style={{ color: "var(--text-secondary)" }}
                             >
@@ -1371,6 +1371,8 @@ export function AdminPage() {
                               <span style={{ color: "#DC2626" }}>*</span>
                             </label>
                             <input
+                              id="admin-current-password"
+                              name="admin-current-password"
                               type="password"
                               value={currentPassword}
                               onChange={(e) => {
@@ -1384,12 +1386,15 @@ export function AdminPage() {
                           </div>
                           <div>
                             <label
+                              htmlFor="admin-new-password"
                               className="block text-[13px] font-semibold mb-1"
                               style={{ color: "var(--text-secondary)" }}
                             >
                               {t("newPassword")}
                             </label>
                             <input
+                              id="admin-new-password"
+                              name="admin-new-password"
                               type="password"
                               value={newPassword}
                               onChange={(e) => {
@@ -1402,12 +1407,15 @@ export function AdminPage() {
                           </div>
                           <div>
                             <label
+                              htmlFor="admin-confirm-new-password"
                               className="block text-[13px] font-semibold mb-1"
                               style={{ color: "var(--text-secondary)" }}
                             >
                               {t("confirmNewPassword")}
                             </label>
                             <input
+                              id="admin-confirm-new-password"
+                              name="admin-confirm-new-password"
                               type="password"
                               value={confirmPassword}
                               onChange={(e) => {
@@ -1557,12 +1565,15 @@ export function AdminPage() {
                         <div className="space-y-3">
                           <div>
                             <label
+                              htmlFor="admin-delete-account-confirm-text"
                               className="block text-[12px] font-semibold mb-1"
                               style={{ color: "#DC2626" }}
                             >
                               {t("typeDeleteToConfirm")}
                             </label>
                             <input
+                              id="admin-delete-account-confirm-text"
+                              name="admin-delete-account-confirm-text"
                               type="text"
                               value={deleteConfirmText}
                               onChange={(e) =>
@@ -1699,7 +1710,7 @@ export function AdminPage() {
                     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                   }}
                 >
-                  <Calendar size={18} />
+                  <CalendarDays size={18} />
                   {t("addEvent")}
                 </Link>
                 <button
@@ -1789,10 +1800,13 @@ export function AdminPage() {
               {venuesListExpanded && filteredSubmissions.length > 0 && (
                 <div className="flex shrink-0 items-center gap-3">
                   <label
+                    htmlFor="admin-venues-select-all"
                     className="flex items-center gap-2 cursor-pointer select-none text-[13px]"
                     style={{ color: "var(--text-muted)" }}
                   >
                     <input
+                      id="admin-venues-select-all"
+                      name="admin-venues-select-all"
                       type="checkbox"
                       checked={
                         filteredSubmissions.length > 0 &&
@@ -2115,6 +2129,8 @@ export function AdminPage() {
                           <div className="flex flex-col gap-2">
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               <input
+                                id={`admin-venue-select-${submission.id}`}
+                                name={`admin-venue-select-${submission.id}`}
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={(e) => {
@@ -2395,7 +2411,7 @@ export function AdminPage() {
                                     >
                                       {submission.city && (
                                         <span className="inline-flex items-center gap-1.5">
-                                          <Building2 size={14} />
+                                          <MapPinned size={14} />
                                           {submission.city}
                                         </span>
                                       )}
@@ -2536,10 +2552,13 @@ export function AdminPage() {
               {eventsListExpanded && filteredEvents.length > 0 && (
                 <div className="flex shrink-0 items-center gap-3">
                   <label
+                    htmlFor="admin-events-select-all"
                     className="flex items-center gap-2 cursor-pointer select-none text-[13px]"
                     style={{ color: "var(--text-muted)" }}
                   >
                     <input
+                      id="admin-events-select-all"
+                      name="admin-events-select-all"
                       type="checkbox"
                       checked={
                         filteredEvents.length > 0 &&
@@ -2959,6 +2978,8 @@ export function AdminPage() {
                           <div className="flex flex-col gap-2">
                             <div className="flex items-start gap-2 flex-1 min-w-0">
                               <input
+                                id={`admin-event-select-${event.id}`}
+                                name={`admin-event-select-${event.id}`}
                                 type="checkbox"
                                 checked={isSelected}
                                 onChange={(e) => {
@@ -2982,7 +3003,7 @@ export function AdminPage() {
                                       />
                                     ) : (
                                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                        <Calendar size={18} />
+                                        <CalendarDays size={18} />
                                       </div>
                                     )}
                                   </div>
@@ -3236,7 +3257,7 @@ export function AdminPage() {
                                     >
                                       {event.city && (
                                         <span className="inline-flex items-center gap-1.5">
-                                          <Building2 size={14} />
+                                          <MapPinned size={14} />
                                           {event.city}
                                         </span>
                                       )}
@@ -3248,7 +3269,7 @@ export function AdminPage() {
                                       )}
                                       {displayStartAt && (
                                         <span className="inline-flex items-center gap-1.5">
-                                          <Calendar size={14} />
+                                          <CalendarDays size={14} />
                                           {formatDate(displayStartAt)}
                                         </span>
                                       )}

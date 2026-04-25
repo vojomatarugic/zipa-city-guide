@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation as useRouterLocation } from "react-router";
-import { MapPin, X } from "lucide-react";
+import { MapPinned, X } from "lucide-react";
 import { useLocation, type City } from "../contexts/LocationContext";
 import { useT } from "../hooks/useT";
 import newCityModalBg from "../assets/location-modal-bg.png";
@@ -207,7 +207,7 @@ export function CityModal() {
                 fontWeight: 500,
               }}
             >
-              <MapPin size={16} />
+              <MapPinned size={16} />
               {t("currentLocation")}
             </button>
           </div>
@@ -243,7 +243,7 @@ export function CityModal() {
                     setCitySearchQuery("");
                   }}
                 >
-                  <MapPin
+                  <MapPinned
                     size={20}
                     style={{
                       color: "#6B7280",

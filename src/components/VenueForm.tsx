@@ -1,5 +1,5 @@
 import React, { useState as useLocalState, useRef, useEffect } from 'react';
-import { Building2, MapPin, Phone, Globe, Users, Clock, Image as ImageIcon, Utensils, Tag, X, Search, User, Loader2, UserCheck, Pencil } from 'lucide-react';
+import { Building2, MapPin, MapPinned, Phone, Globe, Users, Clock, Image as ImageIcon, Utensils, Tag, X, Search, User, Loader2, UserCheck, Pencil } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { toast } from 'sonner@2.0.3';
 import { CustomDropdown } from './CustomDropdown';
@@ -409,12 +409,15 @@ export function VenueForm({ onSubmit, onCancel, submit_button_text, initial_data
 
         {/* city */}
         <div className="mb-4">
-          <label
-            className="block text-[13px] mb-2"
-            style={{ color: 'var(--text-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
-          >
-            {t('city')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
-          </label>
+          <div className="flex items-center gap-2 mb-2">
+            <MapPinned className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+            <label
+              className="text-[13px] m-0"
+              style={{ color: 'var(--text-primary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}
+            >
+              {t('city')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+            </label>
+          </div>
           <input
             type="text"
             name="city"

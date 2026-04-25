@@ -2,7 +2,7 @@ import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
 import { BACKGROUNDS, BORDERS, TEXT, BRAND } from '../utils/colors';
 import { Link, useNavigate } from 'react-router';
-import { User, FileText, Calendar, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, Building2, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, FileText, CalendarDays, Edit2, Upload, X, MapPin, Phone, LogOut, KeyRound, Trash2, MapPinned, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import * as dataService from '../utils/dataService';
@@ -21,6 +21,8 @@ import {
   formatEventTypeForBadge,
   formatVenueTypeForBadge,
 } from '../utils/displayTypeLabels';
+import { eventDetailPath } from '../utils/eventPageCategory';
+import { venueDetailPath } from '../utils/venueRouting';
 
 const PLURAL_OBJEKAT_VENUE = {
   sr: { one: 'objekat', few: 'objekta', many: 'objekata' },
@@ -72,12 +74,8 @@ export function MyPanelPage() {
     return formatAppDate(dateStr, language === 'en' ? 'en' : 'sr');
   };
 
-  const getVenueDetailHref = (venue: dataService.Item): string => {
-    const pageSlug = String(venue.page_slug || '').toLowerCase();
-    if (pageSlug === 'clubs' || pageSlug === 'nightlife') return `/clubs/${venue.id}`;
-    if (pageSlug === 'food-and-drink' || pageSlug === 'restaurants' || pageSlug === 'cafes') return `/food-and-drink/${venue.id}`;
-    return `/${pageSlug || 'food-and-drink'}/${venue.id}`;
-  };
+  const getVenueDetailHref = (venue: dataService.Item): string =>
+    venueDetailPath(venue);
 
   const handleToggleVenueActive = async (id: string, makeActive: boolean) => {
     const currentlyInactive = inactiveVenueIds.has(id);
@@ -810,7 +808,7 @@ export function MyPanelPage() {
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
               }}
             >
-              <Calendar size={18} />
+              <CalendarDays size={18} />
               {t('addEvent')}
             </Link>
             <button
@@ -1105,7 +1103,7 @@ export function MyPanelPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-4 flex-wrap text-[13px]" style={{ color: TEXT.secondary }}>
-                            {venue.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{venue.city}</span>}
+                            {venue.city && <span className="inline-flex items-center gap-1.5"><MapPinned size={14} />{venue.city}</span>}
                             {venue.address && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{venue.address}</span>}
                             {venue.contact_name && <span className="inline-flex items-center gap-1.5"><User size={14} />{venue.contact_name}</span>}
                             {(venue.phone || venue.contact_phone) && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{venue.phone || venue.contact_phone}</span>}
@@ -1319,7 +1317,7 @@ export function MyPanelPage() {
                           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                             <h4 className="m-0 leading-tight" style={{ fontSize: '15px', fontWeight: 600 }}>
                               <Link
-                                to={`/events/${event.id}`}
+                                to={eventDetailPath(event)}
                                 className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:underline"
                                 style={{ color: '#DC2626', textDecorationColor: '#DC2626', textUnderlineOffset: '2px' }}
                               >
@@ -1381,9 +1379,9 @@ export function MyPanelPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-4 flex-wrap text-[13px]" style={{ color: TEXT.secondary }}>
-                            {event.city && <span className="inline-flex items-center gap-1.5"><Building2 size={14} />{event.city}</span>}
+                            {event.city && <span className="inline-flex items-center gap-1.5"><MapPinned size={14} />{event.city}</span>}
                             {eventLocation && <span className="inline-flex items-center gap-1.5"><MapPin size={14} />{eventLocation}</span>}
-                            {eventDateLabel && <span className="inline-flex items-center gap-1.5"><Calendar size={14} />{eventDateLabel}</span>}
+                            {eventDateLabel && <span className="inline-flex items-center gap-1.5"><CalendarDays size={14} />{eventDateLabel}</span>}
                             {(((event as unknown as Record<string, unknown>).organizerName as string | undefined) || event.organizer_name || event.contact_name) && <span className="inline-flex items-center gap-1.5"><User size={14} />{((event as unknown as Record<string, unknown>).organizerName as string | undefined) || event.organizer_name || event.contact_name}</span>}
                             {event.organizer_phone && <span className="inline-flex items-center gap-1.5"><Phone size={14} />{event.organizer_phone}</span>}
                             {event.organizer_email && <span className="inline-flex items-center gap-1.5"><Mail size={14} />{event.organizer_email}</span>}

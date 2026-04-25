@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, MapPin, Clock, Clapperboard } from "lucide-react";
+import { CalendarDays, MapPin, Clock, Clapperboard } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -14,8 +14,14 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { Badge } from "../components/ui/badge";
 import { getLocalizedEventCategory } from "../config/eventCategories";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
+import {
+  eventDetailPath,
+  getTopLevelPageCategory,
+} from "../utils/eventPageCategory";
+import {
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
+} from "../utils/categoryThemes";
 import { cityEquals } from "../utils/city";
 
 const MONTH_NAMES_SR = [
@@ -65,12 +71,7 @@ export function CinemaAllPage() {
     async function fetchCinema() {
       setIsLoading(true);
       try {
-        const fetched = await eventService.getEvents(
-          "all",
-          selectedCity,
-          undefined,
-          "cinema",
-        );
+        const fetched = await eventService.getEvents("all", selectedCity);
         const now = new Date();
         const nextUpcomingSlot = (
           e: Item,
@@ -82,9 +83,7 @@ export function CinemaAllPage() {
           .filter(
             (e) =>
               e.status === "approved" &&
-              String(e.page_slug || "")
-                .toLowerCase()
-                .trim() === "cinema" &&
+              getTopLevelPageCategory(e) === "cinema" &&
               cityEquals(e.city, selectedCity),
           )
           .filter((e) => {
@@ -225,7 +224,7 @@ export function CinemaAllPage() {
                           "linear-gradient(135deg, #00897B 0%, rgba(0, 137, 123, 0.8) 100%)",
                       }}
                     >
-                      <Calendar size={18} style={{ color: "#FFFFFF" }} />
+                      <CalendarDays size={18} style={{ color: "#FFFFFF" }} />
                       <span
                         style={{
                           fontSize: "18px",
@@ -263,7 +262,7 @@ export function CinemaAllPage() {
                       return (
                         <RevealOnScrollArticle key={event.id}>
                           <Link
-                            to={`/events/${event.id}`}
+                            to={eventDetailPath(event)}
                             className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
                             style={{ textDecoration: "none" }}
                           >
@@ -283,7 +282,7 @@ export function CinemaAllPage() {
                               <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 {categoryLabel && (
                                   <Badge
-                                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                                    className={LISTING_BADGE_SURFACE_CLASS}
                                     style={{ color: categoryTextColor }}
                                   >
                                     {categoryLabel}
@@ -291,7 +290,7 @@ export function CinemaAllPage() {
                                 )}
                                 {event.price && (
                                   <Badge
-                                    className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+                                    className={LISTING_BADGE_SURFACE_CLASS}
                                     style={{ color: categoryTextColor }}
                                   >
                                     {eventService.formatPrice(event.price, language)}
@@ -309,7 +308,7 @@ export function CinemaAllPage() {
                               {event.start_at && (
                                 <>
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Calendar size={14} style={{ color: "#6B7280" }} />
+                                    <CalendarDays size={14} style={{ color: "#6B7280" }} />
                                     <span className="text-sm" style={{ color: "#6B7280" }}>
                                       {eventService.getRelativeDateLabel(
                                         event.start_at,

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { UtensilsCrossed, Calendar, Hotel, Building2, Coffee, Music2, MapPin, Search } from 'lucide-react';
+import { UtensilsCrossed, Hotel, Building2, Coffee, Music2, MapPin, Search } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';

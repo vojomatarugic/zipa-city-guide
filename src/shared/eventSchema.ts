@@ -2,6 +2,10 @@ import { resolveEventCategoryForPayload } from '../config/eventCategories';
 
 export type EventScheduleSlot = { start_at: string; end_at?: string | null };
 
+/**
+ * Row shape for `events_ee0c365c` (and API normalization). Columns `event_time` and `source`
+ * exist on the table but are not read or written by this application.
+ */
 export interface EventDbRow {
   id?: string;
   page_slug?: string | null;
@@ -116,7 +120,6 @@ const VALID_EVENT_TYPES = new Set([
 function sanitizeEventType(type: string | null | undefined): string {
   if (!type) return '';
   if (VALID_EVENT_TYPES.has(type)) return type;
-  if (type === 'nightlife') return 'club';
   if (type === 'music') return 'concert';
   return 'other';
 }

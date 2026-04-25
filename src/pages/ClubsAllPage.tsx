@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, Disc3, MapPin } from "lucide-react";
+import { CalendarDays, Disc3, MapPin, MapPinned } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -14,10 +14,13 @@ import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import {
   CLUBS_CATEGORY_THEME,
   CLUBS_LISTING_HERO_OVERLAY,
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
 } from "../utils/categoryThemes";
 import { venueTagsFallbackLine } from "../utils/venueTagLabels";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_CLUBS, listingDocumentTitle } from "../utils/documentTitle";
+import { venueDetailPath } from "../utils/venueRouting";
 
 const MONTH_NAMES_SR = [
   "Januar",
@@ -217,7 +220,7 @@ export function ClubsAllPage() {
                         background: `linear-gradient(135deg, ${CLUBS_CATEGORY_THEME.accentColor} 0%, ${CLUBS_CATEGORY_THEME.accentColor}CC 100%)`,
                       }}
                     >
-                      <Calendar size={18} style={{ color: "#FFFFFF" }} />
+                      <CalendarDays size={18} style={{ color: "#FFFFFF" }} />
                       <span
                         style={{
                           fontSize: "18px",
@@ -246,7 +249,7 @@ export function ClubsAllPage() {
                     {visibleClubs.map((club) => (
                       <RevealOnScrollArticle key={club.id}>
                         <Link
-                          to={`/clubs/${club.id}`}
+                          to={venueDetailPath(club)}
                           className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
                           style={{ textDecoration: "none" }}
                         >
@@ -262,10 +265,9 @@ export function ClubsAllPage() {
                           <div className="p-4">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span
-                                className="text-xs font-medium px-2 py-1 rounded"
+                                className={LISTING_BADGE_SURFACE_CLASS}
                                 style={{
-                                  background: "#F3F4F6",
-                                  color: CLUBS_CATEGORY_THEME.accentColor,
+                                  color: getBadgeTextColorForPageSlug("clubs"),
                                 }}
                               >
                                 {venueTagsFallbackLine(
@@ -276,10 +278,9 @@ export function ClubsAllPage() {
                               </span>
                               {club.opening_hours && (
                                 <span
-                                  className="text-xs font-medium px-2 py-1 rounded inline-block max-w-full align-top"
+                                  className={`${LISTING_BADGE_SURFACE_CLASS} inline-block max-w-full align-top`}
                                   style={{
-                                    background: "#F3F4F6",
-                                    color: "#6B7280",
+                                    color: getBadgeTextColorForPageSlug("clubs"),
                                   }}
                                 >
                                   <VenueOpeningHoursRow
@@ -308,7 +309,11 @@ export function ClubsAllPage() {
                             </h3>
 
                             <div className="flex items-center gap-2">
-                              <MapPin size={14} style={{ color: "#6B7280" }} />
+                              {String(club.address || "").trim() ? (
+                                <MapPin size={14} style={{ color: "#6B7280" }} />
+                              ) : (
+                                <MapPinned size={14} style={{ color: "#6B7280" }} />
+                              )}
                               <span className="text-sm" style={{ color: "#6B7280" }}>
                                 {club.address || club.city || "Banja Luka"}
                               </span>

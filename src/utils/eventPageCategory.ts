@@ -34,3 +34,17 @@ export function getCanonicalEventPageSlug(
 export function getTopLevelPageCategory(event: Item): TopLevelPageCategory {
   return getCanonicalEventPageSlug(event.event_type, event.page_slug);
 }
+
+/**
+ * **Single standard** for user-facing event detail links (`<Link>`, `navigate`, `href`).
+ * Use this instead of hardcoding `/events/:id`, `/concerts/:id`, etc. Same bucket rules as admin.
+ * REST/API URLs (`getApiBase()/events/...`) stay separate — do not route HTTP through this.
+ */
+export function eventDetailPath(event: {
+  id: string;
+  event_type?: string | null;
+  page_slug?: string | null;
+}): string {
+  const slug = getCanonicalEventPageSlug(event.event_type, event.page_slug);
+  return `/${slug}/${event.id}`;
+}

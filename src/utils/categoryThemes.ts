@@ -13,7 +13,7 @@ export const CLUBS_HERO_OVERLAY_GRADIENT =
 export const CLUBS_LISTING_HERO_OVERLAY =
   `linear-gradient(rgba(${CLUBS_CATEGORY_RGB}, 0.5), rgba(0, 0, 0, 0.7))` as const;
 
-/** Nightlife / clubs — same accent as ClubsPage, ClubsAllPage, ClubDetailPage */
+/** Clubs listing/detail accent (ClubsPage, ClubsAllPage, ClubDetailPage) */
 export const CLUBS_CATEGORY_THEME = {
   accentColor: "#D81B60",
   heroGradient: "linear-gradient(135deg, #D81B60, #E91E63)",
@@ -91,6 +91,7 @@ const BADGE_TEXT_COLOR_BY_PAGE_SLUG: Record<string, string> = {
   theatre: "#8E24AA",
   concerts: "#C0CA33",
   "food-and-drink": "#8B6F47",
+  clubs: CLUBS_CATEGORY_THEME.accentColor,
 };
 
 /** Pass top-level category from {@link getTopLevelPageCategory} (theatre | cinema | concerts | events), or legacy keys like `clubs`. */
@@ -108,3 +109,9 @@ export function getBadgeTextColorForPageSlug(pageSlug?: string): string {
   if (!pageSlug) return "#6B7280";
   return BADGE_TEXT_COLOR_BY_PAGE_SLUG[pageSlug] || "#6B7280";
 }
+
+/**
+ * Shared listing/detail chip surface. Pair with {@link getBadgeTextColorForPageSlug} for text ink.
+ */
+export const LISTING_BADGE_SURFACE_CLASS =
+  "rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]" as const;

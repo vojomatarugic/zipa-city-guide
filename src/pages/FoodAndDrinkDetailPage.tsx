@@ -140,7 +140,7 @@ export function FoodAndDrinkDetailPage() {
                 cuisineOnly
                 language={language === "en" ? "en" : "sr"}
                 t={t}
-                variant="default"
+                pageSlug="food-and-drink"
                 className="flex flex-wrap items-center gap-2 mb-6"
               />
 

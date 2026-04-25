@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
-import { Calendar, MapPin, Phone, Mail, Globe, DollarSign, User, Clock, UserCheck, Search, X, Pencil, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { CalendarDays, MapPin, MapPinned, Phone, Mail, Globe, DollarSign, User, Clock, UserCheck, Search, X, Pencil, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -903,7 +903,7 @@ export function SubmitEventPage() {
           {/* PODACI O DEŠAVANJU */}
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-              <Calendar className="w-5 h-5" style={{ color: '#0E3DC5' }} />
+              <CalendarDays className="w-5 h-5" style={{ color: '#0E3DC5' }} />
               <h2 className="m-0" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>{t('eventInfo')}</h2>
             </div>
 
@@ -1353,17 +1353,20 @@ export function SubmitEventPage() {
 
             {/* Lokacija / naziv mjesta */}
             <div className="mb-4">
-              <label 
-                className="block text-[13px] mb-2" 
-                style={{ 
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                {t('eventLocationVenueName')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
-              </label>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+                <label 
+                  className="text-[13px] m-0" 
+                  style={{ 
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {t('eventLocationVenueName')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                </label>
+              </div>
               <input
                 type="text"
                 name="venue"
@@ -1382,17 +1385,20 @@ export function SubmitEventPage() {
 
             {/* Grad */}
             <div className="mb-4">
-              <label 
-                className="block text-[13px] mb-2" 
-                style={{ 
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}
-              >
-                {t('city')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
-              </label>
+              <div className="flex items-center gap-2 mb-2">
+                <MapPinned className="w-4 h-4" style={{ color: '#0E3DC5' }} />
+                <label 
+                  className="text-[13px] m-0" 
+                  style={{ 
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {t('city')} <span style={{ color: 'var(--accent-orange)' }}>*</span>
+                </label>
+              </div>
               <input
                 type="text"
                 name="city"

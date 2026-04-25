@@ -140,7 +140,7 @@ export function ClubDetailPage() {
                 cuisineOnly
                 language={language === "en" ? "en" : "sr"}
                 t={t}
-                variant="default"
+                pageSlug="clubs"
                 className="flex flex-wrap items-center gap-2 mb-6"
               />
 

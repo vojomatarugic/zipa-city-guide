@@ -1,16 +1,13 @@
-import type { CSSProperties } from 'react';
 import {
   buildVenueHeroSecondaryBadgeLabels,
   buildVenueListingBadgeLabels,
 } from '../utils/venueCuisineTaxonomy';
 import type { TranslationKey, translations } from '../utils/translations';
 import { formatVenueTypeForBadge } from '../utils/displayTypeLabels';
-
-const BADGE_ON_DARK: CSSProperties = {
-  background: 'rgba(255,255,255,0.18)',
-  color: 'rgba(255,255,255,0.95)',
-  border: '1px solid rgba(255,255,255,0.35)',
-};
+import {
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
+} from '../utils/categoryThemes';
 
 type Props = {
   venue_type?: string;
@@ -20,21 +17,17 @@ type Props = {
   language: 'sr' | 'en';
   t: (key: TranslationKey) => string;
   className?: string;
-  /** Hero / dark backgrounds */
-  variant?: 'default' | 'onDark';
-  /** Optional custom text color for default badges. */
+  /** When listing would show no badges, render this single label (e.g. category). */
+  listingFallback?: string;
+  /** Text ink; if omitted, derived from {@link pageSlug} via {@link getBadgeTextColorForPageSlug}. */
   textColor?: string;
+  /** Used with {@link getBadgeTextColorForPageSlug} when {@link textColor} is not passed. */
+  pageSlug?: string;
   /**
    * Venue detail heroes: cuisine + oznaka only; render venue_type separately via {@link VenueHeroVenueTypeLabel}.
    */
   cuisineOnly?: boolean;
 };
-
-/** Up to 3 badges: translated venue_type, then up to 2 cuisine values (never merged). */
-const CLASS_VENUE_TYPE =
-  'text-xs px-2 py-1 rounded border font-medium bg-stone-100 text-stone-700 border-stone-200';
-const CLASS_CUISINE =
-  'text-xs px-2 py-1 rounded border font-normal bg-white/70 text-stone-500 border-stone-200';
 
 /** Small uppercase eyebrow above the venue title on detail heroes (not a badge). */
 export function VenueHeroVenueTypeLabel({
@@ -79,11 +72,12 @@ export function VenueBadgeRow({
   language,
   t,
   className,
-  variant = 'default',
+  listingFallback,
   cuisineOnly = false,
   textColor,
+  pageSlug,
 }: Props) {
-  const labels = cuisineOnly
+  let labels = cuisineOnly
     ? buildVenueHeroSecondaryBadgeLabels({ cuisine, cuisine_en, tags, lang: language })
     : buildVenueListingBadgeLabels({
         venue_type,
@@ -93,34 +87,29 @@ export function VenueBadgeRow({
         lang: language,
         tVenueType: (key) => t(key as TranslationKey),
       });
+  const fallbackTrimmed = (listingFallback || '').trim();
+  const usedFallbackOnly = labels.length === 0 && Boolean(fallbackTrimmed);
+  if (usedFallbackOnly) {
+    labels = [fallbackTrimmed];
+  }
   if (labels.length === 0) return null;
-  const hasVenueType = Boolean((venue_type || '').trim()) && !cuisineOnly;
+
+  const ink =
+    textColor ??
+    (pageSlug ? getBadgeTextColorForPageSlug(pageSlug) : undefined) ??
+    '#6B7280';
+
   return (
     <div className={className ?? 'flex flex-wrap items-center gap-2 mb-2'}>
-      {labels.map((text, i) => {
-        const isVenueTypeBadge = hasVenueType && i === 0;
-        return (
-          <span
-            key={`${text}-${i}`}
-            className={
-              variant === 'default'
-                ? isVenueTypeBadge
-                  ? CLASS_VENUE_TYPE
-                  : CLASS_CUISINE
-                : 'text-xs font-medium px-2 py-1 rounded'
-            }
-            style={
-              variant === 'onDark'
-                ? BADGE_ON_DARK
-                : textColor
-                  ? { color: textColor }
-                  : undefined
-            }
-          >
-            {text}
-          </span>
-        );
-      })}
+      {labels.map((text, i) => (
+        <span
+          key={`${text}-${i}`}
+          className={LISTING_BADGE_SURFACE_CLASS}
+          style={{ color: ink }}
+        >
+          {text}
+        </span>
+      ))}
     </div>
   );
 }

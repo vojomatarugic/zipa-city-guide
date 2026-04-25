@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { MapPin, Disc3 } from "lucide-react";
+import { MapPinned, Clock, MapPin, Disc3 } from "lucide-react";
 import { useT } from "../hooks/useT";
-import { useLanguage } from "../contexts/LanguageContext";
 import { useLocation } from "../contexts/LocationContext";
 import { useSEO } from "../hooks/useSEO";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -12,31 +11,279 @@ import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import { getVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
+import * as eventService from "../utils/eventService";
 const ogImage = "/zipa-city-guide-OG.png";
 import clubsHeroImage from "../assets/clubs-hero.png";
-import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import {
   CLUBS_CATEGORY_THEME,
   CLUBS_HERO_OVERLAY_GRADIENT,
 } from "../utils/categoryThemes";
-import { venueTagsFallbackLine } from "../utils/venueTagLabels";
+import { normalizeCityForCompare, getTopCities } from "../utils/city";
+import { EventCardSkeleton } from "../components/EventCard";
+import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
+import { VenueBadgeRow } from "../components/VenueBadgeRow";
+import { splitOpeningHoursDisplaySegments } from "../utils/openingHoursDisplay";
+import type { TranslationKey } from "../utils/translations";
+import {
+  LISTING_PAGE_CONTENT_SECTION_CLASS,
+  LISTING_PAGE_HERO_SECTION_CLASS,
+} from "../utils/listingPageLayout";
+import { venueDetailPath } from "../utils/venueRouting";
+
+const MAIN_MAX_CARDS = 6;
+const FEATURED_MAX_CARDS = 4;
+const OTHER_CITIES_MAX_CARDS = 4;
+
+/** Jedna vrijednost po gridu: skeleton i ClubsCard moraju ostati usklađeni. */
+const CLUBS_MAIN_CARD_IMAGE_HEIGHT = "250px";
+const CLUBS_FEATURED_CARD_IMAGE_HEIGHT = "350px";
+const CLUBS_OTHER_CITIES_CARD_IMAGE_HEIGHT = "200px";
+
+function isFeaturedVenue(venue: Item): boolean {
+  const featured = venue as Item & {
+    is_featured?: boolean;
+    featured?: boolean;
+    starred?: boolean;
+  };
+  return Boolean(featured.is_featured || featured.featured || featured.starred);
+}
+
+function nextStartAtOrNull(venue: Item, now: Date): Date | null {
+  const slots = eventService.getEventScheduleSlots(venue);
+  const nextSlot = slots.find((slot) => new Date(slot.start_at) >= now);
+  if (nextSlot) return new Date(nextSlot.start_at);
+
+  const candidates = [venue.start_at, venue.date]
+    .filter(Boolean)
+    .map((raw) => new Date(String(raw)))
+    .filter((value) => !Number.isNaN(value.getTime()) && value >= now);
+
+  return candidates.length > 0 ? candidates[0]! : null;
+}
+
+function sortByNextDateAsc(venues: Item[], now: Date): Item[] {
+  return [...venues].sort((a, b) => {
+    const aTime =
+      nextStartAtOrNull(a, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const bTime =
+      nextStartAtOrNull(b, now)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    if (aTime !== bTime) return aTime - bTime;
+    return (
+      new Date(b.created_at || 0).getTime() -
+      new Date(a.created_at || 0).getTime()
+    );
+  });
+}
+
+function ClubsCard({
+  club,
+  language,
+  imageHeight = CLUBS_FEATURED_CARD_IMAGE_HEIGHT,
+  variant,
+  t,
+}: {
+  club: Item;
+  language: string;
+  imageHeight?: string;
+  /** `local`: kao FoodAndDrink kartice (oznake, naziv, adresa, sati). `otherCities`: + red za grad. */
+  variant: "local" | "otherCities";
+  t: (key: TranslationKey) => string;
+}) {
+  const locale: "sr" | "en" = language === "en" ? "en" : "sr";
+  const title = language === "sr" ? club.title : club.title_en || club.title;
+
+  const eventCity = String(club.city || "").trim();
+  const addressPhysical = String(club.address || "").trim();
+  const venueOrLocation = String(
+    club.venue_name || (club as Item & { location?: string }).location || "",
+  ).trim();
+
+  /** Lokalno: kao Food — adresa, pa naziv mjesta / lokacija, pa tek onda grad (bez duplog prikaza grada u "drugi gradovi"). */
+  const addressLineLocal = addressPhysical || venueOrLocation || eventCity;
+  const addressLineOther =
+    addressPhysical ||
+    (venueOrLocation && venueOrLocation !== eventCity ? venueOrLocation : "");
+
+  const hoursRaw =
+    locale === "en" && club.opening_hours_en
+      ? club.opening_hours_en
+      : club.opening_hours || "";
+  const hourSegments = hoursRaw
+    ? splitOpeningHoursDisplaySegments(hoursRaw)
+    : [];
+  const hoursFirst = hourSegments[0] || "";
+  const hoursExtraCount = hourSegments.length > 1 ? hourSegments.length - 1 : 0;
+
+  return (
+    <Link
+      to={venueDetailPath(club)}
+      className="block h-full no-underline"
+      style={{ textDecoration: "none" }}
+    >
+      <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300 h-full">
+        <img
+          src={
+            club.image ||
+            "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600"
+          }
+          alt={title}
+          className="w-full object-cover rounded-md"
+          style={{ height: imageHeight }}
+        />
+        <div className="p-4">
+          <VenueBadgeRow
+            cuisine={club.cuisine}
+            cuisine_en={club.cuisine_en}
+            tags={club.tags}
+            language={locale}
+            t={t}
+            cuisineOnly
+            listingFallback={t("clubs")}
+            pageSlug="clubs"
+          />
+          <h3
+            className="text-base font-semibold mb-2"
+            style={{ color: "#1a1a1a" }}
+          >
+            {title}
+          </h3>
+
+          {variant === "otherCities" && eventCity ? (
+            <div className="flex items-center gap-2 mb-1">
+              <MapPinned
+                size={14}
+                className="shrink-0"
+                style={{ color: "#6B7280" }}
+              />
+              <span className="text-sm" style={{ color: "#6B7280" }}>
+                {eventCity}
+              </span>
+            </div>
+          ) : null}
+
+          {(variant === "local" ? addressLineLocal : addressLineOther) ? (
+            <div className="flex items-center gap-2 mb-1">
+              {variant === "local" ? (
+                addressPhysical || venueOrLocation ? (
+                  <MapPin
+                    size={14}
+                    className="shrink-0"
+                    style={{ color: "#6B7280" }}
+                  />
+                ) : (
+                  <MapPinned
+                    size={14}
+                    className="shrink-0"
+                    style={{ color: "#6B7280" }}
+                  />
+                )
+              ) : (
+                <MapPin
+                  size={14}
+                  className="shrink-0"
+                  style={{ color: "#6B7280" }}
+                />
+              )}
+              <span className="text-sm" style={{ color: "#6B7280" }}>
+                {variant === "local" ? addressLineLocal : addressLineOther}
+              </span>
+            </div>
+          ) : null}
+
+          {hoursFirst ? (
+            <div className="flex items-start gap-2">
+              <Clock
+                size={14}
+                className="shrink-0 mt-0.5"
+                style={{ color: "#6B7280" }}
+              />
+              <span className="text-sm min-w-0" style={{ color: "#6B7280" }}>
+                {hoursFirst}
+                {hoursExtraCount > 0 ? (
+                  <span className="whitespace-nowrap">
+                    {" "}
+                    (+{hoursExtraCount})
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export function ClubsPage() {
   const { t, language } = useT();
-  const { selectedCity, getCityInLocative } = useLocation();
+  const { selectedCity } = useLocation();
   const [clubs, setClubs] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch clubs from database
   useEffect(() => {
+    let cancelled = false;
     async function fetchClubs() {
       setIsLoading(true);
       const fetchedClubs = await getVenues("clubs");
-      setClubs(fetchedClubs.slice(0, 12)); // Show first 12 as featured
+      if (cancelled) return;
+      setClubs(fetchedClubs);
       setIsLoading(false);
     }
     fetchClubs();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCity]);
+
+  const { mainClubs, featuredClubs, otherCitiesClubs } = useMemo(() => {
+    const now = new Date();
+    const selectedCityKey = normalizeCityForCompare(selectedCity);
+    const approved = clubs.filter((club) => club.status === "approved");
+
+    const localClubs = approved.filter((club) => {
+      const cityKey = normalizeCityForCompare(club.city);
+      return !cityKey || cityKey === selectedCityKey;
+    });
+
+    const orderedLocal = sortByNextDateAsc(localClubs, now);
+    const mainClubs = orderedLocal.slice(0, MAIN_MAX_CARDS);
+
+    const starred = orderedLocal.filter((club) => isFeaturedVenue(club));
+    const featuredSelected = starred.slice(0, FEATURED_MAX_CARDS);
+    const selectedIds = new Set(featuredSelected.map((club) => club.id));
+    const featuredFallback = orderedLocal.filter(
+      (club) => !selectedIds.has(club.id),
+    );
+    const featuredClubs = [...featuredSelected].concat(
+      featuredFallback.slice(
+        0,
+        Math.max(FEATURED_MAX_CARDS - featuredSelected.length, 0),
+      ),
+    );
+
+    const outsideSelectedCity = approved.filter((club) => {
+      const cityKey = normalizeCityForCompare(club.city);
+      return Boolean(cityKey) && cityKey !== selectedCityKey;
+    });
+    const topCities = getTopCities(outsideSelectedCity, OTHER_CITIES_MAX_CARDS);
+    const topCityKeys = new Set(topCities.map((city) => city.key));
+    const byCity = new Map<string, Item[]>();
+
+    for (const club of sortByNextDateAsc(outsideSelectedCity, now)) {
+      const cityKey = normalizeCityForCompare(club.city);
+      if (!cityKey || !topCityKeys.has(cityKey)) continue;
+      const bucket = byCity.get(cityKey) ?? [];
+      bucket.push(club);
+      byCity.set(cityKey, bucket);
+    }
+
+    const otherCitiesClubs = topCities
+      .map((city) => byCity.get(city.key)?.[0] ?? null)
+      .filter((club): club is Item => Boolean(club))
+      .slice(0, OTHER_CITIES_MAX_CARDS);
+
+    return { mainClubs, featuredClubs, otherCitiesClubs };
+  }, [clubs, selectedCity]);
 
   useDocumentTitle(listingDocumentTitle(DOC_TITLE_CLUBS, selectedCity));
 
@@ -72,7 +319,7 @@ export function ClubsPage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION - Full Width */}
       <section
-        className="relative w-full min-h-[320px]"
+        className={LISTING_PAGE_HERO_SECTION_CLASS}
         style={{
           height: "420px",
           background: `${CLUBS_HERO_OVERLAY_GRADIENT}, url('${clubsHeroImage}') center/cover`,
@@ -107,337 +354,189 @@ export function ClubsPage() {
         </div>
       </section>
 
-      {/* CLUBS BY MUSIC GENRE - ROZA POZADINA */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
+      {/* CLUBS — isti layout wrapper i skeleton kao EventsPage */}
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
-            className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
             style={{
               fontSize: "24px",
               fontWeight: 600,
               color: CLUBS_CATEGORY_THEME.accentColor,
+              marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {t("clubsByMusicGenre")}
+            {language === "sr" ? "Klubovi" : "Clubs"}
           </h2>
 
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6"
-            key={language}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
-              <div className="col-span-3 text-center py-12">
-                <p className="text-lg font-semibold text-gray-600">
-                  {t("loading")}
-                </p>
-              </div>
-            ) : clubs.length === 0 ? (
+              <EventCardSkeleton
+                count={MAIN_MAX_CARDS}
+                imageHeight={CLUBS_MAIN_CARD_IMAGE_HEIGHT}
+              />
+            ) : mainClubs.length === 0 ? (
               <div className="col-span-3">
                 <SectionEmptyState
                   icon={Disc3}
                   accentColor={CLUBS_CATEGORY_THEME.accentColor}
-                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
                 />
               </div>
             ) : (
-              clubs.slice(0, 9).map((club) => (
-                <Link
-                  key={club.id}
-                  to={`/clubs/${club.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
-                    <img
-                      src={club.image}
-                      alt={
-                        language === "en" && club.title_en
-                          ? club.title_en
-                          : club.title
-                      }
-                      className="w-full h-[220px] object-cover rounded-md"
-                    />
-                    <div className="p-4">
-                      {/* Category Badge */}
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className="text-xs font-medium px-2 py-1 rounded"
-                          style={{
-                            background: "#F3F4F6",
-                            color: CLUBS_CATEGORY_THEME.accentColor,
-                          }}
-                        >
-                          {venueTagsFallbackLine(
-                            club.tags,
-                            language === "en" ? "en" : "sr",
-                            t("clubs"),
-                          )}
-                        </span>
-                      </div>
-
-                      {/* Title */}
-                      <h3
-                        className="text-base font-semibold mb-2"
-                        style={{ color: "#1a1a1a" }}
-                      >
-                        {language === "en" && club.title_en
-                          ? club.title_en
-                          : club.title}
-                      </h3>
-
-                      {/* Location */}
-                      <div className="flex items-center gap-2 mb-1">
-                        <MapPin size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {club.address || club.city || "Banja Luka"}
-                        </span>
-                      </div>
-
-                      {/* Hours */}
-                      {club.opening_hours && (
-                        <VenueOpeningHoursRow
-                          hoursText={
-                            language === "en" && club.opening_hours_en
-                              ? club.opening_hours_en
-                              : club.opening_hours
-                          }
-                        />
-                      )}
-                    </div>
-                  </div>
-                </Link>
+              mainClubs.map((club) => (
+                <RevealOnScrollArticle key={club.id}>
+                  <ClubsCard
+                    club={club}
+                    language={language}
+                    imageHeight={CLUBS_MAIN_CARD_IMAGE_HEIGHT}
+                    variant="local"
+                    t={t}
+                  />
+                </RevealOnScrollArticle>
               ))
             )}
           </div>
-        </div>
-        {/* View All Clubs Button */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginTop: "40px",
-          }}
-        >
-          <Link
-            to="/clubs/all"
+
+          <div
             style={{
-              display: "inline-block",
-              background: CLUBS_CATEGORY_THEME.ctaBackground,
-              color: "white",
-              padding: "14px 32px",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: 600,
-              textDecoration: "none",
-              transition: "all 0.3s",
+              display: "flex",
+              justifyContent: "center",
+              marginTop: "40px",
             }}
-            className="hover:opacity-90"
           >
-            {t("viewAllClubs")}
-          </Link>
+            <Link
+              to="/clubs/all"
+              style={{
+                display: "inline-block",
+                background: CLUBS_CATEGORY_THEME.ctaBackground,
+                color: "white",
+                padding: "14px 32px",
+                borderRadius: "8px",
+                fontSize: "16px",
+                fontWeight: 600,
+                textDecoration: "none",
+                transition: "all 0.3s",
+              }}
+              className="hover:opacity-90"
+            >
+              {t("viewAllClubs")}
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* FEATURED CLUBS */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FCE4EC" }}>
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FCE4EC" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
-            className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
             style={{
               fontSize: "24px",
               fontWeight: 600,
               color: CLUBS_CATEGORY_THEME.accentColor,
+              marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
             {t("featuredClubs")}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-            {!isLoading && clubs.length > 0 ? (
-              clubs.slice(0, 4).map((club) => (
-                <Link
-                  key={club.id}
-                  to={`/clubs/${club.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
-                    <img
-                      src={club.image}
-                      alt={
-                        language === "en" && club.title_en
-                          ? club.title_en
-                          : club.title
-                      }
-                      className="w-full h-[300px] object-cover rounded-md"
-                    />
-                    <div className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span
-                          className="text-xs font-medium px-2 py-1 rounded"
-                          style={{
-                            background: "#F3F4F6",
-                            color: CLUBS_CATEGORY_THEME.accentColor,
-                          }}
-                        >
-                          {venueTagsFallbackLine(
-                            club.tags,
-                            language === "en" ? "en" : "sr",
-                            t("clubs"),
-                          )}
-                        </span>
-                      </div>
-
-                      <h3
-                        className="text-base font-semibold mb-2"
-                        style={{ color: "#1a1a1a" }}
-                      >
-                        {language === "en" && club.title_en
-                          ? club.title_en
-                          : club.title}
-                      </h3>
-
-                      <div className="flex items-center gap-2 mb-1">
-                        <MapPin size={14} style={{ color: "#6B7280" }} />
-                        <span className="text-sm" style={{ color: "#6B7280" }}>
-                          {club.address || club.city || "Banja Luka"}
-                        </span>
-                      </div>
-
-                      {club.opening_hours && (
-                        <VenueOpeningHoursRow
-                          hoursText={
-                            language === "en" && club.opening_hours_en
-                              ? club.opening_hours_en
-                              : club.opening_hours
-                          }
-                        />
-                      )}
-                    </div>
-                  </div>
-                </Link>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {isLoading ? (
+              <EventCardSkeleton
+                count={FEATURED_MAX_CARDS}
+                imageHeight={CLUBS_FEATURED_CARD_IMAGE_HEIGHT}
+              />
+            ) : featuredClubs.length > 0 ? (
+              featuredClubs.map((club) => (
+                <RevealOnScrollArticle key={club.id}>
+                  <ClubsCard
+                    club={club}
+                    language={language}
+                    imageHeight={CLUBS_FEATURED_CARD_IMAGE_HEIGHT}
+                    variant="local"
+                    t={t}
+                  />
+                </RevealOnScrollArticle>
               ))
-            ) : !isLoading ? (
-              <div className="col-span-2">
+            ) : (
+              <div className="col-span-full sm:col-span-2 lg:col-span-4">
                 <SectionEmptyState
                   icon={Disc3}
                   accentColor={CLUBS_CATEGORY_THEME.accentColor}
-                  message={language === "sr" ? "Trenutno nema sadržaja u ovoj sekciji." : "There is currently no content in this section."}
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
                 />
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </section>
 
-      {/* NEARBY CLUBS */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
+      {/* CLUBS FROM OTHER CITIES */}
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
-            className="mb-2.5 pb-2 lg:mb-4 lg:pb-3"
             style={{
               fontSize: "24px",
               fontWeight: 600,
               color: CLUBS_CATEGORY_THEME.accentColor,
+              marginBottom: "24px",
               textShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
             }}
           >
-            {t("nearbyClubs")}
+            {language === "sr"
+              ? "Klubovi iz drugih gradova"
+              : "Clubs from other cities"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
-            {/* ⚠️ FEATURED NEARBY CLUBS - OGRANIČENO NA 5 KARTICA ⚠️ */}
-            {/* NOVI KLUB SE DODAJE SAMO NA /clubs/all STRANICU! */}
-            {/* NE DODAVATI OVDJE - OVO JE FEATURED SEKCIJA SA FIKSNIH 5 KARTICA! */}
-            {/* ⚠️ ZAŠTITA: .slice(0, 5) osigurava da se prikazuje MAKSIMALNO 5 kartica */}
-            {[
-              {
-                image:
-                  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjbHViJTIwbmlnaHQlMjBwYXJ0eXxlbnwxfHx8fDE3MzgxNTg0MDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-                category: t("electronic"),
-                priceRange: "€€",
-                title: t("clubPrijedor"),
-                location: t("prijedor"),
-              },
-              {
-                image:
-                  "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuaWdodGNsdWIlMjBkYW5jaW5nfGVufDF8fHx8MTczODE1ODQwMHww&ixlib=rb-4.1.0&q=80&w=1080",
-                category: t("popDance"),
-                priceRange: "€€€",
-                title: t("clubGradiska"),
-                location: t("gradiska"),
-              },
-              {
-                image:
-                  "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwbGl2ZSUyMG11c2ljfGVufDF8fHx8MTczODE1ODQwMHww&ixlib=rb-4.1.0&q=80&w=1080",
-                category: t("liveMusic"),
-                priceRange: "€€",
-                title: t("barLiveDoboj"),
-                location: t("doboj"),
-              },
-              {
-                image:
-                  "https://images.unsplash.com/photo-1516450137517-162bfbeb8dba?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkaXNjbyUyMGJhbGx8ZW58MXx8fHwxNzM4MTU4NDAwfDA&ixlib=rb-4.1.0&q=80&w=1080",
-                category: t("folkNarodna"),
-                priceRange: "€",
-                title: t("kafanaLaktasi"),
-                location: t("laktasi"),
-              },
-              {
-                image:
-                  "https://images.unsplash.com/photo-1598387993281-cecf8b71a8f8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsb3VuZ2UlMjBiYXIlMjBjb2NrdGFpbHxlbnwxfHx8fDE3MzgxNTg0MDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
-                category: t("lounge"),
-                priceRange: "€€€",
-                title: t("loungeTeslic"),
-                location: t("teslic"),
-              },
-            ]
-              .slice(0, 5)
-              .map((club, i) => (
-                <div
-                  key={i}
-                  className="cursor-pointer hover:scale-[1.02] transition-all duration-300"
-                >
-                  {/* Image */}
-                  <img
-                    src={club.image}
-                    alt={club.title}
-                    className="w-full h-[250px] object-cover rounded-md"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {isLoading ? (
+              <EventCardSkeleton
+                count={OTHER_CITIES_MAX_CARDS}
+                imageHeight={CLUBS_OTHER_CITIES_CARD_IMAGE_HEIGHT}
+              />
+            ) : otherCitiesClubs.length > 0 ? (
+              otherCitiesClubs.map((club) => (
+                <RevealOnScrollArticle key={club.id}>
+                  <ClubsCard
+                    club={club}
+                    language={language}
+                    imageHeight={CLUBS_OTHER_CITIES_CARD_IMAGE_HEIGHT}
+                    variant="otherCities"
+                    t={t}
                   />
-
-                  {/* Content ISPOD SLIKE */}
-                  <div className="p-4">
-                    {/* Category and Badge */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded"
-                        style={{
-                          background: "#F3F4F6",
-                          color: CLUBS_CATEGORY_THEME.accentColor,
-                        }}
-                      >
-                        {club.category}
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h3
-                      className="text-base font-semibold mb-2"
-                      style={{ color: "#1a1a1a" }}
-                    >
-                      {club.title}
-                    </h3>
-
-                    {/* Location */}
-                    <div className="flex items-center gap-2">
-                      <MapPin size={14} style={{ color: "#6B7280" }} />
-                      <span className="text-sm" style={{ color: "#6B7280" }}>
-                        {club.location}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                </RevealOnScrollArticle>
+              ))
+            ) : (
+              <div className="col-span-4">
+                <SectionEmptyState
+                  icon={Disc3}
+                  accentColor={CLUBS_CATEGORY_THEME.accentColor}
+                  message={
+                    language === "sr"
+                      ? "Trenutno nema sadržaja u ovoj sekciji."
+                      : "There is currently no content in this section."
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>

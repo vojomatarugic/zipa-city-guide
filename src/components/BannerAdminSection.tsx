@@ -248,9 +248,9 @@ export function BannerAdminSection() {
         {/* Left: Format + URL */}
         <div className="flex flex-col gap-4">
           <div>
-            <label className="block text-[14px] mb-2 font-medium" style={{ color: 'var(--text-primary)' }}>
+            <p className="block text-[14px] mb-2 font-medium" style={{ color: 'var(--text-primary)' }}>
               1. {t('selectBannerFormat')}
-            </label>
+            </p>
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -290,10 +290,12 @@ export function BannerAdminSection() {
           </div>
 
           <div>
-            <label className="block text-[14px] mb-2 font-medium" style={{ color: 'var(--text-primary)' }}>
+            <label htmlFor="admin-banner-destination-url" className="block text-[14px] mb-2 font-medium" style={{ color: 'var(--text-primary)' }}>
               2. {t('destinationUrl')}
             </label>
             <input
+              id="admin-banner-destination-url"
+              name="admin-banner-destination-url"
               type="url"
               value={destinationUrl}
               onChange={(e) => setDestinationUrl(e.target.value)}
@@ -336,9 +338,9 @@ export function BannerAdminSection() {
 
         {/* Right: Upload & Preview */}
         <div className="flex flex-col gap-3">
-          <label className="block text-[14px] font-medium" style={{ color: 'var(--text-primary)' }}>
+          <p className="block text-[14px] font-medium" style={{ color: 'var(--text-primary)' }}>
             {t('preview')}
-          </label>
+          </p>
 
           {/* Ako JOŠ NEMA crop-ovane slike, prikaži cropper */}
           {!croppedImage ? (

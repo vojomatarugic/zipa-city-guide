@@ -1,0 +1,2890 @@
+{
+  "generated": "2026-04-25T01:15:51.263Z",
+  "summary": {
+    "totalTopLevelKeys": 843,
+    "definitelyUsed": 425,
+    "probablyUnused": 326,
+    "uncertain": 92
+  },
+  "definitelyUsed": [
+    {
+      "key": "about",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "accountDeleted",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "accountDeleteError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "activeBanners",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addAnotherDateBlock",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addAnotherTimeRow",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addObject",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "address",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addressPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addSchedule",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "addVenueDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "admin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "adminPanel",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "adminRoleGranted",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "adminRoleRemoved",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "aktivan",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "all",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allCinemaDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allClubsTitleBanjaLuka",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allEventsInYourCity",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allFieldsRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allRightsReserved",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "allTheatreDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "altAdvertisement",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "altBanner",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "altBannerPreview",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "appName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "approve",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "approved",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "approvedSubmissions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "assignedTo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalConnecting",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalContinueWithEmail",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalContinueWithGoogle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalDividerOr",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalGenericError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalInvalidEmail",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalLegalAnd",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalLegalPrefix",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalPrivacyPolicy",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalResetEmailRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalResetPasswordSent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalSubtitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalTermsOfUse",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "authModalTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "back",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "backToClubs",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "backToFoodAndDrink",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerAdManagement",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerLimitError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerLimitReached",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerRedirectInfo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerUploadError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bannerUploadSuccess",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "beforeUploadComplete",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "bestClubsParties",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "blockUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "businessInfo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "buyTicket",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "callClub",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "callRestaurant",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cancel",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cannotRemoveLastAdmin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "categoryCafes",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "categoryClubs",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "categoryEvents",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "categoryRestaurants",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "change",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "changeImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "changePassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "chooseDays",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "chooseFile",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cinema",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cinemaPageHero",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "city",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cityPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clicks",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clickToDisable",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clickToEnable",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "close",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "closed",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clubEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clubNotFound",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clubs",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "clubsAllHeroSubline",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "concert",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "concerts",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "concertsPageHero",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "conference",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirm",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmBlockUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmDeleteBanner",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmDeleteEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmDeleteUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmDeleteVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmMakeAdmin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmNewPassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmRejectEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmRejectVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmRemoveAdmin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "confirmUnblockUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contact",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactEmail",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactEmailPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactFormMissingConfig",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactFormSendError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactInfo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactMessage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactMessagePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactNamePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactPageTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactPerson",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactPhone",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactPhonePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "contactSubtitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "continue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "created",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "createdBy",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cropInstructions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cuisine",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "cuisinePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "currentLocation",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "currentPassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "currentPasswordRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "currentPasswordWrong",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "dateAndTime",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "delete",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteAccount",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteAccountConfirm",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteBanner",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteSelectedEvents",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteSelectedVenues",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deleteVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "deletingInProgress",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "description",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "descriptionEn",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "descriptionEnPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "descriptionPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "destinationUrl",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "dialogNoticeTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "done",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "dragDropImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "edit",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "editEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "editEventDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "editProfile",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "editVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "editVenueDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "email",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "emailContactPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "endTime",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "enterDestinationUrlMsg",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "enterEmail",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "enterPassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "enterYourCity",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorApprovingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorApprovingSubmission",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorDeletingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorDeletingSubmission",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorLoadingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorLoadingVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorRejectingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorRejectingSubmission",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorSubmittingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorSubmittingVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorUpdatingEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "errorUpdatingVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventCityPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventCountSuffix",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDate",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDescriptionEnglish",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDescriptionEnPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDescriptionEnRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventDescriptionPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventInfo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventLocationVenueName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventNameEnglish",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventNameEnPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventNameEnRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventNamePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventNotFound",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "events",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventScheduleSection",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventsLabel",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventsList",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventsPageDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventsPageTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventStreetAndNumberPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventTime",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventUpdatedMessage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventUpdatedSuccess",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventVenuePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "eventWillBeAdded",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "everyDay",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "exhibition",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "explore",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "exploreCitiesNearYou",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "facebookLinkPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "failedToCropImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "featuredClubs",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "festival",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "fileTooLarge",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "fileTooLargeUpload",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "filmScreening",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "finalSize",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "follow",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "foodAndDrink",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "foodAndDrinkPageDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "forgotPassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "formLoading",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "formSubmitted",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "freeEntry",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "friday",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "fullVenueName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "gastro",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "heroSubtitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "heroTitleDiscover",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "heroTitleRest",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "home",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "horizontal",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "imageSelected",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "information",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "instagramLinkPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "instructions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "interested",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "invalidFileType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "invalidImageType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "invalidUserSelectionMessage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "invalidUserSelectionTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "joined",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "kids",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "lastAdminError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "lastSignIn",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "loading",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "login",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "loginRequiredSubmit",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "logout",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "makeAdmin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "map",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "monday",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "mustSelectRegisteredUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "myAccount",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "myEvents",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "myPanel",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "myVenues",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "name",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "namePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "neaktivan",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "newPassword",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "nightRhythm",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noBannersUploadedYet",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noEventsFound",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noEventsYet",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noSubmissionsYet",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noUsersRegistered",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noVenuesFound",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "noVenuesYet",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "okButton",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "openingHours",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "openMap",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "orClickToUpload",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "organizer",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "organizerInfo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "other",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "paidEntry",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "password",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "passwordChangedReLogin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "passwordChangeError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "passwordsDoNotMatch",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "passwordTooShort",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "pending",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "pendingSubmissions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "peopleInterested",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "phone",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "pleaseSelectDateAndTime",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "preview",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "price",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "privacyPolicy",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profileEmail",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profileEmailRequired",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profileName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profilePhone",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profileSaved",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "profileSaveError",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "ratio",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "registeredUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "reject",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "rejectedSubmissions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "rejectEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "rejectVenue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "removeAdmin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "removeSchedule",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "replaceImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "saturday",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "save",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "saveChanges",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "saveContinue",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "saving",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "scheduleWeekdayHint",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "search",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "searchByEmailOrName",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "searchLocations",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "searchPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "searchRegisteredUsers",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "selectAll",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "selectBannerFormat",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "selectEventType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "selectVenueType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "sending",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoCinemaDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoCinemaKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoCinemaTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoClubsDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoClubsKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoClubsTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoConcertsDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoConcertsKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoConcertsTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoContactDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoContactKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoContactTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoEventsDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoEventsKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoEventsTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoFoodAndDrinkDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoFoodAndDrinkKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoFoodAndDrinkTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoHomeDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoHomeKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoHomeTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTermsDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTermsKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTermsTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTheatreDescription",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTheatreKeywords",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "seoTheatreTitle",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "serverWarmup",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "sessionExpiredReLogin",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "showOnMap",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "socialLinks",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "sport",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "square",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "startTime",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "statusApproved",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "statusPending",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "statusRejected",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "streetAndNumber",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submissions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submit",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submitEvent",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submitEventDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submittedBy",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "submittedByDesc",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "sunday",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "supportedFormats",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "termsOfService",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "theatre",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "theatrePageHero",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "ticketLink",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "ticketLinkPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "ticketPrice",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "timeFrom",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "timeTo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toastActiveStatusFailed",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toastEventNowActive",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toastEventNowInactive",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toastVenueNowActive",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toastVenueNowInactive",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "toggleMenu",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "total",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "totalSubmissions",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "typeDeleteToConfirm",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "unblockUser",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "uploadAndCropImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "uploadAnyImage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "uploadBanner",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "uploading",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "user",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "userBlocked",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "userDeleted",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "users",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "userUnblocked",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueNamePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueNotFound",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueNotFoundOrNoAccess",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venuePendingApproval",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueSentForApproval",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venuesLabel",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venuesList",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTag",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTagPlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueType",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeBar",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeBrewery",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeCafe",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeCevabdzinica",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeDessertShop",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeFastFood",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeKafana",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeNightclub",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeOther",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypePizzeria",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypePub",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueTypeRestaurant",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueUpdatedMessage",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "venueUpdatedSuccess",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "viewAllClubs",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "visibleLocations",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "websiteLink",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "websitePlaceholder",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "willBeCroppedTo",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "workingHours",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "workshop",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "zipaCity",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "zipaStreet",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    },
+    {
+      "key": "zoom",
+      "where": "t/ tr",
+      "scope": "outside translations.ts"
+    }
+  ],
+  "probablyUnused": [
+    "accommodationLongText1",
+    "accommodationLongText2",
+    "ada",
+    "asian",
+    "at",
+    "atmosphereLongText1",
+    "atmosphereLongText2",
+    "atmosphereLongText3",
+    "borik",
+    "caffe",
+    "clubDate1",
+    "clubDate2",
+    "clubDate3",
+    "clubEvent1Date",
+    "clubEvent1Title",
+    "clubEvent2Date",
+    "clubEvent2Title",
+    "clubEvent3Date",
+    "clubEvent3Title",
+    "clubEvent4Date",
+    "clubEvent4Title",
+    "clubEvent5Date",
+    "clubEvent5Title",
+    "clubEvent6Date",
+    "clubEvent6Title",
+    "clubEvent7Date",
+    "clubEvent7Title",
+    "clubEvent8Date",
+    "clubEvent8Title",
+    "clubEvent9Date",
+    "clubEvent9Title",
+    "clubSalsaNight",
+    "clubsFilter",
+    "cocktailBar",
+    "cocktailNight",
+    "comingSoon",
+    "concertDate1",
+    "concertDate10",
+    "concertDate11",
+    "concertDate12",
+    "concertDate2",
+    "concertDate3",
+    "concertDate4",
+    "concertDate5",
+    "concertDate6",
+    "concertDate7",
+    "concertDate8",
+    "concertDate9",
+    "concertJazzEvening",
+    "concertMetalMayhem",
+    "concertRockFest2026",
+    "concertRockFest2026Description",
+    "contactSubject",
+    "contactUs",
+    "cottages",
+    "cuisineLongText1",
+    "cuisineLongText2",
+    "cuisineOptAmericka",
+    "cuisineOptAutorska",
+    "cuisineOptAzijska",
+    "cuisineOptBalkanska",
+    "cuisineOptBosanska",
+    "cuisineOptCaj",
+    "cuisineOptCokolada",
+    "cuisineOptCraftPivo",
+    "cuisineOptCrnogorska",
+    "cuisineOptDalmatinska",
+    "cuisineOptDelikatese",
+    "cuisineOptDeserti",
+    "cuisineOptFastFood",
+    "cuisineOptFrancuska",
+    "cuisineOptFuzija",
+    "cuisineOptGrcka",
+    "cuisineOptHrvatska",
+    "cuisineOptInternacionalna",
+    "cuisineOptIrska",
+    "cuisineOptItalijanska",
+    "cuisineOptKafa",
+    "cuisineOptKolaci",
+    "cuisineOptMakedonska",
+    "cuisineOptMediteranska",
+    "cuisineOptModerna",
+    "cuisineOptPubHrana",
+    "cuisineOptRiblja",
+    "cuisineOptRostilj",
+    "cuisineOptSladoled",
+    "cuisineOptSlasticarnica",
+    "cuisineOptSlovenska",
+    "cuisineOptSpecialtyKafa",
+    "cuisineOptSrpska",
+    "cuisineOptStreetFood",
+    "cuisineOptTradicionalna",
+    "cuisineOptVino",
+    "customDate",
+    "deleted",
+    "direction",
+    "discoNight",
+    "discoRetro",
+    "discover",
+    "dismiss",
+    "districtLongText1",
+    "districtLongText2",
+    "districtLongText3",
+    "districtNovaVaros",
+    "districtOldTown",
+    "doboj",
+    "duration",
+    "eightLocations",
+    "electronic",
+    "emailRequired",
+    "enterName",
+    "enterPhone",
+    "entireHouse",
+    "eventDate1",
+    "eventDate10",
+    "eventDate2",
+    "eventDate3",
+    "eventDate4",
+    "eventDate5",
+    "eventDate6",
+    "eventDate7",
+    "eventDate8",
+    "eventDate9",
+    "eventPrice1",
+    "eventPrice2",
+    "eventPrice3",
+    "eventPrice4",
+    "eventTermLabel",
+    "eventTime1",
+    "eventTime2",
+    "eventTime3",
+    "eventTime4",
+    "eventTime5",
+    "eventVenue",
+    "eventsLongText1",
+    "eventsLongText2",
+    "everyDay1900to0200",
+    "everyDay2000to0200",
+    "everyDay2000to0300",
+    "exclusive",
+    "exhibitions",
+    "expensive",
+    "extravagant",
+    "familyRooms",
+    "fastFood",
+    "february",
+    "festivals",
+    "fifteenPlaces",
+    "finalPreview",
+    "findUs",
+    "followUs",
+    "forNightsOut",
+    "freeWiFi",
+    "friSat2200to0400",
+    "friSat2300to0500",
+    "generalInquiry",
+    "genre",
+    "genreAcoustic",
+    "genreBlues",
+    "genreClassical",
+    "genreElectronic",
+    "genreFolk",
+    "genreHipHop",
+    "genreJazz",
+    "genreLatin",
+    "genreMetal",
+    "genrePop",
+    "genreReggae",
+    "genreRock",
+    "glamping",
+    "grill",
+    "grills",
+    "guideLongText1",
+    "guideLongText2",
+    "hiddenGems",
+    "hipHopNight",
+    "hipHopParty",
+    "history",
+    "hospitals",
+    "hostelRock",
+    "hostels",
+    "hotel",
+    "hotelKastel",
+    "hotelPalace",
+    "imageUrl",
+    "informal",
+    "italian",
+    "jazzCorner",
+    "jazzNight",
+    "kaldrma1929",
+    "kaldrma1929Desc",
+    "kazamat",
+    "kodBrke",
+    "laFiesta",
+    "laktasi",
+    "latin",
+    "latinMusic",
+    "laus",
+    "lifestyle",
+    "liveJazz",
+    "locationCitySquare",
+    "locationJazzClub",
+    "locationRockClub",
+    "loungeTeslic",
+    "lounges",
+    "lunchBarAra",
+    "luxuryHotels",
+    "luxuryStays",
+    "magazineDate1",
+    "magazineDate2",
+    "magazineDate3",
+    "magazineDate4",
+    "malaStanica",
+    "march",
+    "metal",
+    "mexican",
+    "mockVenue1Address",
+    "mockVenue1Name",
+    "mockVenue2Address",
+    "mockVenue2Name",
+    "mockVenue3Address",
+    "mockVenue3Name",
+    "mockVenue4Address",
+    "mockVenue4Name",
+    "moderate",
+    "monogram",
+    "monuments",
+    "moreCities",
+    "motels",
+    "museums",
+    "mySubmissions",
+    "nature",
+    "nearbyClubs",
+    "nineActivities",
+    "ninetiesParty",
+    "noClubsFound",
+    "oldTown",
+    "openUntil11PM",
+    "openUntil1AM",
+    "openedAtTime",
+    "ourAddress",
+    "parkMladih",
+    "parking",
+    "parks",
+    "partyTonight",
+    "petFriendly",
+    "petricevac",
+    "pharmacies",
+    "pickRange",
+    "pizzerias",
+    "planB",
+    "popDance",
+    "pricePlaceholder",
+    "prijedor",
+    "profile",
+    "profileImage",
+    "quickActions",
+    "rating",
+    "readTime10min",
+    "readTime6min",
+    "readTime8min",
+    "rejectedVenues",
+    "restaurantBar",
+    "restaurantsByCuisine",
+    "reviews",
+    "rnb",
+    "rockHouse",
+    "rockLive",
+    "role",
+    "seasonal",
+    "seeAll",
+    "sevenLocations",
+    "showAllFilter",
+    "skyLounge",
+    "spaWellness",
+    "staraAda",
+    "staroBure",
+    "subject",
+    "tenPlaces",
+    "teslic",
+    "theater",
+    "thisMonth",
+    "thuSat2100to0200",
+    "thuSat2200to0400",
+    "time20",
+    "time21",
+    "time22",
+    "time23",
+    "time2330",
+    "top10HotelsDesc",
+    "top10HotelsInBL",
+    "top10Restaurants",
+    "top7PlacesDesc",
+    "top7PlacesTitle",
+    "totalSubmitted",
+    "totalVenues",
+    "touristInfo",
+    "travel",
+    "tueSun1800to0200",
+    "twelvePlaces",
+    "under100BAM",
+    "uploadingImage",
+    "urbanArea",
+    "urbanClub",
+    "vegan",
+    "vegetarian",
+    "venueDetails",
+    "venueTypeCafes",
+    "venueTypeClubs",
+    "venueTypeFoodAndDrink",
+    "venueTypeRestaurants",
+    "viewAllCinema",
+    "viewAllConcerts",
+    "viewAllEvents",
+    "viewpoints",
+    "views",
+    "vip",
+    "vrbasRiver",
+    "vrbasTerrace",
+    "vrbasView",
+    "waterfront",
+    "wedSat2100to0300",
+    "welcome",
+    "withView",
+    "yearRound",
+    "zipaAddress"
+  ],
+  "uncertain": [
+    {
+      "key": "apartments",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "apartmentsMap",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "bar",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "brewery",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "cafe",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 5
+    },
+    {
+      "key": "cafes",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 6
+    },
+    {
+      "key": "cafesMap",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "categoryArt",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categoryEvent",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categoryFestival",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categoryGastro",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categoryMusic",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categoryParty",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "categorySport",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "cevabdzinica",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 4
+    },
+    {
+      "key": "club",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 3
+    },
+    {
+      "key": "clubsMap",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "dayFriday",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "dayItineraryDesc",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "daySaturday",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "daySunday",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "dayThursday",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "dayTuesday",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "dessert_shop",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 4
+    },
+    {
+      "key": "desserts",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "fast_food",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 4
+    },
+    {
+      "key": "food",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "free",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 12
+    },
+    {
+      "key": "fridayEightPM",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "friShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "gradiska",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "hotels",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "hotelsMap",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "international",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "kafana",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "legalNotice",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "location",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "lounge",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "magazine",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "message",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 5
+    },
+    {
+      "key": "monShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "music",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "nearbyEvent1City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent1Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent1Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent1Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent2City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent2Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent2Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent2Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent3City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent3Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent3Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent3Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent4City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent4Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent4Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent4Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent5City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent5Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent5Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent5Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent6City",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent6Date",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent6Interested",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nearbyEvent6Title",
+      "reason": "numbered placeholder keys"
+    },
+    {
+      "key": "nightclub",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 5
+    },
+    {
+      "key": "pizzeria",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 5
+    },
+    {
+      "key": "priceRange",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 2
+    },
+    {
+      "key": "pub",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 4
+    },
+    {
+      "key": "rejected",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 14
+    },
+    {
+      "key": "restaurant",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 8
+    },
+    {
+      "key": "romantic",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "satShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "saturdayEightPM",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "saturdayTenAM",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "screenings",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "seafood",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "signup",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 5
+    },
+    {
+      "key": "sports",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "standup",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 3
+    },
+    {
+      "key": "status",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 4
+    },
+    {
+      "key": "sundayMarket",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "sunShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "thursday",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "thuShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "today",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "tuesday",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "tueShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "venueTagHint",
+      "reason": "prefix/category-style"
+    },
+    {
+      "key": "wednesday",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    },
+    {
+      "key": "wedShort",
+      "reason": "same identifier appears quoted in code without t( — possible config/copy or false positive",
+      "approxQuotedOccurrences": 1
+    }
+  ],
+  "limitations": [
+    "Keys are lines matching /^  keyName:/ (2-space indent) excluding false lat/en (4-space).",
+    "definitelyUsed: t(\", t(', tr(\", or \"key\" as keyof typeof translations in any file except the match must be a real call pattern.",
+    "String literals that pass the same text as a translation key in JSON/config were not deep-linked; uncertain.looseQuotes flags substring matches.",
+    "Dynamic: category*, day*, venueTag*, etc. marked uncertain if not a direct t(\"key\")."
+  ]
+}

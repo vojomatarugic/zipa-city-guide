@@ -71,8 +71,7 @@
   "price": "$$",
   "price_en": "$$",
   "tags": [
-    "club",
-    "nightlife"
+    "club"
   ],
   "status": "approved",
   "submitted_by": "vojo23@yahoo.com",

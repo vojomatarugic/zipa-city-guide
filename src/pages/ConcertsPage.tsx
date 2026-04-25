@@ -26,6 +26,10 @@ const UPCOMING_MAX_CARDS = 4;
 const FEATURED_MAX_CARDS = 3;
 const OTHER_CITIES_MAX_CARDS = 4;
 
+const CONCERTS_UPCOMING_CARD_IMAGE_HEIGHT = "320px";
+const CONCERTS_FEATURED_CARD_IMAGE_HEIGHT = "450px";
+const CONCERTS_OTHER_CITIES_CARD_IMAGE_HEIGHT = "300px";
+
 function nextStartAtOrNull(event: Item, now: Date): Date | null {
   const slots = eventService.getEventScheduleSlots(event);
   const nextSlot = slots.find((slot) => new Date(slot.start_at) >= now);
@@ -250,7 +254,10 @@ export function ConcertsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="320px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={CONCERTS_UPCOMING_CARD_IMAGE_HEIGHT}
+              />
             ) : upcomingConcerts.length > 0 ? (
               upcomingConcerts.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -258,7 +265,7 @@ export function ConcertsPage() {
                     event={event}
                     language={language}
                     accentColor="#C0CA33"
-                    imageHeight="320px"
+                    imageHeight={CONCERTS_UPCOMING_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                     showCity={false}
                     showVenue
@@ -324,7 +331,10 @@ export function ConcertsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={3} imageHeight="450px" />
+              <EventCardSkeleton
+                count={3}
+                imageHeight={CONCERTS_FEATURED_CARD_IMAGE_HEIGHT}
+              />
             ) : featuredConcerts.length > 0 ? (
               featuredConcerts.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -332,7 +342,7 @@ export function ConcertsPage() {
                     event={event}
                     language={language}
                     accentColor="#C0CA33"
-                    imageHeight="450px"
+                    imageHeight={CONCERTS_FEATURED_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                     showCity={false}
                     showVenue
@@ -381,7 +391,10 @@ export function ConcertsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="300px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={CONCERTS_OTHER_CITIES_CARD_IMAGE_HEIGHT}
+              />
             ) : otherCitiesConcerts.length > 0 ? (
               otherCitiesConcerts.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -389,7 +402,7 @@ export function ConcertsPage() {
                     event={event}
                     language={language}
                     accentColor="#C0CA33"
-                    imageHeight="300px"
+                    imageHeight={CONCERTS_OTHER_CITIES_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                     showCity
                     showVenue

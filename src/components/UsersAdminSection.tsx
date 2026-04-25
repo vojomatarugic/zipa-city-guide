@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useT } from '../hooks/useT';
 import { useAuth } from '../contexts/AuthContext';
-import { Users, ChevronDown, ChevronUp, Calendar, MapPin, Ban, Trash2, ShieldCheck, Shield, Crown, ArrowUpDown, Building2, User, Phone, Mail } from 'lucide-react';
+import { Users, ChevronDown, ChevronUp, CalendarDays, MapPin, Ban, Trash2, ShieldCheck, Shield, Crown, ArrowUpDown, MapPinned, User, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { ConfirmDialog } from './ConfirmDialog';
 import { publicAnonKey } from '../utils/supabase/info';
 import { apiUrl } from '../config/apiBase';
 import { supabase } from '../utils/authService';
-import { getCanonicalEventPageSlug } from '../utils/eventPageCategory';
+import { eventDetailPath } from '../utils/eventPageCategory';
+import { venueDetailPath } from '../utils/venueRouting';
 import { shouldHandleSoftRowClick } from '../utils/rowClick';
 import { adminAccordionCountBadgeClass } from '../utils/adminAccordionBadgeClasses';
 import { formatDate as formatAppDate, formatDateTime as formatAppDateTime } from '../utils/dateFormat';
@@ -545,16 +546,13 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
     
     // Determine route based on canonical page mapping
     if (submission.event_type || normalized === 'events' || normalized === 'event' || normalized === 'exhibition' || normalized === 'concerts' || normalized === 'cinema' || normalized === 'theatre') {
-      return `/${getCanonicalEventPageSlug(submission.event_type, submission.page_slug)}/${id}`;
-    } else if (normalized === 'food-and-drink' || normalized === 'restaurants' || normalized === 'cafes') {
-      // food-and-drink venues (backward compat: 'restaurants' is the old slug)
-      return `/food-and-drink/${id}`;
-    } else if (normalized === 'clubs' || normalized === 'nightlife') {
-      return `/clubs/${id}`;
-    } else {
-      // Fallback - pokušaj sa page_slug-om
-      return `/${normalized || 'food-and-drink'}/${id}`;
+      return eventDetailPath({
+        id,
+        event_type: submission.event_type,
+        page_slug: submission.page_slug,
+      });
     }
+    return venueDetailPath({ id, page_slug: submission.page_slug });
   };
 
   return (
@@ -630,7 +628,12 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
                     <div className="flex-1 h-px bg-gray-200 ml-2" />
                     <div className="flex items-center gap-1 ml-2">
                       <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" aria-hidden />
+                      <label htmlFor="admin-users-sort" className="sr-only">
+                        {language === 'sr' ? 'Sortiranje korisnika' : 'Sort users'}
+                      </label>
                       <select
+                        id="admin-users-sort"
+                        name="admin-users-sort"
                         value={regularUserSort}
                         onChange={(e) => setRegularUserSort(e.target.value as typeof regularUserSort)}
                         className="text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-300"
@@ -877,7 +880,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
                       <div className="flex flex-wrap gap-3 text-[14px]" style={{ color: 'var(--text-muted)' }}>
                         {submission.city && (
                           <span className="inline-flex min-w-0 items-center gap-1.5">
-                            <Building2 size={14} className="shrink-0" />
+                            <MapPinned size={14} className="shrink-0" />
                             <span className="truncate">{submission.city}</span>
                           </span>
                         )}
@@ -889,7 +892,7 @@ export function UsersAdminSection({ inactiveVenueIds, inactiveEventIds }: UsersA
                         )}
                         {submission.start_at && (
                           <span className="inline-flex min-w-0 items-center gap-1.5">
-                            <Calendar size={14} className="shrink-0" />
+                            <CalendarDays size={14} className="shrink-0" />
                             <span className="truncate">{formatDate(submission.start_at)}</span>
                           </span>
                         )}

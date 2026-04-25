@@ -1,6 +1,9 @@
-import { Search, Menu, X, MapPin, ChevronDown } from "lucide-react";
+import { Search, Menu, X, MapPinned, ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation as useRouterLocation } from "react-router";
+import {
+  Link,
+  useLocation as useRouterLocation,
+} from "react-router";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,7 +14,6 @@ const zipaLogo = "/zipa-logo-transparent.png";
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [loginHover, setLoginHover] = useState(false);
   const { t } = useT();
   const routerLocation = useRouterLocation();
   const { selectedCity, setIsCityPopupOpen } = useLocation();
@@ -80,7 +82,7 @@ export function Header() {
 
   return (
     <header
-      className="bg-white sticky top-0 z-50"
+      className="sticky top-0 z-50 w-full shrink-0 bg-white"
       style={{
         height: "72px",
         borderBottom: `1px solid ${BORDERS.light}`,
@@ -94,6 +96,8 @@ export function Header() {
           maxWidth: "1280px",
           paddingLeft: "20px",
           paddingRight: "20px",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         {/* Logo Area */}
@@ -123,6 +127,7 @@ export function Header() {
               width: "1px",
               height: "32px",
               background: "#E5E9F0",
+              pointerEvents: "none",
             }}
           />
 
@@ -154,7 +159,7 @@ export function Header() {
             }}
             onClick={() => setIsCityPopupOpen(true)}
           >
-            <MapPin size={16} style={{ color: "#0E3DC5" }} />
+            <MapPinned size={16} style={{ color: "#0E3DC5" }} />
             <span
               style={{
                 fontSize: "14px",
@@ -193,6 +198,7 @@ export function Header() {
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                   backgroundClip: "text",
+                  pointerEvents: "none",
                 }}
               >
                 {item.label}
@@ -204,6 +210,7 @@ export function Header() {
                   background: item.isActive ? item.gradient : "transparent",
                   borderRadius: "999px",
                   transition: "background 0.2s",
+                  pointerEvents: "none",
                 }}
               />
             </Link>
@@ -211,7 +218,10 @@ export function Header() {
         </nav>
 
         {/* Desktop Actions */}
-        <div className="hidden lg:flex items-center" style={{ gap: "12px" }}>
+        <div
+          className="hidden lg:flex items-center"
+          style={{ gap: "12px", position: "relative", zIndex: 3 }}
+        >
           {/* Language Switcher */}
           <LanguageSwitcher currentPage={currentPage} />
 
@@ -265,7 +275,7 @@ export function Header() {
                 e.currentTarget.style.boxShadow =
                   "0 2px 8px rgba(14, 61, 197, 0.25)";
               }}
-              className="border-0 cursor-pointer"
+              className="border-0 cursor-pointer no-underline inline-flex items-center justify-center"
               style={{
                 background: "linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)",
                 color: "#FFFFFF",

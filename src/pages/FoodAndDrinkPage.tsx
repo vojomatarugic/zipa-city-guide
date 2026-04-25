@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { MapPin, Utensils } from "lucide-react";
+import { MapPin, MapPinned, Utensils } from "lucide-react";
 import { SectionEmptyState } from "../components/SectionEmptyState";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
@@ -9,12 +9,12 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_FOOD, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
-import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
 import { getVenues, getFeaturedVenues } from "../utils/dataService";
 import type { Item } from "../utils/dataService";
 import { VenueBadgeRow } from "../components/VenueBadgeRow";
 import { VenueOpeningHoursRow } from "../components/VenueOpeningHoursRow";
 import { cityEquals } from "../utils/city";
+import { venueDetailPath } from "../utils/venueRouting";
 const ogImage = "/zipa-city-guide-OG.png";
 import foodAndDrinkHeroImage from "../assets/food-and-drink-hero.png";
 import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
@@ -29,9 +29,8 @@ function VenueCard({
   language: string;
   t: (key: string) => string;
 }) {
-  const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
   return (
-    <Link to={`/food-and-drink/${item.id}`} style={{ textDecoration: "none" }}>
+    <Link to={venueDetailPath(item)} style={{ textDecoration: "none" }}>
       <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
         <img
           src={item.image}
@@ -46,7 +45,7 @@ function VenueCard({
             tags={item.tags}
             language={language === "en" ? "en" : "sr"}
             t={t}
-            textColor={badgeTextColor}
+            pageSlug="food-and-drink"
           />
           <h3
             className="text-base font-semibold mb-2"
@@ -55,7 +54,11 @@ function VenueCard({
             {language === "en" && item.title_en ? item.title_en : item.title}
           </h3>
           <div className="flex items-center gap-2 mb-1">
-            <MapPin size={14} style={{ color: "#6B7280" }} />
+            {String(item.address || "").trim() ? (
+              <MapPin size={14} style={{ color: "#6B7280" }} />
+            ) : (
+              <MapPinned size={14} style={{ color: "#6B7280" }} />
+            )}
             <span className="text-sm" style={{ color: "#6B7280" }}>
               {item.address || item.city || "Banja Luka"}
             </span>
@@ -151,7 +154,6 @@ export function FoodAndDrinkPage() {
   const [foodAndDrinkVenues, setFoodAndDrinkVenues] = useState<Item[]>([]);
   const [featuredFoodAndDrink, setFeaturedFoodAndDrink] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const badgeTextColor = getBadgeTextColorForPageSlug("food-and-drink");
 
   useEffect(() => {
     async function fetchFoodAndDrinkVenues() {
@@ -333,7 +335,7 @@ export function FoodAndDrinkPage() {
               {featuredFoodAndDrink.slice(0, 4).map((venue) => (
                 <RevealOnScrollArticle key={venue.id}>
                   <Link
-                    to={`/food-and-drink/${venue.id}`}
+                    to={venueDetailPath(venue)}
                     style={{ textDecoration: "none" }}
                   >
                     <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
@@ -354,7 +356,7 @@ export function FoodAndDrinkPage() {
                           tags={venue.tags}
                           language={language === "en" ? "en" : "sr"}
                           t={t}
-                          textColor={badgeTextColor}
+                          pageSlug="food-and-drink"
                         />
                         <h3
                           className="text-base font-semibold mt-2 mb-1"
@@ -365,7 +367,11 @@ export function FoodAndDrinkPage() {
                             : venue.title}
                         </h3>
                         <div className="flex items-center gap-2">
-                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          {String(venue.address || "").trim() ? (
+                            <MapPin size={14} style={{ color: "#6B7280" }} />
+                          ) : (
+                            <MapPinned size={14} style={{ color: "#6B7280" }} />
+                          )}
                           <span className="text-sm" style={{ color: "#6B7280" }}>
                             {venue.address || venue.city || "Banja Luka"}
                           </span>
@@ -488,7 +494,7 @@ export function FoodAndDrinkPage() {
               {nearbyFoodAndDrink.map((venue) => (
                 <RevealOnScrollArticle key={venue.id}>
                   <Link
-                    to={`/food-and-drink/${venue.id}`}
+                    to={venueDetailPath(venue)}
                     style={{ textDecoration: "none" }}
                   >
                     <div className="cursor-pointer hover:scale-[1.02] transition-all duration-300">
@@ -509,7 +515,7 @@ export function FoodAndDrinkPage() {
                           tags={venue.tags}
                           language={language === "en" ? "en" : "sr"}
                           t={t}
-                          textColor={badgeTextColor}
+                          pageSlug="food-and-drink"
                         />
                         <h3
                           className="text-base font-semibold mt-2 mb-1"
@@ -520,7 +526,11 @@ export function FoodAndDrinkPage() {
                             : venue.title}
                         </h3>
                         <div className="flex items-center gap-2">
-                          <MapPin size={14} style={{ color: "#6B7280" }} />
+                          {String(venue.address || "").trim() ? (
+                            <MapPin size={14} style={{ color: "#6B7280" }} />
+                          ) : (
+                            <MapPinned size={14} style={{ color: "#6B7280" }} />
+                          )}
                           <span className="text-sm" style={{ color: "#6B7280" }}>
                             {venue.address || venue.city || "Banja Luka"}
                           </span>

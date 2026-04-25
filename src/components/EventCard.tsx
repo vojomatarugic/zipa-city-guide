@@ -4,13 +4,19 @@
  */
 import React from "react";
 import { Link } from "react-router";
-import { Heart, MapPin, Calendar, Clock3 } from "lucide-react";
+import { Heart, MapPin, MapPinned, CalendarDays, Clock } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Item } from "../utils/dataService";
 import * as eventService from "../utils/eventService";
 import { getLocalizedEventCategory } from "../config/eventCategories";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
+import {
+  eventDetailPath,
+  getTopLevelPageCategory,
+} from "../utils/eventPageCategory";
+import {
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
+} from "../utils/categoryThemes";
 
 interface EventCardProps {
   event: Item;
@@ -73,10 +79,10 @@ export function EventCard({
     time: showTime,
   };
   const metadataIcons: Record<"city" | "venue" | "date" | "time", React.ReactNode> = {
-    city: <MapPin size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    city: <MapPinned size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
     venue: <MapPin size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
-    date: <Calendar size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
-    time: <Clock3 size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    date: <CalendarDays size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
+    time: <Clock size={14} className="shrink-0" style={{ color: "#6B7280" }} />,
   };
   const renderedMetadata = metadataOrder
     .filter((key) => metadataVisibility[key] && Boolean(metadataValues[key]))
@@ -84,7 +90,7 @@ export function EventCard({
 
   return (
     <Link
-      to={`/events/${event.id}`}
+      to={eventDetailPath(event)}
       className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
       style={{ textDecoration: "none" }}
     >
@@ -98,7 +104,7 @@ export function EventCard({
       <div className="p-4 space-y-1">
         {typeBadgeLabel ? (
           <Badge
-            className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+            className={LISTING_BADGE_SURFACE_CLASS}
             style={{ color: categoryBadgeTextColor || "#6B7280" }}
           >
             {typeBadgeLabel}

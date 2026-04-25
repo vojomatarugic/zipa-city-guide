@@ -126,6 +126,7 @@ export function BannerUploadCropper({
           onChange={handleFileChange}
           className="hidden"
           id="banner-file-upload"
+          name="banner-file-upload"
         />
         <label
           htmlFor="banner-file-upload"
@@ -175,8 +176,10 @@ export function BannerUploadCropper({
 
       {/* Zoom Control */}
       <div className="flex items-center gap-3">
-        <span className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('zoom')}:</span>
+        <label htmlFor="banner-crop-zoom" className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{t('zoom')}:</label>
         <input
+          id="banner-crop-zoom"
+          name="banner-crop-zoom"
           type="range"
           min={1}
           max={3}

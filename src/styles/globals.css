@@ -7,38 +7,38 @@
   --bg-tertiary: #eef2f7;
 
   /* Blue Primary (TUI-inspired) */
-  --blue-primary: #0084D7;
-  --blue-light: #E6F4FC;
-  --blue-hover: #006AB5;
-  
+  --blue-primary: #0084d7;
+  --blue-light: #e6f4fc;
+  --blue-hover: #006ab5;
+
   /* Surface - Light Cards */
   --card-white: #ffffff;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.10);
-  
+  --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.1);
+
   /* Borders - Thin & Soft */
   --border-light: #f3f4f6;
   --border-medium: #d0d7e3;
-  --border-accent: #0084D7;
-  
+  --border-accent: #0084d7;
+
   /* Text - Darker for Readability */
   --text-primary: #1a2332;
   --text-secondary: #4a5568;
   --text-muted: #7a8a9e;
   --text-white: #ffffff;
-  
+
   /* Accent Colors - Subtle */
   --accent-green: #00a650;
   --accent-orange: #ff6b35;
   --accent-yellow: #ffc107;
-  
+
   /* Radius - Rounded but not too much */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 18px;
   --radius-pill: 999px;
-  
+
   /* Spacing - More whitespace */
   --spacing-xs: 8px;
   --spacing-sm: 12px;
@@ -46,7 +46,7 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
   --spacing-2xl: 48px;
-  
+
   /* Typography - Smaller, cleaner */
   --font-h1: 32px;
   --font-h2: 22px;
@@ -54,7 +54,7 @@
   --font-body: 14px;
   --font-small: 13px;
   --font-tiny: 11px;
-  
+
   /* Font Weights */
   --weight-regular: 400;
   --weight-medium: 500;
@@ -63,7 +63,13 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Inter",
+    sans-serif;
   background: var(--bg-main);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -286,7 +292,7 @@ a:hover {
 }
 
 .img-overlay-gradient {
-  background: linear-gradient(0deg, rgba(0,0,0,0.2), transparent);
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.2), transparent);
 }
 
 /* ============================================
@@ -310,7 +316,7 @@ a:hover {
 /* Flatpickr container */
 .flatpickr-calendar {
   background: white;
-  border: 1px solid #E5E9F0;
+  border: 1px solid #e5e9f0;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   font-family: inherit;
@@ -318,7 +324,7 @@ a:hover {
 
 /* Flatpickr header (month/year) */
 .flatpickr-months {
-  background: #0E3DC5;
+  background: #0e3dc5;
   border-radius: 12px 12px 0 0;
   padding: 12px;
 }
@@ -343,9 +349,9 @@ a:hover {
 
 /* Weekday labels */
 .flatpickr-weekdays {
-  background: #F7F9FC;
+  background: #f7f9fc;
   font-weight: 600;
-  color: #6B7280;
+  color: #6b7280;
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.5px;
@@ -360,19 +366,19 @@ a:hover {
 }
 
 .flatpickr-day:hover {
-  background: #E6F4FC;
-  border-color: #E6F4FC;
+  background: #e6f4fc;
+  border-color: #e6f4fc;
 }
 
 .flatpickr-day.today {
-  border: 2px solid #0E3DC5;
+  border: 2px solid #0e3dc5;
   background: transparent;
 }
 
 .flatpickr-day.selected {
-  background: #0E3DC5;
+  background: #0e3dc5;
   color: white;
-  border-color: #0E3DC5;
+  border-color: #0e3dc5;
 }
 
 .flatpickr-day.selected:hover {
@@ -382,12 +388,12 @@ a:hover {
 
 /* Disabled days */
 .flatpickr-day.flatpickr-disabled {
-  color: #D1D5DB;
+  color: #d1d5db;
 }
 
 /* Time picker */
 .flatpickr-time {
-  border-top: 1px solid #E5E9F0;
+  border-top: 1px solid #e5e9f0;
 }
 
 .flatpickr-time input {
@@ -404,7 +410,7 @@ a:hover {
 /* Clear/Today buttons */
 .flatpickr-clear,
 .flatpickr-today {
-  color: #0E3DC5;
+  color: #0e3dc5;
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 6px;
@@ -413,7 +419,7 @@ a:hover {
 
 .flatpickr-clear:hover,
 .flatpickr-today:hover {
-  background: #E6F4FC;
+  background: #e6f4fc;
 }
 
 /* ============================================
@@ -428,7 +434,7 @@ a:hover {
 .react-datepicker__input-container input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #E5E9F0;
+  border: 1px solid #e5e9f0;
   border-radius: 8px;
   font-size: 14px;
   color: var(--text-primary);
@@ -438,18 +444,18 @@ a:hover {
 
 .react-datepicker__input-container input:focus {
   outline: none;
-  border-color: #0E3DC5;
+  border-color: #0e3dc5;
   box-shadow: 0 0 0 3px rgba(14, 61, 197, 0.1);
 }
 
 .react-datepicker__input-container input::placeholder {
-  color: #9CA3AF;
+  color: #9ca3af;
 }
 
 /* Calendar container */
 .react-datepicker {
   font-family: inherit;
-  border: 1px solid #E5E9F0;
+  border: 1px solid #e5e9f0;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   background: white;
@@ -461,7 +467,7 @@ a:hover {
 
 /* Header (month/year navigation) */
 .react-datepicker__header {
-  background: #0E3DC5;
+  background: #0e3dc5;
   border-radius: 12px 12px 0 0;
   border-bottom: none;
   padding: 16px 12px 12px;
@@ -490,7 +496,7 @@ a:hover {
 
 /* Day names */
 .react-datepicker__day-names {
-  background: #F7F9FC !important;
+  background: #f7f9fc !important;
   padding: 8px 12px !important;
   margin: 0 !important;
   display: grid !important;
@@ -499,7 +505,7 @@ a:hover {
 }
 
 .react-datepicker__day-name {
-  color: #6B7280 !important;
+  color: #6b7280 !important;
   font-weight: 600 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
@@ -518,7 +524,7 @@ a:hover {
 /* 🔴 NED header - BOLD i crvena */
 .react-datepicker__day-name:last-child {
   font-weight: 700 !important;
-  color: #B91C1C !important;
+  color: #b91c1c !important;
 }
 
 /* Days */
@@ -552,24 +558,24 @@ a:hover {
 
 /* 🔴 NEDJELJA kolona - suptilna pozadina */
 .react-datepicker__day--weekend:last-child {
-  background: #FEF2F2 !important;
+  background: #fef2f2 !important;
   font-weight: 600 !important;
 }
 
 .react-datepicker__day:hover {
-  background: #E6F4FC !important;
+  background: #e6f4fc !important;
   border-radius: 6px !important;
 }
 
 .react-datepicker__day--today {
-  border: 2px solid #0E3DC5;
+  border: 2px solid #0e3dc5;
   background: transparent;
   font-weight: 600;
 }
 
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
-  background: #0E3DC5;
+  background: #0e3dc5;
   color: white;
   font-weight: 600;
 }
@@ -580,7 +586,7 @@ a:hover {
 }
 
 .react-datepicker__day--disabled {
-  color: #D1D5DB;
+  color: #d1d5db;
   cursor: not-allowed;
 }
 
@@ -589,26 +595,26 @@ a:hover {
 }
 
 .react-datepicker__day--outside-month {
-  color: #D1D5DB;
+  color: #d1d5db;
 }
 
 /* Year dropdown */
 .react-datepicker__year-dropdown,
 .react-datepicker__month-dropdown {
   background: white;
-  border: 1px solid #E5E9F0;
+  border: 1px solid #e5e9f0;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .react-datepicker__year-option:hover,
 .react-datepicker__month-option:hover {
-  background: #E6F4FC;
+  background: #e6f4fc;
 }
 
 .react-datepicker__year-option--selected,
 .react-datepicker__month-option--selected {
-  background: #0E3DC5;
+  background: #0e3dc5;
   color: white;
 }
 
@@ -634,19 +640,20 @@ a:hover {
   h1 {
     font-size: 26px;
   }
-  
+
   h2 {
     font-size: 19px;
   }
-  
+
   h3 {
     font-size: 16px;
   }
-  
-  button, a {
+
+  button,
+  a {
     min-height: 44px;
   }
-  
+
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -658,12 +665,12 @@ a:hover {
 
 .certificate-card-reveal:not(.certificate-card-visible) {
   opacity: 0;
-  transform: translateY(48px);
+  transform: translate3d(0, var(--reveal-hidden-y, 48px), 0);
 }
 
 .certificate-card-reveal.certificate-card-visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
   transition:
     opacity 640ms ease-out,
     transform 640ms ease-out;

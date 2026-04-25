@@ -22,6 +22,10 @@ const ogImage = "/zipa-city-guide-OG.png";
 import theatreHeroImage from "../assets/theatre-hero.png";
 import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
+const THEATRE_REPERTOIRE_CARD_IMAGE_HEIGHT = "300px";
+const THEATRE_COMING_SOON_CARD_IMAGE_HEIGHT = "400px";
+const THEATRE_OTHER_CITIES_CARD_IMAGE_HEIGHT = "280px";
+
 function isApprovedTheatreEvent(e: Item): boolean {
   if (e.status !== "approved") return false;
   if (
@@ -232,7 +236,10 @@ export function TheatrePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={5} imageHeight="300px" />
+              <EventCardSkeleton
+                count={5}
+                imageHeight={THEATRE_REPERTOIRE_CARD_IMAGE_HEIGHT}
+              />
             ) : repertoire.length > 0 ? (
               repertoire.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -240,7 +247,7 @@ export function TheatrePage() {
                     event={event}
                     language={language}
                     accentColor="#8E24AA"
-                    imageHeight="300px"
+                    imageHeight={THEATRE_REPERTOIRE_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                   />
                 </RevealOnScrollArticle>
@@ -304,7 +311,10 @@ export function TheatrePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="400px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={THEATRE_COMING_SOON_CARD_IMAGE_HEIGHT}
+              />
             ) : moreFromRepertoire.length > 0 ? (
               moreFromRepertoire.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -312,7 +322,7 @@ export function TheatrePage() {
                     event={event}
                     language={language}
                     accentColor="#8E24AA"
-                    imageHeight="400px"
+                    imageHeight={THEATRE_COMING_SOON_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                   />
                 </RevealOnScrollArticle>
@@ -355,7 +365,7 @@ export function TheatrePage() {
                     event={event}
                     language={language}
                     accentColor="#8E24AA"
-                    imageHeight="280px"
+                    imageHeight={THEATRE_OTHER_CITIES_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                     showCity
                     showVenue

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, MapPin, Clock, Music } from "lucide-react";
+import { CalendarDays, MapPin, Clock, Music } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -10,7 +10,14 @@ import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
 import concertsHeroImage from "../assets/concerts-hero.png";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import {
+  eventDetailPath,
+  getTopLevelPageCategory,
+} from "../utils/eventPageCategory";
+import {
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
+} from "../utils/categoryThemes";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import {
   DOC_TITLE_CONCERTS,
@@ -246,7 +253,7 @@ export function ConcertsAllPage() {
                           "linear-gradient(135deg, #C0CA33 0%, rgba(192, 202, 51, 0.8) 100%)",
                       }}
                     >
-                      <Calendar size={18} style={{ color: "#FFFFFF" }} />
+                      <CalendarDays size={18} style={{ color: "#FFFFFF" }} />
                       <span
                         style={{
                           fontSize: "18px",
@@ -276,7 +283,7 @@ export function ConcertsAllPage() {
                     {visibleEvents.map((event) => (
                       <RevealOnScrollArticle key={event.id}>
                         <Link
-                          to={`/events/${event.id}`}
+                          to={eventDetailPath(event)}
                           className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
                           style={{ textDecoration: "none" }}
                         >
@@ -295,8 +302,12 @@ export function ConcertsAllPage() {
                           <div className="p-4">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span
-                                className="text-xs font-medium px-2 py-1 rounded"
-                                style={{ background: "#F3F4F6", color: "#C0CA33" }}
+                                className={LISTING_BADGE_SURFACE_CLASS}
+                                style={{
+                                  color: getBadgeTextColorForPageSlug(
+                                    getTopLevelPageCategory(event),
+                                  ),
+                                }}
                               >
                                 {event.event_type
                                   ? eventService.translateEventType(
@@ -309,8 +320,12 @@ export function ConcertsAllPage() {
                               </span>
                               {event.price && (
                                 <span
-                                  className="text-xs font-medium px-2 py-1 rounded"
-                                  style={{ background: "#F3F4F6", color: "#6B7280" }}
+                                  className={LISTING_BADGE_SURFACE_CLASS}
+                                  style={{
+                                    color: getBadgeTextColorForPageSlug(
+                                      getTopLevelPageCategory(event),
+                                    ),
+                                  }}
                                 >
                                   {eventService.formatPrice(event.price, language)}
                                 </span>
@@ -327,7 +342,7 @@ export function ConcertsAllPage() {
                             {event.start_at && (
                               <>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <Calendar size={14} style={{ color: "#6B7280" }} />
+                                  <CalendarDays size={14} style={{ color: "#6B7280" }} />
                                   <span className="text-sm" style={{ color: "#6B7280" }}>
                                     {eventService.getRelativeDateLabel(
                                       event.start_at,

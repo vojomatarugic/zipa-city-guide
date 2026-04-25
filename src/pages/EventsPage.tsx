@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router";
+import { useState, useEffect, useLayoutEffect, useMemo } from "react";
+import { Link, useSearchParams } from "react-router";
 import { EventCard, EventCardSkeleton } from "../components/EventCard";
 import { SectionEmptyState } from "../components/SectionEmptyState";
 import { CalendarDays } from "lucide-react";
@@ -20,12 +20,20 @@ import {
   EVENTS_HERO_OVERLAY_GRADIENT,
 } from "../utils/categoryThemes";
 import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import { cityEquals } from "../utils/city";
+import { cityEquals, formatCityLabel } from "../utils/city";
 import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
+import {
+  LISTING_PAGE_CONTENT_SECTION_CLASS,
+  LISTING_PAGE_HERO_SECTION_CLASS,
+} from "../utils/listingPageLayout";
 
 const CURRENT_MAX_CARDS = 4;
 const FEATURED_MAX_CARDS = 6;
 const OTHER_CITIES_MAX_CARDS = 4;
+
+/** Skeleton + EventCard u istom gridu dijele visinu slike. */
+const EVENTS_CURRENT_CARD_IMAGE_HEIGHT = "350px";
+const EVENTS_COMPACT_CARD_IMAGE_HEIGHT = "200px";
 
 function nextStartAtOrNull(event: Item, now: Date): Date | null {
   const slots = eventService.getEventScheduleSlots(event);
@@ -68,18 +76,33 @@ function isFeaturedEvent(event: Item): boolean {
 export function EventsPage() {
   const { t } = useT();
   const { language } = useLanguage();
-  const { selectedCity } = useLocation();
+  const { selectedCity, setSelectedCity } = useLocation();
+  const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<Item[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [interestCounts, setInterestCounts] = useState<Record<string, number>>(
     {},
   );
 
+  // URL `?city=` (npr. iz „Istraži ostale gradove” ili otvor u novom tabu) mora ući u kontekst
+  // prije nego se lista isfiltrira po `selectedCity`.
+  useLayoutEffect(() => {
+    const raw = searchParams.get("city");
+    if (!raw) return;
+    const label = formatCityLabel(decodeURIComponent(raw));
+    if (label) setSelectedCity(label);
+  }, [searchParams, setSelectedCity]);
+
   // Fetch events from database
   useEffect(() => {
     async function fetchEvents() {
       setIsLoading(true);
-      const fetchedEvents = await eventService.getEvents("all");
+      const fetchedEvents = await eventService.getEvents(
+        "all",
+        undefined,
+        undefined,
+        "events",
+      );
       const eventsBucket = fetchedEvents.filter(
         (e) => getTopLevelPageCategory(e) === "events",
       );
@@ -185,7 +208,7 @@ export function EventsPage() {
     <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* HERO SECTION */}
       <section
-        className="relative w-full min-h-[320px]"
+        className={LISTING_PAGE_HERO_SECTION_CLASS}
         style={{
           height: "420px",
           background: `${EVENTS_HERO_OVERLAY_GRADIENT}, url('${eventsHeroImage}') center/cover`,
@@ -222,7 +245,10 @@ export function EventsPage() {
       </section>
 
       {/* CURRENT EVENTS */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -238,7 +264,10 @@ export function EventsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="350px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={EVENTS_CURRENT_CARD_IMAGE_HEIGHT}
+              />
             ) : currentEvents.length > 0 ? (
               currentEvents.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -246,7 +275,7 @@ export function EventsPage() {
                     event={event}
                     language={language}
                     accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                    imageHeight="350px"
+                    imageHeight={EVENTS_CURRENT_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                   />
                 </RevealOnScrollArticle>
@@ -292,7 +321,10 @@ export function EventsPage() {
       </section>
 
       {/* FEATURED EVENTS */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FFF5E6" }}>
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FFF5E6" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -308,7 +340,10 @@ export function EventsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={6} imageHeight="200px" />
+              <EventCardSkeleton
+                count={6}
+                imageHeight={EVENTS_COMPACT_CARD_IMAGE_HEIGHT}
+              />
             ) : featuredEvents.length > 0 ? (
               featuredEvents.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -316,7 +351,7 @@ export function EventsPage() {
                     event={event}
                     language={language}
                     accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                    imageHeight="200px"
+                    imageHeight={EVENTS_COMPACT_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                   />
                 </RevealOnScrollArticle>
@@ -335,7 +370,10 @@ export function EventsPage() {
       </section>
 
       {/* EVENTS FROM OTHER CITIES */}
-      <section className="py-16 min-h-[320px]" style={{ background: "#FFFFFF" }}>
+      <section
+        className={LISTING_PAGE_CONTENT_SECTION_CLASS}
+        style={{ background: "#FFFFFF" }}
+      >
         <div className="w-[60vw] mx-auto">
           <h2
             style={{
@@ -353,7 +391,10 @@ export function EventsPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="200px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={EVENTS_COMPACT_CARD_IMAGE_HEIGHT}
+              />
             ) : otherCitiesEvents.length > 0 ? (
               otherCitiesEvents.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
@@ -361,7 +402,7 @@ export function EventsPage() {
                     event={event}
                     language={language}
                     accentColor={EVENTS_CATEGORY_THEME.accentColor}
-                    imageHeight="200px"
+                    imageHeight={EVENTS_COMPACT_CARD_IMAGE_HEIGHT}
                     interestCount={interestCounts[event.id]}
                     showCity
                     showVenue

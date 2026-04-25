@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { Building2, Calendar, Clapperboard, Clock, MapPin } from "lucide-react";
+import { MapPinned, CalendarDays, Clapperboard, Clock, MapPin } from "lucide-react";
 import { EventCardSkeleton } from "../components/EventCard";
 import { SectionEmptyState } from "../components/SectionEmptyState";
 import { Badge } from "../components/ui/badge";
@@ -13,8 +13,14 @@ import { DOC_TITLE_CINEMA, listingDocumentTitle } from "../utils/documentTitle";
 import { getBreadcrumbSchema } from "../utils/structuredData";
 import { SITE_URL } from "../config/siteConfig";
 import { getLocalizedEventCategory } from "../config/eventCategories";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
-import { getBadgeTextColorForPageSlug } from "../utils/categoryThemes";
+import {
+  eventDetailPath,
+  getTopLevelPageCategory,
+} from "../utils/eventPageCategory";
+import {
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
+} from "../utils/categoryThemes";
 import { cityEquals } from "../utils/city";
 import * as eventService from "../utils/eventService";
 import { Item } from "../utils/dataService";
@@ -22,13 +28,17 @@ const ogImage = "/zipa-city-guide-OG.png";
 import cinemaHeroImage from "../assets/cinema-hero.png";
 import { RevealOnScrollArticle } from "../components/RevealOnScrollArticle";
 
+const CINEMA_NOW_SHOWING_CARD_IMAGE_HEIGHT = "300px";
+const CINEMA_COMING_SOON_CARD_IMAGE_HEIGHT = "400px";
+const CINEMA_OTHER_CITIES_CARD_IMAGE_HEIGHT = "280px";
+
 /**
  * Cinema-specific card with star rating display
  */
 function CinemaCard({
   event,
   language,
-  imageHeight = "300px",
+  imageHeight = CINEMA_NOW_SHOWING_CARD_IMAGE_HEIGHT,
   showEventCity = false,
 }: {
   event: Item;
@@ -77,7 +87,7 @@ function CinemaCard({
 
   return (
     <Link
-      to={`/events/${event.id}`}
+      to={eventDetailPath(event)}
       className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
       style={{ textDecoration: "none" }}
     >
@@ -94,7 +104,7 @@ function CinemaCard({
         <div className="flex items-center gap-2 mb-2 flex-wrap">
           {event.category && (
             <Badge
-              className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+              className={LISTING_BADGE_SURFACE_CLASS}
               style={{ color: badgeTextColor }}
             >
               {categoryLabel}
@@ -102,7 +112,7 @@ function CinemaCard({
           )}
           {isFree && (
             <Badge
-              className="rounded border-0 px-2 py-1 text-xs font-medium bg-[#F3F4F6]"
+              className={LISTING_BADGE_SURFACE_CLASS}
               style={{ color: badgeTextColor }}
             >
               {language === "sr" ? "Besplatan ulaz" : "Free Entry"}
@@ -120,7 +130,7 @@ function CinemaCard({
             <div className="flex flex-col gap-1">
               {event.city && String(event.city).trim() ? (
                 <div className="flex items-center gap-2">
-                  <Building2 size={14} style={{ color: "#6B7280" }} />
+                  <MapPinned size={14} style={{ color: "#6B7280" }} />
                   <span className="text-sm" style={{ color: "#6B7280" }}>
                     {event.city}
                   </span>
@@ -136,7 +146,7 @@ function CinemaCard({
               ) : null}
               {dateLabel ? (
                 <div className="flex items-center gap-2">
-                  <Calendar size={14} style={{ color: "#6B7280" }} />
+                  <CalendarDays size={14} style={{ color: "#6B7280" }} />
                   <span className="text-sm" style={{ color: "#6B7280" }}>
                     {dateLabel}
                   </span>
@@ -158,7 +168,12 @@ function CinemaCard({
               <div className="flex flex-col gap-1">
                 {venue ? (
                   <div className="flex items-center gap-2">
-                    <MapPin size={14} style={{ color: "#6B7280" }} />
+                    {String(event.venue_name || "").trim() ||
+                    String(event.address || "").trim() ? (
+                      <MapPin size={14} style={{ color: "#6B7280" }} />
+                    ) : (
+                      <MapPinned size={14} style={{ color: "#6B7280" }} />
+                    )}
                     <span className="text-sm" style={{ color: "#6B7280" }}>
                       {venue}
                     </span>
@@ -166,7 +181,7 @@ function CinemaCard({
                 ) : null}
                 {dateLabel ? (
                   <div className="flex items-center gap-2">
-                    <Calendar size={14} style={{ color: "#6B7280" }} />
+                    <CalendarDays size={14} style={{ color: "#6B7280" }} />
                     <span className="text-sm" style={{ color: "#6B7280" }}>
                       {dateLabel}
                     </span>
@@ -196,7 +211,9 @@ function normalizedPageSlug(e: Item): string {
 }
 
 function isApprovedCinemaPageEvent(e: Item): boolean {
-  return e.status === "approved" && normalizedPageSlug(e) === "cinema";
+  if (e.status !== "approved") return false;
+  if (normalizedPageSlug(e) === "cinema") return true;
+  return getTopLevelPageCategory(e) === "cinema";
 }
 
 function sortByStartAtAsc(events: Item[]): Item[] {
@@ -384,14 +401,17 @@ export function CinemaPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={5} imageHeight="300px" />
+              <EventCardSkeleton
+                count={5}
+                imageHeight={CINEMA_NOW_SHOWING_CARD_IMAGE_HEIGHT}
+              />
             ) : nowShowing.length > 0 ? (
               nowShowing.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
                   <CinemaCard
                     event={event}
                     language={language}
-                    imageHeight="300px"
+                    imageHeight={CINEMA_NOW_SHOWING_CARD_IMAGE_HEIGHT}
                   />
                 </RevealOnScrollArticle>
               ))
@@ -450,14 +470,17 @@ export function CinemaPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {isLoading ? (
-              <EventCardSkeleton count={4} imageHeight="400px" />
+              <EventCardSkeleton
+                count={4}
+                imageHeight={CINEMA_COMING_SOON_CARD_IMAGE_HEIGHT}
+              />
             ) : moreFromRepertoire.length > 0 ? (
               moreFromRepertoire.map((event) => (
                 <RevealOnScrollArticle key={event.id}>
                   <CinemaCard
                     event={event}
                     language={language}
-                    imageHeight="400px"
+                    imageHeight={CINEMA_COMING_SOON_CARD_IMAGE_HEIGHT}
                   />
                 </RevealOnScrollArticle>
               ))
@@ -498,7 +521,7 @@ export function CinemaPage() {
                   <CinemaCard
                     event={event}
                     language={language}
-                    imageHeight="280px"
+                    imageHeight={CINEMA_OTHER_CITIES_CARD_IMAGE_HEIGHT}
                     showEventCity
                   />
                 </RevealOnScrollArticle>

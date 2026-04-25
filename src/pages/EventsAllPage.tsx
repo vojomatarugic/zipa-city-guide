@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Calendar, MapPin, Clock, Heart, CalendarDays } from "lucide-react";
+import { MapPin, Clock, Heart, CalendarDays } from "lucide-react";
 import { Link } from "react-router";
 import { useT } from "../hooks/useT";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -12,10 +12,16 @@ import eventsHeroImage from "../assets/events-hero.png";
 import {
   EVENTS_CATEGORY_THEME,
   EVENTS_HERO_OVERLAY_GRADIENT,
+  getBadgeTextColorForPageSlug,
+  LISTING_BADGE_SURFACE_CLASS,
 } from "../utils/categoryThemes";
-import { getTopLevelPageCategory } from "../utils/eventPageCategory";
+import {
+  eventDetailPath,
+  getTopLevelPageCategory,
+} from "../utils/eventPageCategory";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOC_TITLE_EVENTS, listingDocumentTitle } from "../utils/documentTitle";
+import { cityEquals } from "../utils/city";
 
 const MONTH_NAMES_SR = [
   "Januar",
@@ -68,22 +74,41 @@ export function EventsAllPage() {
       setIsLoading(true);
       try {
         const fetchedEvents = await eventService.getEvents("all", selectedCity);
-
         const now = new Date();
+        const nextUpcomingSlot = (
+          e: Item,
+        ): { start_at: string; end_at?: string | null } | null => {
+          const slots = eventService.getEventScheduleSlots(e);
+          return slots.find((s) => new Date(s.start_at) >= now) ?? null;
+        };
         const activeEvents = fetchedEvents
-          .filter((event) => {
-            if (!event.start_at) return false;
-            const endDate = event.end_at
-              ? new Date(event.end_at)
-              : new Date(event.start_at);
-            return endDate >= now;
+          .filter((e) => {
+            return (
+              e.status === "approved" &&
+              getTopLevelPageCategory(e) === "events" &&
+              cityEquals(e.city, selectedCity)
+            );
           })
-          .filter((e) => getTopLevelPageCategory(e) === "events")
-          .sort((a, b) => {
-            const dateA = a.start_at ? new Date(a.start_at).getTime() : 0;
-            const dateB = b.start_at ? new Date(b.start_at).getTime() : 0;
-            return dateA - dateB;
-          });
+          .filter((e) => {
+            const slots = eventService.getEventScheduleSlots(e);
+            if (slots.length > 0) {
+              return slots.some((s) => new Date(s.end_at || s.start_at) >= now);
+            }
+            if (!e.start_at) return false;
+            const end = e.end_at ? new Date(e.end_at) : new Date(e.start_at);
+            return end >= now;
+          })
+          .map((e) => {
+            const next = nextUpcomingSlot(e);
+            return next
+              ? { ...e, start_at: next.start_at, end_at: next.end_at ?? null }
+              : e;
+          })
+          .sort(
+            (a, b) =>
+              (a.start_at ? new Date(a.start_at).getTime() : 0) -
+              (b.start_at ? new Date(b.start_at).getTime() : 0),
+          );
 
         setEvents(activeEvents);
 
@@ -230,7 +255,7 @@ export function EventsAllPage() {
                         background: `linear-gradient(135deg, ${EVENTS_CATEGORY_THEME.accentColor} 0%, ${EVENTS_CATEGORY_THEME.accentColor}CC 100%)`,
                       }}
                     >
-                      <Calendar size={18} style={{ color: "#FFFFFF" }} />
+                      <CalendarDays size={18} style={{ color: "#FFFFFF" }} />
                       <span
                         style={{
                           fontSize: "18px",
@@ -259,7 +284,7 @@ export function EventsAllPage() {
                     {visibleEvents.map((event) => (
                       <RevealOnScrollArticle key={event.id}>
                         <Link
-                          to={`/events/${event.id}`}
+                          to={eventDetailPath(event)}
                           className="cursor-pointer hover:scale-[1.02] transition-all duration-300 block"
                           style={{ textDecoration: "none" }}
                         >
@@ -274,8 +299,12 @@ export function EventsAllPage() {
                           <div className="p-4">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span
-                                className="text-sm font-medium"
-                                style={{ color: EVENTS_CATEGORY_THEME.accentColor }}
+                                className={LISTING_BADGE_SURFACE_CLASS}
+                                style={{
+                                  color: getBadgeTextColorForPageSlug(
+                                    getTopLevelPageCategory(event),
+                                  ),
+                                }}
                               >
                                 {eventService.translateEventType(
                                   event.event_type || event.page_slug || "",
@@ -284,8 +313,12 @@ export function EventsAllPage() {
                               </span>
                               {/^(free|besplatn|gratis)/i.test(event.price || "") && (
                                 <span
-                                  className="text-xs font-medium px-2 py-1 rounded"
-                                  style={{ background: "#F3F4F6", color: "#6B7280" }}
+                                  className={LISTING_BADGE_SURFACE_CLASS}
+                                  style={{
+                                    color: getBadgeTextColorForPageSlug(
+                                      getTopLevelPageCategory(event),
+                                    ),
+                                  }}
                                 >
                                   {language === "sr"
                                     ? "Besplatan ulaz"
@@ -304,7 +337,7 @@ export function EventsAllPage() {
                             {event.start_at && (
                               <>
                                 <div className="flex items-center gap-2 mb-1">
-                                  <Calendar size={14} style={{ color: "#6B7280" }} />
+                                  <CalendarDays size={14} style={{ color: "#6B7280" }} />
                                   <span className="text-sm" style={{ color: "#6B7280" }}>
                                     {eventService.getRelativeDateLabel(
                                       event.start_at,

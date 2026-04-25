@@ -1049,24 +1049,16 @@ export const translations = {
 
   // Atmospheres
   romantic: { lat: "Romantično", en: "Romantic" },
-  extravagant: { lat: "Ekstravagantno", en: "Extravagant" },
   chillOut: { lat: "Opušteno", en: "Relaxed" },
-  exclusive: { lat: "Ekskluzivno", en: "Exclusive" },
   breweries: { lat: "Pivnice", en: "Breweries" },
-  forNightsOut: { lat: "Za izlazak", en: "For Nights Out" },
   withView: { lat: "Sa pogledom", en: "With a View" },
-  informal: { lat: "Neformalno", en: "Informal" },
 
   // Cuisines
-  grills: { lat: "Roštilji", en: "Grills" },
-  italian: { lat: "Italijanska", en: "Italian" },
   asian: { lat: "Azijska", en: "Asian" },
-  mexican: { lat: "Meksička", en: "Mexican" },
   seafood: { lat: "Morska hrana", en: "Seafood" },
   vegetarian: { lat: "Vegetarijanska", en: "Vegetarian" },
   vegan: { lat: "Veganska", en: "Vegan" },
   pizzerias: { lat: "Picerije", en: "Pizzerias" },
-  fastFood: { lat: "Brza hrana", en: "Fast Food" },
   burgers: { lat: "Burgeri", en: "Burgers" },
   desserts: { lat: "Deserti", en: "Desserts" },
   bakeries: { lat: "Pekare", en: "Bakeries" },
@@ -1076,28 +1068,20 @@ export const translations = {
   },
 
   // Events
-  festivals: { lat: "Festivali", en: "Festivals" },
-  exhibitions: { lat: "Izložbe", en: "Exhibitions" },
   rnb: { lat: "R'n'B", en: "R'n'B" },
 
   // Accommodation
   hotels: { lat: "Hoteli", en: "Hotels" },
-  luxuryHotels: { lat: "Luksuzni hoteli", en: "Luxury Hotels" },
-  entireHouse: { lat: "Cijela kuća", en: "Entire House" },
 
   // Map Page Categories
   hotelsMap: { lat: "Hoteli", en: "Hotels" },
   apartmentsMap: { lat: "Apartmani", en: "Apartments" },
   cafesMap: { lat: "Kafići", en: "Cafes" },
   clubsMap: { lat: "Klubovi", en: "Clubs" },
-  hostels: { lat: "Hosteli", en: "Hostels" },
   spaWellness: { lat: "Spa & Wellness", en: "Spa & Wellness" },
-  glamping: { lat: "Glamping", en: "Glamping" },
-  cottages: { lat: "Vikendice", en: "Cottages" },
 
   // UI Texts
   showAllFilter: { lat: "Prikaži sve", en: "Show All" },
-  clubsFilter: { lat: "Klubovi", en: "Clubs" },
   freeEntry: { lat: "Slobodan ulaz", en: "Free Entry" },
   registerOnline: {
     lat: "Prijavi se online",
@@ -1106,7 +1090,6 @@ export const translations = {
   alwaysOpen: { lat: "Uvijek otvoreno", en: "Always open" },
   waterfront: { lat: "Obala", en: "Waterfront" },
   explore: { lat: "Istraži", en: "Explore" },
-  discover: { lat: "Otkrij", en: "Discover" },
 
   // Sample content - Home
   summerConcertKastel: {
@@ -1210,7 +1193,6 @@ export const translations = {
     lat: "Uto-Sub: 12:00-00:00",
     en: "Tue-Sat: 12:00-00:00",
   },
-  kodBrke: { lat: "Kod Brke", en: "Kod Brke" },
   kodBrkeDesc: {
     lat: "Lokalna kuhinja ⬢ Centar grada",
     en: "Local Cuisine ⬢ City Center",
@@ -1233,7 +1215,6 @@ export const translations = {
   },
 
   // Sample content - Accommodation
-  hotelPalace: { lat: "Hotel Palace", en: "Hotel Palace" },
   hotelPalaceDesc: {
     lat: "Luksuzni smještaj u centru grada.",
     en: "Luxury accommodation in the city center.",
@@ -1471,11 +1452,9 @@ export const translations = {
   },
 
   // Magazine categories
-  history: { lat: "Istorija", en: "History" },
   food: { lat: "Hrana", en: "Food" },
   business: { lat: "Biznis", en: "Business" },
   travel: { lat: "Putovanja", en: "Travel" },
-  lifestyle: { lat: "Životni stil", en: "Lifestyle" },
 
   // ==== MISSING KEYS - GUIDE PAGE ====
   mustSeeAttractions: {
@@ -1574,7 +1553,6 @@ export const translations = {
   },
 
   // ==== MISSING FOOTER LINKS ==== (explore, discover, about removed - already defined above)
-  followUs: { lat: "Pratite nas", en: "Follow Us" },
 
   // ==== MISSING KEYS - HEADER ====
   search: { lat: "Pretraži...", en: "Search..." },
@@ -1608,7 +1586,6 @@ export const translations = {
     lat: "Istraži gradove iz regije",
     en: "Explore Regional Cities",
   },
-  moreCities: { lat: "Više gradova", en: "More cities" },
   cityBanjaLuka: { lat: "Banja Luka", en: "Banja Luka" },
   citySarajevo: { lat: "Sarajevo", en: "Sarajevo" },
   cityTuzla: { lat: "Tuzla", en: "Tuzla" },
@@ -1803,7 +1780,6 @@ export const translations = {
     lat: "Morate biti prijavljeni da biste poslali prijavu.",
     en: "You must be logged in to submit.",
   },
-  dismiss: { lat: "Odustani", en: "Dismiss" },
   confirm: { lat: "Potvrdi", en: "Confirm" },
   submitVenue: {
     lat: "Pošalji na odobrenje",
@@ -1817,7 +1793,6 @@ export const translations = {
   prijedor: { lat: "Prijedor", en: "Prijedor" },
   gradiska: { lat: "Gradiška", en: "Gradiska" },
   doboj: { lat: "Doboj", en: "Doboj" },
-  laktasi: { lat: "Laktaši", en: "Laktasi" },
   teslic: { lat: "Teslić", en: "Teslic" },
   caffe: { lat: "Kafić", en: "Cafe" },
   nightclub: { lat: "Noćni klub", en: "Nightclub" },
@@ -1856,9 +1831,6 @@ export const translations = {
     en: "Select price range",
   },
   budget: { lat: "Povoljno", en: "Budget" },
-  moderate: { lat: "Umjereno", en: "Moderate" },
-  expensive: { lat: "Skupo", en: "Expensive" },
-  imageUrl: { lat: "Dodaj sliku/e", en: "Add image(s)" },
   imageUrlHelper: {
     lat: "Unesite link slike vašeg objekta",
     en: "Enter image link of your venue",
@@ -1957,11 +1929,9 @@ export const translations = {
     lat: "Dan u sedmici",
     en: "Weekday",
   },
-  eventTermLabel: { lat: "Termin", en: "Showing" },
   eventTime: { lat: "Vrijeme", en: "Time" },
   startTime: { lat: "Početak", en: "Start" },
   endTime: { lat: "Kraj (opcionalno)", en: "End (optional)" },
-  eventVenue: { lat: "Mjesto održavanja", en: "Venue" },
   /** Submit event: venue name only (not city) */
   eventLocationVenueName: {
     lat: "Naziv lokacije / mjesto održavanja",
@@ -2268,7 +2238,6 @@ export const translations = {
   allVenues: { lat: "Svi objekti", en: "All Venues" },
   edit: { lat: "Uredi", en: "Edit" },
   delete: { lat: "Obriši", en: "Delete" },
-  deleted: { lat: "Obrisano", en: "Deleted" },
   status: { lat: "Status", en: "Status" },
   approved: { lat: "Odobren", en: "Approved" },
   pending: { lat: "Na čekanju", en: "Pending" },
@@ -2386,7 +2355,6 @@ export const translations = {
     lat: "Hot Spot/Otvoreno sada",
     en: "Hot Spot/Open Now",
   },
-  lounges: { lat: "Lounge barovi", en: "Lounges" },
   clubsByMusicGenre: {
     lat: "Klubovi po muzičkom žanru",
     en: "Clubs by Music Genre",
@@ -2395,7 +2363,6 @@ export const translations = {
     lat: "Pronađite klub koji svira vašu omiljenu muziku.",
     en: "Find a club that plays your favorite music.",
   },
-  latinMusic: { lat: "Latino muzika", en: "Latin Music" },
   clubCalendarThisWeek: {
     lat: "Klupski kalendar ove sedmice",
     en: "Club Calendar This Week",
@@ -2438,7 +2405,6 @@ export const translations = {
     lat: "Istaknuti klubovi",
     en: "Featured Clubs",
   },
-  nearbyClubs: { lat: "Klubovi u blizini", en: "Nearby Clubs" },
 
   // ClubsPage - Locations (duplicates removed - already defined earlier)
   // cityCenter, novaVaros, borik, starcevica, prijedor, gradiska, doboj, laktasi, teslic removed
@@ -2448,23 +2414,18 @@ export const translations = {
     lat: "Club Atmosphere",
     en: "Club Atmosphere",
   },
-  discoNight: { lat: "Disco Night", en: "Disco Night" },
   rockHouse: { lat: "Rock House", en: "Rock House" },
   planB: { lat: "Plan B", en: "Plan B" },
-  laFiesta: { lat: "La Fiesta", en: "La Fiesta" },
   skyLounge: { lat: "Sky Lounge", en: "Sky Lounge" },
   kafanaStaraCarsija: {
     lat: "Kafana Stara Čaršija",
     en: "Kafana Stara Čaršija",
   },
-  jazzCorner: { lat: "Jazz Corner", en: "Jazz Corner" },
   ritualLoungeBar: {
     lat: "Ritual Lounge Bar",
     en: "Ritual Lounge Bar",
   },
   urbanClub: { lat: "Urban Club", en: "Urban Club" },
-  monogram: { lat: "Monogram", en: "Monogram" },
-  malaStanica: { lat: "Mala Stanica", en: "Mala Stanica" },
   clubPrijedor: { lat: "Club Prijedor", en: "Club Prijedor" },
   clubGradiska: { lat: "Club Gradiška", en: "Club Gradiska" },
   barLiveDoboj: { lat: "Bar Live Doboj", en: "Bar Live Doboj" },
@@ -2472,11 +2433,8 @@ export const translations = {
     lat: "Kafana Laktaši",
     en: "Tavern Laktasi",
   },
-  loungeTeslic: { lat: "Lounge Teslić", en: "Lounge Teslic" },
 
   // ClubsPage - Categories
-  electronic: { lat: "Electronic", en: "Electronic" },
-  discoRetro: { lat: "Disco / Retro", en: "Disco / Retro" },
   // rockMetal, liveMusic removed - duplicates (already defined earlier)
   latin: { lat: "Latin", en: "Latin" },
   lounge: { lat: "Lounge", en: "Lounge" },
@@ -2485,7 +2443,6 @@ export const translations = {
     en: "Folk / Traditional",
   },
   // jazzBlues, hipHopRnB removed - duplicates (already defined earlier)
-  cocktailBar: { lat: "Cocktail Bar", en: "Cocktail Bar" },
   popDance: { lat: "Pop / Dance", en: "Pop / Dance" },
 
   // ClubsPage - Hours
@@ -2641,7 +2598,6 @@ export const translations = {
     lat: "Filtrirajte po tipu smještaja.",
     en: "Filter by accommodation type.",
   },
-  motels: { lat: "Moteli", en: "Motels" },
   accommodationByDistrict: {
     lat: "Smještaj po dijelu grada",
     en: "Accommodation by District",
@@ -2667,7 +2623,6 @@ export const translations = {
     lat: "Pronađite smještaj prema željenim sadržajima.",
     en: "Find accommodation by desired amenities.",
   },
-  freeWiFi: { lat: "Besplatan WiFi", en: "Free WiFi" },
   parking: { lat: "Parking", en: "Parking" },
   // restaurant removed - duplicate (already defined at line 1550)
   petFriendly: { lat: "Za kućne ljubimce", en: "Pet-Friendly" },
@@ -2731,7 +2686,6 @@ export const translations = {
     lat: "Najbolji ekonomični hoteli",
     en: "Best Budget Hotels",
   },
-  luxuryStays: { lat: "Luksuzni boravci", en: "Luxury Stays" },
   apartmentsGuide: {
     lat: "Vodič kroz apartmane",
     en: "Apartments Guide",
@@ -2778,7 +2732,6 @@ export const translations = {
     lat: "Energičan klub za ljubitelje elektronske muzike.",
     en: "Energetic club for electronic music lovers.",
   },
-  kazamat: { lat: "Kazamat", en: "Kazamat" },
   kazamatDesc: {
     lat: "Poznata kafana sa tradicionalnom muzikom i hranom.",
     en: "Famous tavern with traditional music and food.",
@@ -2798,12 +2751,10 @@ export const translations = {
     lat: "Tradicionalna kafana sa domaćom kuhinjom.",
     en: "Traditional tavern with local cuisine.",
   },
-  hipHopParty: { lat: "Hip-hop žurka", en: "Hip-hop Party" },
   hipHopPartyDesc: {
     lat: "Najbolji hip-hop bitovi u gradu.",
     en: "Best hip-hop beats in the city.",
   },
-  ninetiesParty: { lat: "Žurka 90-ih", en: "90s Party" },
   retroPartyDesc: {
     lat: "Retro hitovi koji vraćaju uspomene.",
     en: "Retro hits that bring back memories.",
@@ -2838,7 +2789,6 @@ export const translations = {
   },
 
   // ==== RESTAURANT VENUES ====
-  lunchBarAra: { lat: "Lunch Bar Ara", en: "Lunch Bar Ara" },
   lunchBarAraDesc: {
     lat: "Tradicionalna domaća kuhinja u centru grada.",
     en: "Traditional local cuisine in the city center.",
@@ -2895,11 +2845,9 @@ export const translations = {
     lat: "Prirodne ljepote",
     en: "Natural Beauty",
   },
-  museums: { lat: "Muzeji", en: "Museums" },
   parks: { lat: "Parkovi", en: "Parks" },
   architecture: { lat: "Arhitektura", en: "Architecture" },
   churches: { lat: "Crkve", en: "Churches" },
-  monuments: { lat: "Spomenici", en: "Monuments" },
   viewpoints: { lat: "Vidikovci", en: "Viewpoints" },
   bestSelfiePlaces: {
     lat: "Najbolja mjesta za selfie",
@@ -2940,7 +2888,6 @@ export const translations = {
   cityStadium: { lat: "Gradski stadion", en: "City Stadium" },
 
   // ==== ACCOMMODATIONPAGE KEYS ====
-  hotelKastel: { lat: "Hotel Kastel", en: "Hotel Kastel" },
   hotelKastelDesc: {
     lat: "Luksuzni hotel u srcu grada sa modernim sadržajem i 5-zvjezdičnom uslugom.",
     en: "Luxury hotel in the heart of the city with modern facilities and 5-star service.",
@@ -2961,7 +2908,6 @@ export const translations = {
     lat: "Savršena lokacija u centru grada, blizu svih glavnih atrakcija.",
     en: "Perfect location in the city center, close to all main attractions.",
   },
-  hostelRock: { lat: "Hostel Rock", en: "Hostel Rock" },
   hostelRockDesc: {
     lat: "Pristupačan hostel sa sjajnom atmosferom i druženjem gostiju.",
     en: "Affordable hostel with great atmosphere and guest socializing.",
@@ -2975,7 +2921,6 @@ export const translations = {
     en: "Free Breakfast",
   },
   vrbasView: { lat: "Pogled na Vrbas", en: "Vrbas View" },
-  familyRooms: { lat: "Porodične sobe", en: "Family Rooms" },
 
   // ==== EVENTS - DATES ====
   eventDate1: {
@@ -3018,7 +2963,6 @@ export const translations = {
     en: "Crop Your Image",
   },
   preview: { lat: "Pregled", en: "Preview" },
-  finalPreview: { lat: "Finalni pregled", en: "Final preview" },
   finalSize: { lat: "Finalna veličina", en: "Final size" },
   noImageUploadedYet: {
     lat: "Nema uploadovane slike",
@@ -3189,7 +3133,6 @@ export const translations = {
     lat: "Dječije pozorište - Bajke",
     en: "Children Theater - Fairy Tales",
   },
-  jazzNight: { lat: "Džez noć", en: "Jazz Night" },
   photoExhibition: {
     lat: "Izložba fotografija",
     en: "Photo Exhibition",
@@ -3237,9 +3180,6 @@ export const translations = {
 
   // ==== NIGHTLIFE - EVENT NAMES ==== (duplicates removed)
   // djNightElectronic removed - duplicate (already defined at line 774)
-  liveJazz: { lat: "Uživo džez", en: "Live Jazz" },
-  hipHopNight: { lat: "Hip hop noć", en: "Hip Hop Night" },
-  cocktailNight: { lat: "Koktel noć", en: "Cocktail Night" },
   rockLive: { lat: "Rok uživo", en: "Rock Live" },
   // hipHopParty removed - duplicate (already defined earlier)
   // ninetiesParty removed - duplicate (already defined earlier)
@@ -3280,7 +3220,6 @@ export const translations = {
     en: "Historical Site",
   },
   urbanArea: { lat: "Urbano područje", en: "Urban Area" },
-  nature: { lat: "Priroda", en: "Nature" },
 
   // Tours
   walkingTourOldTown: {
@@ -3334,7 +3273,6 @@ export const translations = {
     en: "Emergency Numbers",
   },
   pharmacies: { lat: "Apoteke", en: "Pharmacies" },
-  hospitals: { lat: "Bolnice", en: "Hospitals" },
   touristInfo: { lat: "Turistički info", en: "Tourist Info" },
 
   // Attractions
@@ -3387,7 +3325,6 @@ export const translations = {
   },
   bestCafes: { lat: "Najbolji kafići", en: "Best Cafes" },
   bestClubs: { lat: "Najbolji klubovi", en: "Best Clubs" },
-  hiddenGems: { lat: "Skriveni dragulji", en: "Hidden Gems" },
   outdoorActivities: {
     lat: "Aktivnosti na otvorenom",
     en: "Outdoor Activities",
@@ -3395,22 +3332,16 @@ export const translations = {
 
   // Counts
   tenPlaces: { lat: "10 mjesta", en: "10 Places" },
-  fifteenPlaces: { lat: "15 mjesta", en: "15 Places" },
-  eightLocations: { lat: "8 lokacija", en: "8 Locations" },
   twelvePlaces: { lat: "12 mjesta", en: "12 Places" },
   sevenLocations: { lat: "7 lokacija", en: "7 Locations" },
-  nineActivities: { lat: "9 aktivnosti", en: "9 Activities" },
 
   // ==== CONTACT FORM / SUBMIT EVENT PAGE ====
-  contactUs: { lat: "Kontaktirajte nas", en: "Contact Us" },
   subject: { lat: "Predmet", en: "Subject" },
   submitEventOption: {
     lat: "Prijavite dešavanje",
     en: "Submit Event",
   },
-  generalInquiry: { lat: "Opšti upit", en: "General Inquiry" },
   advertising: { lat: "Oglašavanje", en: "Advertising" },
-  emailRequired: { lat: "Email *", en: "Email *" },
   emailPlaceholder: {
     lat: "vas.email@example.com",
     en: "your.email@example.com",
@@ -3482,7 +3413,6 @@ export const translations = {
     lat: "+387 XX XXX XXX",
     en: "+387 XX XXX XXX",
   },
-  contactSubject: { lat: "Tema poruke", en: "Subject" },
   contactSubjectPlaceholder: {
     lat: "O čemu se radi?",
     en: "What is this about?",
@@ -3524,7 +3454,6 @@ export const translations = {
   sunShort: { lat: "Ned", en: "Sun" },
   done: { lat: "Gotovo", en: "Done" },
   aboutZipa: { lat: "O ZIPA Agency", en: "About ZIPA Agency" },
-  findUs: { lat: "Pronađite nas", en: "Find Us" },
   mapPlaceholder: {
     lat: "Mapa će biti prikazana ovdje",
     en: "Map will be displayed here",
@@ -3690,31 +3619,16 @@ export const translations = {
   },
   // today removed - duplicate (already defined at line 59)
   // thisWeekend removed - duplicate (already defined earlier)
-  february: { lat: "Februar", en: "February" },
   march: { lat: "Mart", en: "March" },
-  customDate: { lat: "Prilagođeni datum", en: "Custom Date" },
   pickRange: { lat: "Izaberi period", en: "Pick Range" },
 
   // Concerts Page - Genres
-  genreRock: { lat: "Rock", en: "Rock" },
-  genreJazz: { lat: "Jazz", en: "Jazz" },
-  genrePop: { lat: "Pop", en: "Pop" },
-  genreElectronic: { lat: "Elektronska", en: "Electronic" },
-  genreFolk: { lat: "Folk", en: "Folk" },
-  genreHipHop: { lat: "Hip Hop", en: "Hip Hop" },
-  genreClassical: { lat: "Klasična", en: "Classical" },
-  genreReggae: { lat: "Reggae", en: "Reggae" },
-  genreMetal: { lat: "Metal", en: "Metal" },
-  genreBlues: { lat: "Blues", en: "Blues" },
-  genreAcoustic: { lat: "Akustična", en: "Acoustic" },
-  genreLatin: { lat: "Latino", en: "Latin" },
 
   // Concerts - Titles
   concertRockFest2026: {
     lat: "Rock Fest 2026",
     en: "Rock Fest 2026",
   },
-  concertJazzEvening: { lat: "Jazz večer", en: "Jazz Evening" },
   concertPopNightLive: {
     lat: "Pop Night Live",
     en: "Pop Night Live",
@@ -3739,7 +3653,6 @@ export const translations = {
     lat: "Reggae ljetni vibovi",
     en: "Reggae Summer Vibes",
   },
-  concertMetalMayhem: { lat: "Metal haos", en: "Metal Mayhem" },
   concertBluesSoulNight: {
     lat: "Blues & Soul večer",
     en: "Blues & Soul Night",
@@ -3805,8 +3718,6 @@ export const translations = {
     lat: "Tvrđava Kastel",
     en: "Kastel Fortress",
   },
-  locationJazzClub: { lat: "Jazz Club", en: "Jazz Club" },
-  locationCitySquare: { lat: "Gradski trg", en: "City Square" },
   locationClubAtmosphere: {
     lat: "Club Atmosphere",
     en: "Club Atmosphere",
@@ -3827,7 +3738,6 @@ export const translations = {
     lat: "Obala Vrbasa",
     en: "Vrbas Riverbank",
   },
-  locationRockClub: { lat: "Rock Klub", en: "Rock Club" },
 
   // Concerts - Dates (Days)
   daySaturday: { lat: "Sub", en: "Sat" },
@@ -3937,7 +3847,6 @@ export const translations = {
     lat: "House Music Club",
     en: "House Music Club",
   },
-  clubSalsaNight: { lat: "Salsa Night", en: "Salsa Night" },
 
   // Clubs - Music Genres
   clubGenreElectronic: { lat: "Electronic", en: "Electronic" },
@@ -3967,8 +3876,6 @@ export const translations = {
     lat: "Centar grada",
     en: "City Center",
   },
-  districtOldTown: { lat: "Stari grad", en: "Old Town" },
-  districtNovaVaros: { lat: "Nova Varoš", en: "Nova Varos" },
   districtVrbasRiverbank: {
     lat: "Obala Vrbasa",
     en: "Vrbas Riverbank",
@@ -4113,8 +4020,6 @@ export const translations = {
 
   // Theatre Detail Page
   aboutShow: { lat: "O predstavi", en: "About the Show" },
-  direction: { lat: "Režija", en: "Direction" },
-  duration: { lat: "Trajanje", en: "Duration" },
   bookTicket: { lat: "Rezerviši kartu", en: "Book Ticket" },
   at: { lat: "u", en: "at" },
 
@@ -4146,7 +4051,6 @@ export const translations = {
     en: "Back to Food & Drink",
   },
   backToClubs: { lat: "Povratak na klubove", en: "Back to Clubs" },
-  noClubsFound: { lat: "Nema pronađenih klubova", en: "No clubs found" },
   noRestaurantsFound: {
     lat: "Nema pronađenih restorana",
     en: "No restaurants found",
@@ -4221,10 +4125,8 @@ export const translations = {
     en: "Type DELETE to confirm",
   },
   // name removed - duplicate (already defined at line 1605)
-  enterName: { lat: "Unesite ime", en: "Enter your name" },
   enterEmail: { lat: "Unesite email", en: "Enter your email" },
   enterPassword: { lat: "Unesite lozinku", en: "Enter your password" },
-  enterPhone: { lat: "Unesite broj telefona", en: "Enter your phone number" },
   formLoading: { lat: "Učitavanje...", en: "Loading..." },
   continue: { lat: "Nastavi", en: "Continue" },
   back: { lat: "Nazad", en: "Back" },
@@ -4290,8 +4192,6 @@ export const translations = {
   myEvents: { lat: "Moja dešavanja", en: "My Events" },
   totalSubmitted: { lat: "Ukupno poslato", en: "Total Submitted" },
   quickActions: { lat: "Brze akcije", en: "Quick Actions" },
-  mySubmissions: { lat: "Moje prijave", en: "My Submissions" },
-  comingSoon: { lat: "Uskoro", en: "Coming Soon" },
   viewYourSubmissionsHere: {
     lat: "Ovdje ćete moći vidjeti sve svoje poslate objekte i dešavanja.",
     en: "You will be able to view all your submitted venues and events here.",

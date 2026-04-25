@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router';
 import { useT } from '../hooks/useT';
-import { MapPin, Calendar, Tag, ArrowLeft, Clock } from 'lucide-react';
+import { MapPin, MapPinned, CalendarDays, Tag, ArrowLeft, Clock } from 'lucide-react';
 import * as eventService from '../utils/eventService';
 import { Item } from '../utils/dataService';
 import { useLocation as useSelectedCity } from '../contexts/LocationContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { listingDocumentTitle } from '../utils/documentTitle';
 import { pluralize } from '../utils/pluralize';
+import { eventDetailPath } from '../utils/eventPageCategory';
 
 const RESULT_FORMS = {
   sr: { one: 'rezultat', few: 'rezultata', many: 'rezultata' },
@@ -131,7 +132,7 @@ export function SearchResultsPage() {
             
             {city && (
               <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                <MapPin size={18} style={{ color: '#0E3DC5' }} />
+                <MapPinned size={18} style={{ color: '#0E3DC5' }} />
                 <span style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}>
                   {city}
                 </span>
@@ -140,7 +141,7 @@ export function SearchResultsPage() {
             
             {date && (
               <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                <Calendar size={18} style={{ color: '#0E3DC5' }} />
+                <CalendarDays size={18} style={{ color: '#0E3DC5' }} />
                 <span style={{ fontSize: '14px', fontWeight: 500, color: '#1a1a1a' }}>
                   {date}
                 </span>
@@ -177,7 +178,7 @@ export function SearchResultsPage() {
             {results.map((event) => (
               <Link
                 key={event.id}
-                to={`/events/${event.id}`}
+                to={eventDetailPath(event)}
                 className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer block"
                 style={{ textDecoration: 'none', color: 'inherit' }}
               >
@@ -210,7 +211,7 @@ export function SearchResultsPage() {
                   <div className="space-y-2">
                     {event.start_at && (
                       <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar size={14} />
+                        <CalendarDays size={14} />
                         <span>{eventService.getRelativeDateLabel(event.start_at, language)}</span>
                       </div>
                     )}
