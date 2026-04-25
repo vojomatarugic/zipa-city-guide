@@ -15,6 +15,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { homeDocumentTitle } from "../utils/documentTitle";
 import { useT } from "../hooks/useT";
 import { useLocation } from "../contexts/LocationContext";
+import { useDateFilter } from "../contexts/DateFilterContext";
 import * as eventService from "../utils/eventService";
 import {
   eventDetailPath,
@@ -74,16 +75,24 @@ export function HomePage() {
     setCitySearchQuery,
     setSelectedCity,
   } = useLocation();
+  const {
+    isDatePickerOpen,
+    setIsDatePickerOpen,
+    selectedStartDate,
+    setSelectedStartDate,
+    selectedEndDate,
+    setSelectedEndDate,
+    selectedDateRange,
+    setSelectedDateRange,
+    currentMonth,
+    setCurrentMonth,
+    hoverDate,
+    setHoverDate,
+  } = useDateFilter();
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [lightboxTitle, setLightboxTitle] = useState<string>("");
   const [lightboxAuthor, setLightboxAuthor] = useState<string>("");
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
-  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-  const [selectedDateRange, setSelectedDateRange] = useState<string>("");
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [isSearchMenuOpen, setIsSearchMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -396,7 +405,7 @@ export function HomePage() {
         <div className="relative z-10 h-full flex flex-col items-center justify-center px-4">
           {/* Hero Title */}
           <h1
-            className="text-center mb-3"
+            className="hidden lg:block text-center mb-3"
             style={{
               fontSize: "42px",
               fontWeight: 700,
@@ -412,7 +421,7 @@ export function HomePage() {
 
           {/* Hero Subtitle */}
           <p
-            className="text-center mb-8"
+            className="hidden lg:block text-center mb-8"
             style={{
               fontSize: "18px",
               color: "#FFFFFF",
@@ -734,7 +743,7 @@ export function HomePage() {
 
       {/* BANNER AD - ODMAH ISPOD HERO SEKCIJE */}
       {hasBanner && (
-        <div className="w-[60vw] mx-auto py-12">
+        <div className="w-full px-4 py-12 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <BannerAd type="horizontal" />
         </div>
       )}
@@ -746,7 +755,7 @@ export function HomePage() {
           background: BACKGROUNDS.white,
         }}
       >
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -950,7 +959,7 @@ export function HomePage() {
 
       {/* SQUARE BANNERS - 3 BANNERA JEDAN PORED DRUGOG */}
       {hasSquareBanners && (
-        <div className="w-[60vw] mx-auto py-12">
+        <div className="w-full px-4 py-12 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <SquareBannersGrid />
         </div>
       )}
@@ -962,7 +971,7 @@ export function HomePage() {
           background: BACKGROUNDS.lightBlue,
         }}
       >
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -1102,7 +1111,7 @@ export function HomePage() {
           background: BACKGROUNDS.lightBlue,
         }}
       >
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -1227,7 +1236,7 @@ export function HomePage() {
 
       {/* FEATURED RESTAURANTS - FULL WIDTH BACKGROUND */}
       <section className="py-12" style={{ background: BACKGROUNDS.white }}>
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -1323,7 +1332,7 @@ export function HomePage() {
 
       {/* CLUBS SECTION */}
       <section className="py-12" style={{ background: BACKGROUNDS.lightBlue }}>
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -1415,7 +1424,7 @@ export function HomePage() {
 
       {/* CONCERTS SECTION */}
       <section className="py-12" style={{ background: BACKGROUNDS.lightBlue }}>
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left cursor-pointer transition-all hover:opacity-80 inline-block"
             style={{
@@ -1551,7 +1560,7 @@ export function HomePage() {
 
       {/* EXPLORE OTHER CITIES - FULL WIDTH BACKGROUND (Istraži ostale gradove) */}
       <section className="py-12" style={{ backgroundColor: "#FFFFFF" }}>
-        <div className="w-[60vw] mx-auto">
+        <div className="w-full px-4 lg:w-[60vw] lg:px-0 lg:mx-auto">
           <h2
             className="text-left mb-4"
             style={{

@@ -3,6 +3,7 @@ import { RouterProvider } from "react-router";
 import { router } from "./routes";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { LocationProvider } from "./contexts/LocationContext";
+import { DateFilterProvider } from "./contexts/DateFilterContext";
 import { AuthProvider } from "./contexts/AuthContext";
 const ogImage = "/zipa-city-guide-OG.png";
 import { Toaster, toast } from "sonner@2.0.3";
@@ -82,25 +83,27 @@ export default function App() {
   return (
     <LanguageProvider>
       <LocationProvider>
-        <AuthProvider>
-          <Toaster
-            position="top-center"
-            richColors
-            closeButton
-            visibleToasts={1}
-            toastOptions={{
-              duration: 4000,
-              style: {
-                fontFamily: "inherit",
-              },
-            }}
-          />
-          <Suspense
-            fallback={<div className="p-4 text-center">Loading...</div>}
-          >
-            <RouterProvider router={router} />
-          </Suspense>
-        </AuthProvider>
+        <DateFilterProvider>
+          <AuthProvider>
+            <Toaster
+              position="top-center"
+              richColors
+              closeButton
+              visibleToasts={1}
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  fontFamily: "inherit",
+                },
+              }}
+            />
+            <Suspense
+              fallback={<div className="p-4 text-center">Loading...</div>}
+            >
+              <RouterProvider router={router} />
+            </Suspense>
+          </AuthProvider>
+        </DateFilterProvider>
       </LocationProvider>
     </LanguageProvider>
   );

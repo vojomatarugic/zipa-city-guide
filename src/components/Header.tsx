@@ -82,26 +82,23 @@ export function Header() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full shrink-0 bg-white"
+      className="sticky top-0 z-50 w-full h-16 lg:h-[72px] shrink-0 bg-white"
       style={{
-        height: "72px",
         borderBottom: `1px solid ${BORDERS.light}`,
         boxShadow: SHADOWS.card,
       }}
     >
       {/* Content Wrapper */}
       <div
-        className="h-full mx-auto flex items-center justify-between"
+        className="h-full w-full lg:mx-auto flex items-center justify-between px-4 lg:px-5"
         style={{
           maxWidth: "1280px",
-          paddingLeft: "20px",
-          paddingRight: "20px",
           position: "relative",
           zIndex: 2,
         }}
       >
         {/* Logo Area */}
-        <div className="flex items-center" style={{ gap: "12px" }}>
+        <div className="flex items-center whitespace-nowrap" style={{ gap: "12px" }}>
           {/* ZIPA Agency Logo - External Link */}
           <a
             href="https://www.zipaagency.com/"
@@ -123,6 +120,7 @@ export function Header() {
 
           {/* Separator */}
           <div
+            className="hidden lg:block"
             style={{
               width: "1px",
               height: "32px",
@@ -151,7 +149,7 @@ export function Header() {
 
           {/* Location Dropdown */}
           <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition-all hover:bg-gray-50"
+            className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition-all hover:bg-gray-50"
             style={{
               borderLeft: "1px solid #E5E9F0",
               paddingLeft: "12px",
@@ -293,29 +291,22 @@ export function Header() {
           )}
         </div>
 
-        {/* Mobile Actions - Language Switcher + Menu Button */}
-        <div className="flex md:hidden items-center" style={{ gap: "12px" }}>
-          {/* Language Switcher */}
-          <LanguageSwitcher currentPage={currentPage} />
-
-          {/* Mobile Auth CTA (compact) */}
-          {!isLoggedIn && (
+        {/* Mobile Actions */}
+        <div className="flex lg:hidden items-center" style={{ gap: "12px" }}>
+          {!isLoggedIn ? (
             <button
               onClick={() => openAuthModal("login")}
-              className="border-0 cursor-pointer"
-              style={{
-                background: "linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)",
-                color: "#FFFFFF",
-                fontSize: "12px",
-                fontWeight: 600,
-                padding: "7px 14px",
-                borderRadius: "8px",
-                boxShadow: "0 2px 6px rgba(14, 61, 197, 0.2)",
-                whiteSpace: "nowrap",
-              }}
+              className="border-0 cursor-pointer bg-transparent p-0 text-sm font-medium text-[#0E3DC5] whitespace-nowrap"
             >
               {t("login")}
             </button>
+          ) : (
+            <Link
+              to={isAdmin ? "/admin" : "/my-panel"}
+              className="no-underline text-sm font-medium text-[#0E3DC5] whitespace-nowrap max-w-[120px] truncate"
+            >
+              {user ? headerProfileButtonLabel(user) : t("myPanel")}
+            </Link>
           )}
 
           {/* Mobile Menu Button */}
@@ -342,7 +333,7 @@ export function Header() {
         <div
           className="lg:hidden fixed left-0 right-0 bg-white z-50"
           style={{
-            top: "72px",
+            top: "64px",
             borderRadius: "16px",
             boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
           }}
