@@ -145,7 +145,7 @@ export function Header() {
                 letterSpacing: "-0.5px",
               }}
             >
-              {t("appName")}
+              City Guide
             </div>
           </Link>
 

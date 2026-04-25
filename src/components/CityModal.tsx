@@ -261,7 +261,7 @@ export function CityModal() {
                     </div>
                     {typeof city.count === "number" ? (
                       <div className="text-xs" style={{ color: "#9CA3AF" }}>
-                        {city.count}+ {t("eventCountSuffix")}
+                        {city.count} {t("eventCountSuffix")}
                       </div>
                     ) : null}
                   </div>

@@ -70,7 +70,6 @@ export function HomePage() {
   const {
     selectedCity,
     getCityInLocative,
-    setIsCityPopupOpen,
     citySearchQuery,
     setCitySearchQuery,
     setSelectedCity,
@@ -545,28 +544,6 @@ export function HomePage() {
               ) : (
                 <CalendarDays size={18} style={{ color: "#0E3DC5" }} />
               )}
-            </div>
-
-            {/* Location Dropdown */}
-            <div
-              className="flex items-center gap-2 px-4 py-2 border-l"
-              style={{
-                borderColor: "#E5E9F0",
-                cursor: "pointer",
-              }}
-              onClick={() => setIsCityPopupOpen(true)}
-            >
-              <MapPinned size={18} style={{ color: "#0E3DC5" }} />
-              <span
-                style={{
-                  fontSize: "15px",
-                  fontWeight: 500,
-                  color: "#1a1a1a",
-                }}
-              >
-                {selectedCity}
-              </span>
-              <ChevronDown size={16} style={{ color: "#6B7280" }} />
             </div>
 
             {/* Search Results Dropdown */}
