@@ -292,18 +292,26 @@ export function Header() {
         </div>
 
         {/* Mobile Actions */}
-        <div className="flex lg:hidden items-center" style={{ gap: "12px" }}>
+        <div className="flex lg:hidden items-center h-full" style={{ gap: "10px" }}>
           {!isLoggedIn ? (
             <button
               onClick={() => openAuthModal("login")}
-              className="border-0 cursor-pointer bg-transparent p-0 text-sm font-medium text-[#0E3DC5] whitespace-nowrap"
+              className="h-9 inline-flex items-center justify-center rounded-lg px-3 border-0 cursor-pointer text-white text-sm font-semibold whitespace-nowrap"
+              style={{
+                background: "linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)",
+                boxShadow: "0 2px 8px rgba(14, 61, 197, 0.25)",
+              }}
             >
               {t("login")}
             </button>
           ) : (
             <Link
               to={isAdmin ? "/admin" : "/my-panel"}
-              className="no-underline text-sm font-medium text-[#0E3DC5] whitespace-nowrap max-w-[120px] truncate"
+              className="h-9 inline-flex items-center justify-center rounded-lg px-3 no-underline text-white text-sm font-semibold whitespace-nowrap max-w-[110px] truncate"
+              style={{
+                background: "linear-gradient(135deg, #60A5FA 0%, #0E3DC5 100%)",
+                boxShadow: "0 2px 8px rgba(14, 61, 197, 0.25)",
+              }}
             >
               {user ? headerProfileButtonLabel(user) : t("myPanel")}
             </Link>

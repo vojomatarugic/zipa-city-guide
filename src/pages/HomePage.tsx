@@ -842,7 +842,7 @@ export function HomePage() {
                           "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800"
                         }
                         alt={event.title}
-                        className="w-full h-[200px] object-cover rounded-md"
+                        className="w-full aspect-[16/10] lg:aspect-auto lg:h-[200px] object-cover rounded-2xl lg:rounded-md"
                       />
 
                       {/* Content ISPOD SLIKE */}
@@ -1011,7 +1011,7 @@ export function HomePage() {
                     <img
                       src={show.image}
                       alt={show.title}
-                      className="w-full h-[400px] object-cover rounded-md"
+                      className="w-full aspect-[16/10] lg:aspect-auto lg:h-[400px] object-cover rounded-2xl lg:rounded-md"
                     />
 
                     {/* Content ISPOD SLIKE */}
@@ -1154,7 +1154,7 @@ export function HomePage() {
                           ? movie.title
                           : movie.title_en || movie.title
                       }
-                      className="w-full h-[250px] object-cover rounded-md"
+                      className="w-full aspect-[16/10] lg:aspect-auto lg:h-[250px] object-cover rounded-2xl lg:rounded-md"
                     />
 
                     {/* Content ISPOD SLIKE */}
@@ -1274,7 +1274,7 @@ export function HomePage() {
                     <img
                       src={restaurant.image}
                       alt={restaurant.title}
-                      className="w-full h-[350px] object-cover rounded-md"
+                      className="w-full aspect-[16/10] lg:aspect-auto lg:h-[350px] object-cover rounded-2xl lg:rounded-md"
                     />
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -1366,7 +1366,7 @@ export function HomePage() {
                     <img
                       src={club.image}
                       alt={club.title}
-                      className="w-full h-[200px] object-cover rounded-md"
+                      className="w-full aspect-[16/10] lg:aspect-auto lg:h-[200px] object-cover rounded-2xl lg:rounded-md"
                     />
 
                     {/* Content ISPOD SLIKE */}
@@ -1458,7 +1458,7 @@ export function HomePage() {
                     <img
                       src={concert.image}
                       alt={concert.title}
-                      className="w-full h-[250px] object-cover rounded-md"
+                      className="w-full aspect-[16/10] lg:aspect-auto lg:h-[250px] object-cover rounded-2xl lg:rounded-md"
                     />
 
                     {/* Content ISPOD SLIKE */}
